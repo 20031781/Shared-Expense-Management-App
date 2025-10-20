@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: splitexpenses-api
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Supabase__Url=${SUPABASE_URL}
+      - Supabase__Key=${SUPABASE_KEY}
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=SplitExpensesApi
+      - Jwt__Audience=SplitExpensesApp
+      - Jwt__ExpiryMinutes=60
+      - Jwt__RefreshTokenExpiryDays=30
+      - Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
+      - Firebase__ProjectId=${FIREBASE_PROJECT_ID}
+      - Firebase__CredentialsPath=/app/firebase-credentials.json
+    volumes:
+      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+    restart: unless-stopped
+    networks:
+      - splitexpenses-network
+
+networks:
+  splitexpenses-network:
+    driver: bridge
