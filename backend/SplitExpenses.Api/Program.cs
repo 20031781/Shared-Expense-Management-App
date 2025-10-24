@@ -70,6 +70,9 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowMobileApp");
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy", timestamp = DateTime.UtcNow }));
+
 app.MapControllers();
 
 app.Run();
