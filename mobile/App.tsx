@@ -34,8 +34,7 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
           <NavigationContainer>
-            //{isAuthenticated ? <MainNavigator /> : <AuthNavigator />} // TODO: Qui
-            <MainNavigator />
+            {isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
           </NavigationContainer>
           <StatusBar style="auto" />
         </SafeAreaProvider>

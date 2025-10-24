@@ -4,13 +4,7 @@
     "slug": "split-expenses",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -23,10 +17,6 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
       "package": "com.splitexpenses.app",
       "permissions": [
         "android.permission.CAMERA",
@@ -35,12 +25,10 @@
         "android.permission.NOTIFICATIONS"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "plugins": [
       "expo-secure-store"
     ],
+    "scheme": "splitexpenses",
     "extra": {
       "eas": {
         "projectId": "your-project-id"
