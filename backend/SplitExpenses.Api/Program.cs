@@ -60,12 +60,8 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// Configurazione middleware
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("AllowMobileApp");
 app.UseAuthentication();
