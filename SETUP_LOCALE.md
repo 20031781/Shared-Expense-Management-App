@@ -14,14 +14,17 @@
 ```bash
 # Crea il file .env per il backend
 cd backend
-cat > .env << 'EOF'
-SUPABASE_URL=https://0ec90b57d6e95fcbda19832f.supabase.co
-SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJib2x0IiwicmVmIjoiMGVjOTBiNTdkNmU5NWZjYmRhMTk4MzJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODE1NzQsImV4cCI6MTc1ODg4MTU3NH0.9I8-U0x86Ak8t2DGaIk0HfvTSLsAyzdnz-Nw00mMkKw
+```
+
+```powershell
+@"
+Bolt Database_URL=https://0ec90b57d6e95fcbda19832f.supabase.co
+Bolt Database_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJib2x0IiwicmVmIjoiMGVjOTBiNTdkNmU5NWZjYmRhMTk4MzJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODE1NzQsImV4cCI6MTc1ODg4MTU3NH0.9I8-U0x86Ak8t2DGaIk0HfvTSLsAyzdnz-Nw00mMkKw
 JWT_SECRET_KEY=questo_e_un_jwt_secret_molto_lungo_e_sicuro_di_almeno_32_caratteri
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 FIREBASE_PROJECT_ID=
-EOF
+"@ | Out-File -FilePath .env -Encoding utf8
 ```
 
 ### Avvio
