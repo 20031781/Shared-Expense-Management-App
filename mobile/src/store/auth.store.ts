@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {User} from '@/types';
-import authService from '@/services/auth.service';
+import supabaseAuthService from '@/services/supabase-auth.service';
 
 interface AuthState {
     user: User | null;
@@ -9,7 +9,8 @@ interface AuthState {
     error: string | null;
 
     setUser: (user: User | null) => void;
-    login: (idToken: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<void>;
+    signUp: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
     updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -28,10 +29,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         error: null
     }),
 
-    login: async (idToken: string) => {
+    login: async (email: string, password: string) => {
         try {
             set({isLoading: true, error: null});
-            const response = await authService.loginWithGoogle(idToken);
+            const response = await supabaseAuthService.signIn(email, password);
             set({
                 user: response.user,
                 isAuthenticated: true,
@@ -46,10 +47,29 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
     },
 
+    signUp: async (email: string, password: string) => {
+        try {
+            set({isLoading: true, error: null});
+            await supabaseAuthService.signUp(email, password);
+            const response = await supabaseAuthService.signIn(email, password);
+            set({
+                user: response.user,
+                isAuthenticated: true,
+                isLoading: false
+            });
+        } catch (error: any) {
+            set({
+                error: error.message || 'Sign up failed',
+                isLoading: false
+            });
+            throw error;
+        }
+    },
+
     logout: async () => {
         try {
             set({isLoading: true});
-            await authService.logout();
+            await supabaseAuthService.signOut();
             set({
                 user: null,
                 isAuthenticated: false,
@@ -67,10 +87,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     initialize: async () => {
         try {
             set({isLoading: true});
-            const user = await authService.initialize();
+            const session = await supabaseAuthService.getSession();
             set({
-                user,
-                isAuthenticated: !!user,
+                user: session?.user || null,
+                isAuthenticated: !!session?.user,
                 isLoading: false
             });
         } catch (error) {
@@ -85,11 +105,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     updateProfile: async (updates: Partial<User>) => {
         try {
             set({isLoading: true, error: null});
-            const user = await authService.updateProfile(updates);
-            set({
-                user,
+            set((state) => ({
+                user: state.user ? { ...state.user, ...updates } : null,
                 isLoading: false
-            });
+            }));
         } catch (error: any) {
             set({
                 error: error.message || 'Update failed',

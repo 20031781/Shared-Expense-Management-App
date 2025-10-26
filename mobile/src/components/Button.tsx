@@ -4,7 +4,7 @@ import {ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, ViewSt
 interface ButtonProps {
     title: string;
     onPress: () => void;
-    variant?: 'primary' | 'secondary' | 'danger';
+    variant?: 'primary' | 'secondary' | 'danger' | 'outline';
     size?: 'small' | 'medium' | 'large';
     disabled?: boolean;
     loading?: boolean;
@@ -62,6 +62,11 @@ const styles = StyleSheet.create({
     danger: {
         backgroundColor: '#FF3B30',
     },
+    outline: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: '#007AFF',
+    },
     small: {
         paddingVertical: 8,
         paddingHorizontal: 16,
@@ -88,6 +93,9 @@ const styles = StyleSheet.create({
     },
     dangerText: {
         color: '#FFFFFF',
+    },
+    outlineText: {
+        color: '#007AFF',
     },
     smallText: {
         fontSize: 14,

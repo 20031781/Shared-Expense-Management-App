@@ -4,15 +4,15 @@
 
 ```mermaid
 graph TB
-    subgraph "Mobile App (.NET MAUI)"
-        MA[MAUI App iOS/Android]
-        VM[ViewModels MVVM]
+    subgraph "Mobile App (React Native)"
+        MA[React Native + Expo]
+        SC[Screens]
+        ST[Zustand Stores]
         SV[Services]
-        DB[SQLite Locale]
 
-        MA --> VM
-        VM --> SV
-        SV --> DB
+        MA --> SC
+        SC --> ST
+        ST --> SV
     end
 
     subgraph "Backend API (ASP.NET Core)"
@@ -47,7 +47,7 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant User
-    participant App as MAUI App
+    participant App as React Native App
     participant Google
     participant API as Backend API
     participant DB as Supabase
@@ -251,15 +251,16 @@ ASP.NET Core 8.0
 
 ### Mobile
 ```
-.NET MAUI
-├── Views (XAML UI)
-├── ViewModels (MVVM)
-├── Services
-│   ├── ApiService (HTTP Client)
-│   ├── AuthService
-│   ├── StorageService (SQLite)
-│   └── SyncService
-└── Models
+React Native + Expo + TypeScript
+├── screens/ (UI Components)
+├── store/ (Zustand State)
+├── services/
+│   ├── api.service (Axios HTTP)
+│   ├── auth.service
+│   ├── supabase.client (Direct DB)
+│   └── storage.service
+├── components/ (Reusable UI)
+└── types/ (TypeScript)
 ```
 
 ### Database
@@ -284,10 +285,10 @@ Supabase (PostgreSQL)
 - **Single Responsibility**: Ogni classe ha un solo scopo
 
 ### Mobile Architecture
-- **MVVM Pattern**: Separazione View/ViewModel/Model
-- **Command Pattern**: RelayCommand per azioni UI
-- **Observer Pattern**: INotifyPropertyChanged per binding
-- **Repository Pattern**: Accesso unificato a API e SQLite
+- **Component-Based**: React functional components
+- **State Management**: Zustand stores
+- **Hooks Pattern**: React hooks for logic
+- **Service Layer**: Direct Supabase + HTTP API
 
 ### Security
 - **Authentication**: Google OAuth + JWT

@@ -1,44 +1,26 @@
 # 🚀 Setup Locale - Split Expenses
 
 ## Cosa Hai Bisogno
-- ✅ Docker (già hai)
 - ✅ Node.js 18+
 - ✅ Il tuo telefono con Expo Go installato ([iOS](https://apps.apple.com/app/expo-go/id982107779) | [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
+- ✅ Supabase account (gratuito)
 
 ---
 
-## Step 1: Backend con Docker (2 minuti)
+## Step 1: Configurazione Supabase (5 minuti)
 
-### Configurazione
+### Setup Database
 
-Crea il file .env per il backend
+Il progetto usa Supabase come database. Le migration sono già disponibili in `supabase/migrations/`.
 
-```bash
-cd backend
-```
-
-```shell
-@"
-BOLT_DATABASE_URL=https://0ec90b57d6e95fcbda19832f.supabase.co
-BOLT_DATABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJib2x0IiwicmVmIjoiMGVjOTBiNTdkNmU5NWZjYmRhMTk4MzJmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4ODE1NzQsImV4cCI6MTc1ODg4MTU3NH0.9I8-U0x86Ak8t2DGaIk0HfvTSLsAyzdnz-Nw00mMkKw
-JWT_SECRET_KEY=questo_e_un_jwt_secret_molto_lungo_e_sicuro_di_almeno_32_caratteri
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-FIREBASE_PROJECT_ID=
-"@ | Out-File -FilePath .env -Encoding utf8
-```
-
-### Avvio
-
-```bash
-# Avvia il backend
-docker-compose up -d
-
-# Verifica che funziona
-curl http://localhost:5000/health
-```
-
-Se vedi una risposta, **Backend OK** ✅
+1. **Crea un progetto Supabase** su [supabase.com](https://supabase.com)
+2. **Applica le migrations**:
+   - Vai su Supabase Dashboard → SQL Editor
+   - Copia il contenuto dei file in `supabase/migrations/` (in ordine)
+   - Esegui ogni migration
+3. **Copia le credenziali**:
+   - Project URL: `https://xxx.supabase.co`
+   - Anon Key: dalla dashboard → Settings → API
 
 ---
 
@@ -66,18 +48,17 @@ cd mobile
 # Installa dipendenze
 npm install
 
-# Crea .env (sostituisci TUO_IP con quello trovato sopra)
+# Crea .env con credenziali Supabase
 cat > .env << 'EOF'
-EXPO_PUBLIC_API_URL=http://TUO_IP:5000/api
-EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS=
-EXPO_PUBLIC_GOOGLE_CLIENT_ID_ANDROID=
-EXPO_PUBLIC_GOOGLE_CLIENT_ID_WEB=
+EXPO_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhb...
 EOF
 ```
 
 **Esempio .env:**
 ```env
-EXPO_PUBLIC_API_URL=http://192.168.1.100:5000/api
+EXPO_PUBLIC_SUPABASE_URL=https://0ec90b57d6e95fcbda19832f.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
 ### Avvio
@@ -95,25 +76,16 @@ Vedrai un **QR code** nel terminale.
 
 ---
 
-## ⚠️ Problema Login Google
+## 🔐 Autenticazione
 
-L'app si aprirà ma il login Google **NON funzionerà** perché serve configurazione OAuth.
+L'app usa **Supabase Auth** con email/password (Google OAuth opzionale).
 
-### Soluzione Rapida: Salta il Login
+### Prima volta
+1. Apri l'app
+2. Registrati con email e password
+3. Login automatico ✅
 
-Modifica `mobile/App.tsx` (apri con WebStorm):
-
-```typescript
-// Trova questa riga (circa riga 30):
-{isAuthenticated ? <MainNavigator /> : <AuthNavigator />}
-
-// Sostituisci con:
-<MainNavigator />
-```
-
-Salva → L'app si ricarica automaticamente → **Sei dentro!** ✅
-
-**Nota:** Le chiamate API falliranno senza token, ma puoi vedere tutta l'UI.
+**Nota:** Puoi aggiungere Google OAuth dopo (vedi documentazione Supabase).
 
 ---
 

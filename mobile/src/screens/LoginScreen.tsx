@@ -1,152 +1,149 @@
-import React, {useEffect, useState} from 'react';
-import {Alert, Platform, StyleSheet, Text, View,} from 'react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
-import {Button, Loading} from '@/components';
-import {useAuthStore} from '@/store/auth.store';
-import authService from '@/services/auth.service';
-
-WebBrowser.maybeCompleteAuthSession();
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { Button, Input, Loading } from '@/components';
+import { useAuthStore } from '@/store/auth.store';
 
 export const LoginScreen: React.FC = () => {
-    const [loading, setLoading] = useState(false);
-    const {login} = useAuthStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const { login, signUp, isLoading } = useAuthStore();
 
-    const googleConfig = authService.getGoogleConfig();
-
-    const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-        clientId: Platform.select({
-            ios: googleConfig.iosClientId,
-            android: googleConfig.androidClientId,
-            default: googleConfig.webClientId,
-        }),
-    });
-
-    useEffect(() => {
-        if (response?.type === 'success') {
-            const {id_token} = response.params;
-            handleGoogleLogin(id_token);
-        }
-    }, [response]);
-
-    const handleGoogleLogin = async (idToken: string) => {
-        try {
-            setLoading(true);
-            await login(idToken);
-        } catch (error: any) {
-            Alert.alert('Login Error', error.message || 'Failed to login with Google');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLoginPress = () => {
-        promptAsync();
-    };
-
-    if (loading) {
-        return <Loading/>;
+  const handleSubmit = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter email and password');
+      return;
     }
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.content}>
-                <View style={styles.logoContainer}>
-                    <Text style={styles.logo}>💰</Text>
-                    <Text style={styles.title}>Split Expenses</Text>
-                    <Text style={styles.subtitle}>
-                        Share expenses with friends and family
-                    </Text>
-                </View>
+    try {
+      if (isSignUp) {
+        await signUp(email, password);
+        Alert.alert('Success', 'Account created successfully!');
+      } else {
+        await login(email, password);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Authentication failed');
+    }
+  };
 
-                <View style={styles.features}>
-                    <FeatureItem icon="✅" text="Create expense lists"/>
-                    <FeatureItem icon="👥" text="Invite members"/>
-                    <FeatureItem icon="📊" text="Track spending"/>
-                    <FeatureItem icon="💸" text="Automatic reimbursements"/>
-                </View>
+  if (isLoading) {
+    return <Loading />;
+  }
 
-                <View style={styles.buttonContainer}>
-                    <Button
-                        title="Sign in with Google"
-                        onPress={handleLoginPress}
-                        disabled={!request || loading}
-                        loading={loading}
-                        size="large"
-                        style={styles.loginButton}
-                    />
-                    <Text style={styles.terms}>
-                        By continuing, you agree to our Terms of Service and Privacy Policy
-                    </Text>
-                </View>
-            </View>
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.content}>
+          <View style={styles.logoContainer}>
+            <Text style={styles.logo}>💰</Text>
+            <Text style={styles.title}>Split Expenses</Text>
+            <Text style={styles.subtitle}>
+              Share expenses with friends and family
+            </Text>
+          </View>
+
+          <View style={styles.formContainer}>
+            <Input
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Input
+              placeholder="Password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+
+            <Button
+              title={isSignUp ? 'Sign Up' : 'Sign In'}
+              onPress={handleSubmit}
+              disabled={isLoading}
+              loading={isLoading}
+              style={styles.submitButton}
+            />
+
+            <Button
+              title={isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+              onPress={() => setIsSignUp(!isSignUp)}
+              variant="outline"
+              style={styles.switchButton}
+            />
+          </View>
+
+          <Text style={styles.terms}>
+            By continuing, you agree to our Terms of Service and Privacy Policy
+          </Text>
         </View>
-    );
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 };
 
-const FeatureItem: React.FC<{ icon: string; text: string }> = ({icon, text}) => (
-    <View style={styles.featureItem}>
-        <Text style={styles.featureIcon}>{icon}</Text>
-        <Text style={styles.featureText}>{text}</Text>
-    </View>
-);
-
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-    },
-    content: {
-        flex: 1,
-        justifyContent: 'space-between',
-        padding: 24,
-    },
-    logoContainer: {
-        alignItems: 'center',
-        marginTop: 60,
-    },
-    logo: {
-        fontSize: 80,
-        marginBottom: 16,
-    },
-    title: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#000000',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#8E8E93',
-        textAlign: 'center',
-    },
-    features: {
-        marginVertical: 40,
-    },
-    featureItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 12,
-    },
-    featureIcon: {
-        fontSize: 24,
-        marginRight: 12,
-    },
-    featureText: {
-        fontSize: 16,
-        color: '#000000',
-    },
-    buttonContainer: {
-        marginBottom: 40,
-    },
-    loginButton: {
-        width: '100%',
-    },
-    terms: {
-        fontSize: 12,
-        color: '#8E8E93',
-        textAlign: 'center',
-        marginTop: 16,
-        paddingHorizontal: 20,
-    },
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'space-between',
+    padding: 24,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginTop: 60,
+    marginBottom: 40,
+  },
+  logo: {
+    fontSize: 80,
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+  },
+  formContainer: {
+    gap: 16,
+  },
+  submitButton: {
+    marginTop: 8,
+  },
+  switchButton: {
+    marginTop: 8,
+  },
+  terms: {
+    fontSize: 12,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginTop: 24,
+    paddingHorizontal: 20,
+  },
 });
