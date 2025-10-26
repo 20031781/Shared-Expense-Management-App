@@ -6,6 +6,12 @@ using SplitExpenses.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- Bind su tutte le interfacce (0.0.0.0) per permettere accesso dalla LAN ---
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5000);
+});
+
 // Configurazione CORS
 builder.Services.AddCors(options =>
 {
