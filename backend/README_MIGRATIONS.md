@@ -1,0 +1,96 @@
+# 🗄️ Migrations Database - PostgreSQL Locale
+
+## ⚠️ IMPORTANTE
+
+Queste migrations sono per **PostgreSQL standalone locale** (Docker).
+
+**NON includono Row Level Security (RLS)** perché `auth.uid()` richiede Supabase Auth che non è disponibile in PostgreSQL locale.
+
+Per produzione, usa **Supabase hosted** con le migrations complete in `../supabase/migrations/`.
+
+---
+
+## 📋 Migrations Disponibili
+
+1. **001_initial_schema.sql** - Schema completo (tabelle, indici, trigger)
+2. **002_stored_procedures.sql** - Funzioni per calcolo rimborsi
+
+---
+
+## 🚀 Come Applicare le Migrations
+
+### Con DataGrip (consigliato)
+
+1. **Connetti al database**:
+   - Host: `localhost`
+   - Port: `5432`
+   - Database: `split_expenses`
+   - User: `postgres`
+   - Password: `postgres`
+
+2. **Esegui in ordine**:
+   - Apri `001_initial_schema.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `002_stored_procedures.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+
+### Con psql (CLI)
+
+```bash
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 001_initial_schema.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 002_stored_procedures.sql
+```
+
+---
+
+## ✅ Verifica Migrations
+
+```sql
+-- Vedi tutte le tabelle
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
+
+-- Dovrebbe mostrare:
+-- device_tokens
+-- expense_splits
+-- expense_validations
+-- expenses
+-- list_members
+-- lists
+-- notifications
+-- refresh_tokens
+-- reimbursements
+-- sync_queue
+-- users
+```
+
+---
+
+## 🔐 Sicurezza in Sviluppo Locale
+
+Senza RLS, **tutti i controlli di sicurezza sono nell'API C#**.
+
+Verifica che ogni endpoint controlli:
+- JWT token valido
+- User ID dal token
+- Appartenenza alla lista richiesta
+
+**Non esporre mai il database PostgreSQL su internet senza RLS!**
+
+---
+
+## 🚀 Deploy su Produzione (Supabase)
+
+Quando vai in produzione, usa `../supabase/migrations/` che include:
+- ✅ Row Level Security completo
+- ✅ Policy restrittive
+- ✅ Integrazione con Supabase Auth
+
+Applica con Supabase CLI:
+```bash
+supabase db push
+```
+
+Oppure dalla Supabase Dashboard → SQL Editor.

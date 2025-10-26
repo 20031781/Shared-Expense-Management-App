@@ -20,7 +20,7 @@ Apri PowerShell nella cartella `backend/`:
 
 ```powershell
 cd backend
-docker-compose up -d
+docker-compose -f docker-compose.db.yml up -d
 ```
 
 Questo avvia PostgreSQL sulla porta **5432**.
@@ -35,28 +35,40 @@ Dovresti vedere un container con `postgres` in esecuzione.
 
 #### Applica le migrations
 
-**Opzione A: Con Supabase CLI (consigliato)**
+**⚠️ IMPORTANTE**: Le migrations in `supabase/migrations/` usano `auth.uid()` che **NON funziona** in PostgreSQL locale standalone.
 
-Se hai Supabase CLI:
-```powershell
-cd supabase
-supabase db push
-```
+Usa le migrations semplificate per sviluppo locale.
 
-**Opzione B: Manualmente con DataGrip/pgAdmin**
+**Con DataGrip (consigliato):**
 
 1. Connettiti al database:
    - Host: `localhost`
    - Port: `5432`
    - Database: `split_expenses`
    - User: `postgres`
-   - Password: `postgres` (vedi `docker-compose.yml`)
+   - Password: `postgres`
 
-2. Esegui in ordine i file SQL in `supabase/migrations/`:
-   - `20251010083149_001_initial_schema_tables.sql`
-   - `20251010083215_002_row_level_security.sql`
-   - `20251010083249_003_stored_procedures.sql`
-   - `20251026000001_add_password_hash.sql` ← **IMPORTANTE: Aggiunge supporto password**
+2. Esegui in ordine i file SQL in `backend/migrations/`:
+   - Apri `001_initial_schema.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `002_stored_procedures.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+
+**Con psql (CLI):**
+
+```powershell
+cd backend/migrations
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 001_initial_schema.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 002_stored_procedures.sql
+```
+
+**Verifica che funzioni:**
+
+```sql
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+```
+
+Dovresti vedere 11 tabelle (users, lists, expenses, ecc.)
 
 ---
 
@@ -64,37 +76,20 @@ supabase db push
 
 #### Configura appsettings.json
 
-Apri `backend/SplitExpenses.Api/appsettings.json` e verifica:
+Il file `backend/SplitExpenses.Api/appsettings.json` è già configurato correttamente con Supabase.
 
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=split_expenses;Username=postgres;Password=postgres"
-  },
-  "Jwt": {
-    "Key": "questo_e_un_jwt_secret_molto_lungo_e_sicuro_di_almeno_32_caratteri",
-    "Issuer": "SplitExpensesApi",
-    "Audience": "SplitExpensesApp",
-    "ExpiryMinutes": 60,
-    "RefreshTokenExpiryDays": 30
-  }
-}
-```
+**Non serve modificarlo** perché il backend usa il database Supabase hosted (già incluso nel progetto).
 
-#### Aggiungi BCrypt.Net
+#### Restore pacchetti NuGet
 
-Il backend usa BCrypt per hashare le password. Aggiungi il pacchetto NuGet:
-
-```powershell
-cd backend/SplitExpenses.Api
-dotnet add package BCrypt.Net-Next
-```
+Il pacchetto BCrypt.Net è già nel file `.csproj`.
 
 #### Avvia in Debug su Rider
 
 1. Apri `backend/SplitExpenses.Api.sln` con **Rider**
-2. Clicca su **Run** (▶️) o **Debug** (🐞)
-3. Il backend si avvia su **http://0.0.0.0:5000**
+2. Clicca destro sul progetto → **Restore NuGet Packages** (se necessario)
+3. Clicca su **Run** (▶️) o **Debug** (🐞)
+4. Il backend si avvia su **http://0.0.0.0:5000**
 
 #### Verifica che funzioni
 
@@ -262,26 +257,26 @@ Puoi testare tutti gli endpoint:
 
 ### Database connection error
 
-**Problema:** Backend non si connette a PostgreSQL
+**Problema:** Backend dice "Cannot connect to database"
 
 **Soluzione:**
-```powershell
-# Verifica che PostgreSQL sia attivo
-docker ps
+Il backend usa **Supabase hosted**, quindi non serve PostgreSQL locale per il backend. Il database Docker è solo per vedere i dati con DataGrip.
 
-# Se non è attivo, avvialo
-cd backend
-docker-compose up -d
-
-# Verifica connection string in appsettings.json
-```
+Verifica che le credenziali Supabase in `appsettings.json` siano corrette.
 
 ### Migration non applicate
 
-**Problema:** Errori "table does not exist"
+**Problema:** Errori "table does not exist" in DataGrip
 
 **Soluzione:**
-Esegui manualmente le migrations in `supabase/migrations/` con DataGrip.
+Esegui le migrations in `backend/migrations/` (NON quelle in `supabase/migrations/` che hanno RLS incompatibile con PostgreSQL locale).
+
+### Errore "Cannot resolve symbol auth"
+
+**Problema:** Le migrations hanno `auth.uid()` che non esiste in PostgreSQL
+
+**Soluzione:**
+Usa le migrations in `backend/migrations/` create appositamente per PostgreSQL locale.
 
 ### Token JWT non valido
 
