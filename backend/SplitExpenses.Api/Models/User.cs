@@ -6,7 +6,8 @@ public class User
     public string Email { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string? PictureUrl { get; set; }
-    public string GoogleId { get; set; } = string.Empty;
+    public string? GoogleId { get; set; }
+    public string? PasswordHash { get; set; }
     public string DefaultCurrency { get; set; } = "EUR";
     public NotificationPreferences NotificationPreferences { get; set; } = new();
     public DateTime CreatedAt { get; set; }

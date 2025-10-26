@@ -4,6 +4,8 @@ namespace SplitExpenses.Api.Services;
 
 public interface IAuthService
 {
+    Task<AuthResult> RegisterWithEmailAsync(string email, string password);
+    Task<AuthResult> AuthenticateWithEmailAsync(string email, string password);
     Task<AuthResult> AuthenticateWithGoogleAsync(string googleIdToken);
     Task<AuthResult> RefreshTokenAsync(string refreshToken);
     Task RevokeRefreshTokenAsync(string refreshToken);

@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {List, ListMember} from '@/types';
-import supabaseListsService from '@/services/supabase-lists.service';
+import listsService from '@/services/lists.service';
 
 interface ListsState {
     lists: List[];
@@ -33,7 +33,7 @@ export const useListsStore = create<ListsState>((set, get) => ({
     fetchLists: async () => {
         try {
             set({isLoading: true, error: null});
-            const lists = await supabaseListsService.getUserLists();
+            const lists = await listsService.getUserLists();
             set({lists, isLoading: false});
         } catch (error: any) {
             set({error: error.message, isLoading: false});
@@ -63,7 +63,7 @@ export const useListsStore = create<ListsState>((set, get) => ({
     createList: async (name: string) => {
         try {
             set({isLoading: true, error: null});
-            const list = await supabaseListsService.createList(name);
+            const list = await listsService.createList(name);
             set(state => ({
                 lists: [...state.lists, list],
                 isLoading: false
@@ -93,7 +93,7 @@ export const useListsStore = create<ListsState>((set, get) => ({
     deleteList: async (id: string) => {
         try {
             set({isLoading: true, error: null});
-            await supabaseListsService.deleteList(id);
+            await listsService.deleteList(id);
             set(state => ({
                 lists: state.lists.filter(l => l.id !== id),
                 currentList: state.currentList?.id === id ? null : state.currentList,
@@ -150,7 +150,7 @@ export const useListsStore = create<ListsState>((set, get) => ({
     joinList: async (inviteCode: string) => {
         try {
             set({isLoading: true, error: null});
-            const list = await supabaseListsService.joinListByCode(inviteCode);
+            const list = await listsService.joinListByCode(inviteCode);
             set(state => ({
                 lists: [...state.lists, list],
                 isLoading: false

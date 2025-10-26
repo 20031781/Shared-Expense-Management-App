@@ -29,6 +29,42 @@ class AuthService {
         return null;
     }
 
+    async registerWithEmail(email: string, password: string): Promise<LoginResponse> {
+        try {
+            const response = await apiService.post<LoginResponse>('/auth/register', {
+                email,
+                password,
+            });
+
+            await storageService.saveTokens(response.tokens);
+            await storageService.saveUser(response.user);
+            this.currentUser = response.user;
+
+            return response;
+        } catch (error) {
+            console.error('Register error:', error);
+            throw error;
+        }
+    }
+
+    async loginWithEmail(email: string, password: string): Promise<LoginResponse> {
+        try {
+            const response = await apiService.post<LoginResponse>('/auth/login', {
+                email,
+                password,
+            });
+
+            await storageService.saveTokens(response.tokens);
+            await storageService.saveUser(response.user);
+            this.currentUser = response.user;
+
+            return response;
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
+    }
+
     async loginWithGoogle(idToken: string): Promise<LoginResponse> {
         try {
             const response = await apiService.post<LoginResponse>('/auth/google', {

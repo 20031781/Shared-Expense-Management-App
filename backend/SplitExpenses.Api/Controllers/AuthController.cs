@@ -9,6 +9,36 @@ namespace SplitExpenses.Api.Controllers;
 [Route("api/[controller]")]
 public class AuthController(IAuthService authService, IUserRepository userRepository) : ControllerBase
 {
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] EmailPasswordRequest request)
+    {
+        var result = await authService.RegisterWithEmailAsync(request.Email, request.Password);
+
+        if (!result.Success) return BadRequest(new { error = result.ErrorMessage });
+
+        return Ok(new
+        {
+            accessToken = result.AccessToken,
+            refreshToken = result.RefreshToken,
+            user = result.User
+        });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] EmailPasswordRequest request)
+    {
+        var result = await authService.AuthenticateWithEmailAsync(request.Email, request.Password);
+
+        if (!result.Success) return BadRequest(new { error = result.ErrorMessage });
+
+        return Ok(new
+        {
+            accessToken = result.AccessToken,
+            refreshToken = result.RefreshToken,
+            user = result.User
+        });
+    }
+
     [HttpPost("google")]
     public async Task<IActionResult> AuthenticateWithGoogle([FromBody] GoogleAuthRequest request)
     {
@@ -62,6 +92,8 @@ public class AuthController(IAuthService authService, IUserRepository userReposi
         return userIdClaim != null ? Guid.Parse(userIdClaim.Value) : null;
     }
 }
+
+public record EmailPasswordRequest(string Email, string Password);
 
 public record GoogleAuthRequest(string IdToken);
 

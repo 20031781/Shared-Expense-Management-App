@@ -20,6 +20,96 @@ public class AuthService : IAuthService
         _userRepository = userRepository;
     }
 
+    public async Task<AuthResult> RegisterWithEmailAsync(string email, string password)
+    {
+        try
+        {
+            var existingUser = await _userRepository.GetByEmailAsync(email);
+            if (existingUser != null)
+            {
+                return new AuthResult
+                {
+                    Success = false,
+                    ErrorMessage = "User already exists"
+                };
+            }
+
+            var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
+
+            var user = new User
+            {
+                Email = email,
+                FullName = email.Split('@')[0],
+                PasswordHash = passwordHash
+            };
+
+            user = await _userRepository.CreateAsync(user);
+
+            var accessToken = GenerateJwtToken(user);
+            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id);
+
+            return new AuthResult
+            {
+                Success = true,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                User = user
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    public async Task<AuthResult> AuthenticateWithEmailAsync(string email, string password)
+    {
+        try
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null || string.IsNullOrEmpty(user.PasswordHash))
+            {
+                return new AuthResult
+                {
+                    Success = false,
+                    ErrorMessage = "Invalid credentials"
+                };
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+            {
+                return new AuthResult
+                {
+                    Success = false,
+                    ErrorMessage = "Invalid credentials"
+                };
+            }
+
+            var accessToken = GenerateJwtToken(user);
+            var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id);
+
+            return new AuthResult
+            {
+                Success = true,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                User = user
+            };
+        }
+        catch (Exception ex)
+        {
+            return new AuthResult
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
     public async Task<AuthResult> AuthenticateWithGoogleAsync(string googleIdToken)
     {
         try

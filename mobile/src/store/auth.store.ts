@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {User} from '@/types';
-import supabaseAuthService from '@/services/supabase-auth.service';
+import authService from '@/services/auth.service';
 
 interface AuthState {
     user: User | null;
@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     login: async (email: string, password: string) => {
         try {
             set({isLoading: true, error: null});
-            const response = await supabaseAuthService.signIn(email, password);
+            const response = await authService.loginWithEmail(email, password);
             set({
                 user: response.user,
                 isAuthenticated: true,
@@ -50,8 +50,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     signUp: async (email: string, password: string) => {
         try {
             set({isLoading: true, error: null});
-            await supabaseAuthService.signUp(email, password);
-            const response = await supabaseAuthService.signIn(email, password);
+            const response = await authService.registerWithEmail(email, password);
             set({
                 user: response.user,
                 isAuthenticated: true,
@@ -69,7 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     logout: async () => {
         try {
             set({isLoading: true});
-            await supabaseAuthService.signOut();
+            await authService.logout();
             set({
                 user: null,
                 isAuthenticated: false,
@@ -87,10 +86,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     initialize: async () => {
         try {
             set({isLoading: true});
-            const session = await supabaseAuthService.getSession();
+            const user = await authService.initialize();
             set({
-                user: session?.user || null,
-                isAuthenticated: !!session?.user,
+                user,
+                isAuthenticated: !!user,
                 isLoading: false
             });
         } catch (error) {
