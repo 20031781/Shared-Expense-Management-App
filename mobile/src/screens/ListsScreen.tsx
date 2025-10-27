@@ -34,7 +34,17 @@ export const ListsScreen: React.FC = () => {
     };
 
     const handleJoinList = () => {
-        navigation.navigate('JoinList');
+        Alert.alert(
+            'Join List',
+            'Enter the invite code to join an existing list',
+            [
+                {text: 'Cancel', style: 'cancel'},
+                {
+                    text: 'Coming Soon',
+                    onPress: () => {},
+                },
+            ]
+        );
     };
 
     const handleDeleteList = (list: List) => {
