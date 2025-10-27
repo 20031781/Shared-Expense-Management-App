@@ -12,6 +12,7 @@ Per produzione, usa **Supabase hosted** con le migrations complete in `../supaba
 
 ## 📋 Migrations Disponibili
 
+0. **000_reset_database.sql** - ⚠️ RESET completo (cancella tutto!)
 1. **001_initial_schema.sql** - Schema completo (tabelle, indici, trigger)
 2. **002_stored_procedures.sql** - Funzioni per calcolo rimborsi
 
@@ -19,7 +20,24 @@ Per produzione, usa **Supabase hosted** con le migrations complete in `../supaba
 
 ## 🚀 Come Applicare le Migrations
 
-### Con DataGrip (consigliato)
+### ⚠️ Se hai già migrations vecchie
+
+Se ottieni errori tipo:
+- `ERROR: column "date" does not exist`
+- `ERROR: column "expense_date" already exists`
+
+Significa che hai applicato le vecchie migrations da `supabase/migrations/`.
+
+**Devi resettare il database:**
+
+1. **Apri** `000_reset_database.sql` in DataGrip
+2. **Execute** (Ctrl+Enter) - Questo CANCELLA TUTTI I DATI!
+3. Verifica: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';`
+4. Dovresti vedere **0 tabelle** ✅
+
+### Setup Pulito (Database Nuovo)
+
+Con DataGrip (consigliato):
 
 1. **Connetti al database**:
    - Host: `localhost`
