@@ -64,7 +64,7 @@ docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 002_s
 
 **Verifica che funzioni:**
 
-```sql
+```postgresql
 SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
 ```
 
