@@ -1,150 +1,240 @@
+using System.Text;
+using Dapper;
+using SplitExpenses.Api.Data;
 using SplitExpenses.Api.Models;
-using SplitExpenses.Api.Services;
-using Supabase.Postgrest;
-using Supabase.Postgrest.Attributes;
-using Supabase.Postgrest.Models;
 
 namespace SplitExpenses.Api.Repositories;
 
-public class ExpenseRepository(ISupabaseService supabase) : IExpenseRepository
+public class ExpenseRepository : IExpenseRepository
 {
+    private const string ExpenseProjection = @"id AS \"Id\",
+        list_id AS \"ListId\",
+        author_id AS \"AuthorId\",
+        title AS \"Title\",
+        amount AS \"Amount\",
+        currency AS \"Currency\",
+        expense_date AS \"ExpenseDate\",
+        notes AS \"Notes\",
+        receipt_url AS \"ReceiptUrl\",
+        status AS \"Status\",
+        server_timestamp AS \"ServerTimestamp\",
+        created_at AS \"CreatedAt\",
+        updated_at AS \"UpdatedAt\"";
+
+    private const string ValidationProjection = @"id AS \"Id\",
+        expense_id AS \"ExpenseId\",
+        validator_id AS \"ValidatorId\",
+        status AS \"Status\",
+        notes AS \"Notes\",
+        validated_at AS \"ValidatedAt\"";
+
+    private const string SplitProjection = @"id AS \"Id\",
+        expense_id AS \"ExpenseId\",
+        member_id AS \"MemberId\",
+        amount AS \"Amount\",
+        percentage AS \"Percentage\"";
+
+    private readonly IDbConnectionFactory _connectionFactory;
+
+    public ExpenseRepository(IDbConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
     public async Task<Expense?> GetByIdAsync(Guid id)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ExpenseDto>()
-            .Where(e => e.Id == id)
-            .Single();
-
-        return response?.ToModel();
+        var sql = $"SELECT {ExpenseProjection} FROM expenses WHERE id = @Id LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ExpenseDto>(sql, new { Id = id });
+        return dto?.ToModel();
     }
 
-    public async Task<IEnumerable<Expense>> GetListExpensesAsync(Guid listId, DateTime? fromDate = null,
-        DateTime? toDate = null)
+    public async Task<IEnumerable<Expense>> GetListExpensesAsync(Guid listId, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        var client = supabase.GetClient();
-        var query = client.From<ExpenseDto>()
-            .Where(e => e.ListId == listId);
+        var sqlBuilder = new StringBuilder($"SELECT {ExpenseProjection} FROM expenses WHERE list_id = @ListId");
+        var parameters = new DynamicParameters(new { ListId = listId });
 
         if (fromDate.HasValue)
-            query = query.Where(e => e.ExpenseDate >= fromDate.Value);
+        {
+            sqlBuilder.Append(" AND expense_date >= @FromDate");
+            parameters.Add("FromDate", fromDate.Value.Date);
+        }
 
         if (toDate.HasValue)
-            query = query.Where(e => e.ExpenseDate <= toDate.Value);
+        {
+            sqlBuilder.Append(" AND expense_date <= @ToDate");
+            parameters.Add("ToDate", toDate.Value.Date);
+        }
 
-        var response = await query.Order("expense_date", Constants.Ordering.Descending).Get();
+        sqlBuilder.Append(" ORDER BY expense_date DESC");
 
-        return response.Models.Select(dto => dto.ToModel());
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ExpenseDto>(sqlBuilder.ToString(), parameters);
+        return rows.Select(dto => dto.ToModel());
     }
 
-    public async Task<IEnumerable<Expense>> GetUserExpensesAsync(Guid userId, DateTime? fromDate = null,
-        DateTime? toDate = null)
+    public async Task<IEnumerable<Expense>> GetUserExpensesAsync(Guid userId, DateTime? fromDate = null, DateTime? toDate = null)
     {
-        var client = supabase.GetClient();
-        var query = client.From<ExpenseDto>()
-            .Where(e => e.AuthorId == userId);
+        var sqlBuilder = new StringBuilder($"SELECT {ExpenseProjection} FROM expenses WHERE author_id = @UserId");
+        var parameters = new DynamicParameters(new { UserId = userId });
 
         if (fromDate.HasValue)
-            query = query.Where(e => e.ExpenseDate >= fromDate.Value);
+        {
+            sqlBuilder.Append(" AND expense_date >= @FromDate");
+            parameters.Add("FromDate", fromDate.Value.Date);
+        }
 
         if (toDate.HasValue)
-            query = query.Where(e => e.ExpenseDate <= toDate.Value);
+        {
+            sqlBuilder.Append(" AND expense_date <= @ToDate");
+            parameters.Add("ToDate", toDate.Value.Date);
+        }
 
-        var response = await query.Order("expense_date", Constants.Ordering.Descending).Get();
+        sqlBuilder.Append(" ORDER BY expense_date DESC");
 
-        return response.Models.Select(dto => dto.ToModel());
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ExpenseDto>(sqlBuilder.ToString(), parameters);
+        return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<Expense> CreateAsync(Expense expense)
     {
-        var client = supabase.GetClient();
-        var dto = ExpenseDto.FromModel(expense);
+        if (expense.Id == Guid.Empty)
+            expense.Id = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        if (expense.CreatedAt == default)
+            expense.CreatedAt = now;
+        expense.UpdatedAt = now;
+        expense.ServerTimestamp = now;
 
-        var response = await client.From<ExpenseDto>()
-            .Insert(dto);
+        const string sql = @"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, server_timestamp, created_at, updated_at)
+            VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @ServerTimestamp, @CreatedAt, @UpdatedAt)
+            RETURNING {ExpenseProjection}";
 
-        return response.Models.First().ToModel();
+        var parameters = new
+        {
+            expense.Id,
+            expense.ListId,
+            expense.AuthorId,
+            expense.Title,
+            expense.Amount,
+            expense.Currency,
+            ExpenseDate = expense.ExpenseDate.Date,
+            expense.Notes,
+            expense.ReceiptUrl,
+            StatusText = expense.Status.ToString().ToLower(),
+            expense.ServerTimestamp,
+            expense.CreatedAt,
+            expense.UpdatedAt
+        };
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ExpenseDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task<Expense> UpdateAsync(Expense expense)
     {
-        var client = supabase.GetClient();
-        var dto = ExpenseDto.FromModel(expense);
+        expense.UpdatedAt = DateTime.UtcNow;
+        expense.ServerTimestamp = expense.UpdatedAt;
 
-        var response = await client.From<ExpenseDto>()
-            .Update(dto);
+        const string sql = @"UPDATE expenses SET
+                title = @Title,
+                amount = @Amount,
+                currency = @Currency,
+                expense_date = @ExpenseDate,
+                notes = @Notes,
+                receipt_url = @ReceiptUrl,
+                status = @StatusText,
+                server_timestamp = @ServerTimestamp,
+                updated_at = @UpdatedAt
+            WHERE id = @Id
+            RETURNING {ExpenseProjection}";
 
-        return response.Models.First().ToModel();
+        var parameters = new
+        {
+            expense.Id,
+            expense.Title,
+            expense.Amount,
+            expense.Currency,
+            ExpenseDate = expense.ExpenseDate.Date,
+            expense.Notes,
+            expense.ReceiptUrl,
+            StatusText = expense.Status.ToString().ToLower(),
+            expense.ServerTimestamp,
+            expense.UpdatedAt
+        };
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ExpenseDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var client = supabase.GetClient();
-        await client.From<ExpenseDto>()
-            .Where(e => e.Id == id)
-            .Delete();
+        const string sql = "DELETE FROM expenses WHERE id = @Id";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await connection.ExecuteAsync(sql, new { Id = id });
     }
 
     public async Task<ExpenseValidation> AddValidationAsync(ExpenseValidation validation)
     {
-        var client = supabase.GetClient();
-        var dto = ExpenseValidationDto.FromModel(validation);
+        if (validation.Id == Guid.Empty)
+            validation.Id = Guid.NewGuid();
+        if (validation.ValidatedAt == default)
+            validation.ValidatedAt = DateTime.UtcNow;
 
-        var response = await client.From<ExpenseValidationDto>()
-            .Insert(dto);
+        const string sql = @"INSERT INTO expense_validations (id, expense_id, validator_id, status, notes, validated_at)
+            VALUES (@Id, @ExpenseId, @ValidatorId, @StatusText, @Notes, @ValidatedAt)
+            RETURNING {ValidationProjection}";
 
-        return response.Models.First().ToModel();
+        var parameters = new
+        {
+            validation.Id,
+            validation.ExpenseId,
+            validation.ValidatorId,
+            StatusText = validation.Status == ValidationStatus.Validated ? "validated" : "rejected",
+            validation.Notes,
+            validation.ValidatedAt
+        };
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ExpenseValidationDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task<IEnumerable<ExpenseValidation>> GetExpenseValidationsAsync(Guid expenseId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ExpenseValidationDto>()
-            .Where(ev => ev.ExpenseId == expenseId)
-            .Get();
-
-        return response.Models.Select(dto => dto.ToModel());
+        var sql = $"SELECT {ValidationProjection} FROM expense_validations WHERE expense_id = @ExpenseId";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ExpenseValidationDto>(sql, new { ExpenseId = expenseId });
+        return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<IEnumerable<ExpenseSplit>> GetExpenseSplitsAsync(Guid expenseId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ExpenseSplitDto>()
-            .Where(es => es.ExpenseId == expenseId)
-            .Get();
-
-        return response.Models.Select(dto => dto.ToModel());
+        var sql = $"SELECT {SplitProjection} FROM expense_splits WHERE expense_id = @ExpenseId";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ExpenseSplitDto>(sql, new { ExpenseId = expenseId });
+        return rows.Select(dto => dto.ToModel());
     }
 }
 
-// DTO classes per Supabase
-[Table("expenses")]
-public class ExpenseDto : BaseModel
+internal class ExpenseDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("list_id")] public Guid ListId { get; set; }
-
-    [Column("author_id")] public Guid AuthorId { get; set; }
-
-    [Column("title")] public string Title { get; set; } = string.Empty;
-
-    [Column("amount")] public decimal Amount { get; set; }
-
-    [Column("currency")] public string Currency { get; set; } = "EUR";
-
-    [Column("expense_date")] public DateTime ExpenseDate { get; set; }
-
-    [Column("notes")] public string? Notes { get; set; }
-
-    [Column("receipt_url")] public string? ReceiptUrl { get; set; }
-
-    [Column("status")] public string Status { get; set; } = "draft";
-
-    [Column("server_timestamp")] public DateTime ServerTimestamp { get; set; }
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
-
-    [Column("updated_at")] public DateTime UpdatedAt { get; set; }
+    public Guid Id { get; set; }
+    public Guid ListId { get; set; }
+    public Guid AuthorId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "EUR";
+    public DateTime ExpenseDate { get; set; }
+    public string? Notes { get; set; }
+    public string? ReceiptUrl { get; set; }
+    public string Status { get; set; } = "draft";
+    public DateTime ServerTimestamp { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     public Expense ToModel()
     {
@@ -161,7 +251,6 @@ public class ExpenseDto : BaseModel
             ReceiptUrl = ReceiptUrl,
             Status = Status.ToLower() switch
             {
-                "draft" => ExpenseStatus.Draft,
                 "submitted" => ExpenseStatus.Submitted,
                 "validated" => ExpenseStatus.Validated,
                 "rejected" => ExpenseStatus.Rejected,
@@ -172,42 +261,16 @@ public class ExpenseDto : BaseModel
             UpdatedAt = UpdatedAt
         };
     }
-
-    public static ExpenseDto FromModel(Expense expense)
-    {
-        return new ExpenseDto
-        {
-            Id = expense.Id,
-            ListId = expense.ListId,
-            AuthorId = expense.AuthorId,
-            Title = expense.Title,
-            Amount = expense.Amount,
-            Currency = expense.Currency,
-            ExpenseDate = expense.ExpenseDate,
-            Notes = expense.Notes,
-            ReceiptUrl = expense.ReceiptUrl,
-            Status = expense.Status.ToString().ToLower(),
-            ServerTimestamp = expense.ServerTimestamp,
-            CreatedAt = expense.CreatedAt,
-            UpdatedAt = expense.UpdatedAt
-        };
-    }
 }
 
-[Table("expense_validations")]
-public class ExpenseValidationDto : BaseModel
+internal class ExpenseValidationDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("expense_id")] public Guid ExpenseId { get; set; }
-
-    [Column("validator_id")] public Guid ValidatorId { get; set; }
-
-    [Column("status")] public string Status { get; set; } = string.Empty;
-
-    [Column("notes")] public string? Notes { get; set; }
-
-    [Column("validated_at")] public DateTime ValidatedAt { get; set; }
+    public Guid Id { get; set; }
+    public Guid ExpenseId { get; set; }
+    public Guid ValidatorId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public DateTime ValidatedAt { get; set; }
 
     public ExpenseValidation ToModel()
     {
@@ -221,33 +284,15 @@ public class ExpenseValidationDto : BaseModel
             ValidatedAt = ValidatedAt
         };
     }
-
-    public static ExpenseValidationDto FromModel(ExpenseValidation validation)
-    {
-        return new ExpenseValidationDto
-        {
-            Id = validation.Id,
-            ExpenseId = validation.ExpenseId,
-            ValidatorId = validation.ValidatorId,
-            Status = validation.Status == ValidationStatus.Validated ? "validated" : "rejected",
-            Notes = validation.Notes,
-            ValidatedAt = validation.ValidatedAt
-        };
-    }
 }
 
-[Table("expense_splits")]
-public class ExpenseSplitDto : BaseModel
+internal class ExpenseSplitDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("expense_id")] public Guid ExpenseId { get; set; }
-
-    [Column("member_id")] public Guid MemberId { get; set; }
-
-    [Column("amount")] public decimal Amount { get; set; }
-
-    [Column("percentage")] public decimal Percentage { get; set; }
+    public Guid Id { get; set; }
+    public Guid ExpenseId { get; set; }
+    public Guid MemberId { get; set; }
+    public decimal Amount { get; set; }
+    public decimal Percentage { get; set; }
 
     public ExpenseSplit ToModel()
     {
@@ -258,18 +303,6 @@ public class ExpenseSplitDto : BaseModel
             MemberId = MemberId,
             Amount = Amount,
             Percentage = Percentage
-        };
-    }
-
-    public static ExpenseSplitDto FromModel(ExpenseSplit split)
-    {
-        return new ExpenseSplitDto
-        {
-            Id = split.Id,
-            ExpenseId = split.ExpenseId,
-            MemberId = split.MemberId,
-            Amount = split.Amount,
-            Percentage = split.Percentage
         };
     }
 }

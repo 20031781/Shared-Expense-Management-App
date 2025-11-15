@@ -1,145 +1,203 @@
+using System.Security.Cryptography;
+using Dapper;
+using SplitExpenses.Api.Data;
 using SplitExpenses.Api.Models;
-using SplitExpenses.Api.Services;
-using Supabase.Postgrest.Attributes;
-using Supabase.Postgrest.Models;
 
 namespace SplitExpenses.Api.Repositories;
 
-public class ListRepository(ISupabaseService supabase) : IListRepository
+public class ListRepository : IListRepository
 {
+    private const string ListProjection = @"l.id AS \"Id\",
+        l.name AS \"Name\",
+        l.admin_id AS \"AdminId\",
+        l.invite_code AS \"InviteCode\",
+        l.created_at AS \"CreatedAt\",
+        l.updated_at AS \"UpdatedAt\"";
+
+    private const string MemberProjection = @"id AS \"Id\",
+        list_id AS \"ListId\",
+        user_id AS \"UserId\",
+        email AS \"Email\",
+        split_percentage AS \"SplitPercentage\",
+        is_validator AS \"IsValidator\",
+        status AS \"Status\",
+        joined_at AS \"JoinedAt\",
+        created_at AS \"CreatedAt\"";
+
+    private readonly IDbConnectionFactory _connectionFactory;
+
+    public ListRepository(IDbConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
     public async Task<List?> GetByIdAsync(Guid id)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ListDto>()
-            .Where(l => l.Id == id)
-            .Single();
-
-        return response?.ToModel();
+        var sql = $"SELECT {ListProjection} FROM lists l WHERE l.id = @Id LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ListDto>(sql, new { Id = id });
+        return dto?.ToModel();
     }
 
     public async Task<IEnumerable<List>> GetUserListsAsync(Guid userId)
     {
-        var client = supabase.GetClient();
+        var sql = $@"SELECT DISTINCT {ListProjection}
+            FROM lists l
+            LEFT JOIN list_members lm ON lm.list_id = l.id
+            WHERE l.admin_id = @UserId OR (lm.user_id = @UserId AND lm.status = 'active')
+            ORDER BY l.created_at DESC";
 
-        // Recupera tutte le liste dove l'utente è membro attivo
-        var memberResponse = await client.From<ListMemberDto>()
-            .Where(lm => lm.UserId == userId && lm.Status == "active")
-            .Get();
-
-        if (memberResponse.Models.Count == 0)
-            return Enumerable.Empty<List>();
-
-        var listIds = memberResponse.Models.Select(m => m.ListId).ToList();
-
-        var lists = new List<List>();
-        foreach (var listId in listIds)
-        {
-            var list = await GetByIdAsync(listId);
-            if (list != null)
-                lists.Add(list);
-        }
-
-        return lists;
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ListDto>(sql, new { UserId = userId });
+        return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<List?> GetByInviteCodeAsync(string inviteCode)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ListDto>()
-            .Where(l => l.InviteCode == inviteCode)
-            .Single();
-
-        return response?.ToModel();
+        var sql = $"SELECT {ListProjection} FROM lists l WHERE l.invite_code = @InviteCode LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ListDto>(sql, new { InviteCode = inviteCode });
+        return dto?.ToModel();
     }
 
     public async Task<List> CreateAsync(List list)
     {
-        var client = supabase.GetClient();
-        var dto = ListDto.FromModel(list);
+        if (list.Id == Guid.Empty)
+            list.Id = Guid.NewGuid();
+        if (string.IsNullOrWhiteSpace(list.InviteCode))
+            list.InviteCode = GenerateInviteCode();
 
-        var response = await client.From<ListDto>()
-            .Insert(dto);
+        var now = DateTime.UtcNow;
+        if (list.CreatedAt == default)
+            list.CreatedAt = now;
+        list.UpdatedAt = now;
 
-        return response.Models.First().ToModel();
+        const string sql = @"INSERT INTO lists (id, name, admin_id, invite_code, created_at, updated_at)
+            VALUES (@Id, @Name, @AdminId, @InviteCode, @CreatedAt, @UpdatedAt)
+            RETURNING id AS \"Id\", name AS \"Name\", admin_id AS \"AdminId\", invite_code AS \"InviteCode\", created_at AS \"CreatedAt\", updated_at AS \"UpdatedAt\"";
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ListDto>(sql, list);
+        return dto.ToModel();
     }
 
     public async Task<List> UpdateAsync(List list)
     {
-        var client = supabase.GetClient();
-        var dto = ListDto.FromModel(list);
+        list.UpdatedAt = DateTime.UtcNow;
+        const string sql = @"UPDATE lists SET
+                name = @Name,
+                invite_code = @InviteCode,
+                updated_at = @UpdatedAt
+            WHERE id = @Id
+            RETURNING id AS \"Id\", name AS \"Name\", admin_id AS \"AdminId\", invite_code AS \"InviteCode\", created_at AS \"CreatedAt\", updated_at AS \"UpdatedAt\"";
 
-        var response = await client.From<ListDto>()
-            .Update(dto);
-
-        return response.Models.First().ToModel();
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ListDto>(sql, list);
+        return dto.ToModel();
     }
 
     public async Task DeleteAsync(Guid id)
     {
-        var client = supabase.GetClient();
-        await client.From<ListDto>()
-            .Where(l => l.Id == id)
-            .Delete();
+        const string sql = "DELETE FROM lists WHERE id = @Id";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await connection.ExecuteAsync(sql, new { Id = id });
     }
 
     public async Task<ListMember> AddMemberAsync(ListMember member)
     {
-        var client = supabase.GetClient();
-        var dto = ListMemberDto.FromModel(member);
+        if (member.Id == Guid.Empty)
+            member.Id = Guid.NewGuid();
+        if (member.CreatedAt == default)
+            member.CreatedAt = DateTime.UtcNow;
 
-        var response = await client.From<ListMemberDto>()
-            .Insert(dto);
+        const string sql = @"INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
+            VALUES (@Id, @ListId, @UserId, @Email, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
+            RETURNING {MemberProjection}";
 
-        return response.Models.First().ToModel();
+        var parameters = new
+        {
+            member.Id,
+            member.ListId,
+            member.UserId,
+            member.Email,
+            member.SplitPercentage,
+            member.IsValidator,
+            StatusText = member.Status == MemberStatus.Active ? "active" : "pending",
+            member.JoinedAt,
+            member.CreatedAt
+        };
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ListMemberDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task<ListMember> UpdateMemberAsync(ListMember member)
     {
-        var client = supabase.GetClient();
-        var dto = ListMemberDto.FromModel(member);
+        const string sql = @"UPDATE list_members SET
+                user_id = @UserId,
+                email = @Email,
+                split_percentage = @SplitPercentage,
+                is_validator = @IsValidator,
+                status = @StatusText,
+                joined_at = @JoinedAt
+            WHERE id = @Id
+            RETURNING {MemberProjection}";
 
-        var response = await client.From<ListMemberDto>()
-            .Update(dto);
+        var parameters = new
+        {
+            member.Id,
+            member.UserId,
+            member.Email,
+            member.SplitPercentage,
+            member.IsValidator,
+            StatusText = member.Status == MemberStatus.Active ? "active" : "pending",
+            member.JoinedAt
+        };
 
-        return response.Models.First().ToModel();
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ListMemberDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task<IEnumerable<ListMember>> GetListMembersAsync(Guid listId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ListMemberDto>()
-            .Where(lm => lm.ListId == listId)
-            .Get();
-
-        return response.Models.Select(dto => dto.ToModel());
+        var sql = $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId ORDER BY created_at";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ListMemberDto>(sql, new { ListId = listId });
+        return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<ListMember?> GetMemberAsync(Guid memberId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ListMemberDto>()
-            .Where(lm => lm.Id == memberId)
-            .Single();
+        var sql = $"SELECT {MemberProjection} FROM list_members WHERE id = @MemberId LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql, new { MemberId = memberId });
+        return dto?.ToModel();
+    }
 
-        return response?.ToModel();
+    private static string GenerateInviteCode()
+    {
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        Span<char> buffer = stackalloc char[6];
+        for (var i = 0; i < buffer.Length; i++)
+        {
+            var index = RandomNumberGenerator.GetInt32(chars.Length);
+            buffer[i] = chars[index];
+        }
+
+        return new string(buffer);
     }
 }
 
-// DTO classes per Supabase
-[Table("lists")]
-public class ListDto : BaseModel
+internal class ListDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("name")] public string Name { get; set; } = string.Empty;
-
-    [Column("admin_id")] public Guid AdminId { get; set; }
-
-    [Column("invite_code")] public string InviteCode { get; set; } = string.Empty;
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
-
-    [Column("updated_at")] public DateTime UpdatedAt { get; set; }
+    public Guid Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public Guid AdminId { get; set; }
+    public string InviteCode { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     public List ToModel()
     {
@@ -153,41 +211,19 @@ public class ListDto : BaseModel
             UpdatedAt = UpdatedAt
         };
     }
-
-    public static ListDto FromModel(List list)
-    {
-        return new ListDto
-        {
-            Id = list.Id,
-            Name = list.Name,
-            AdminId = list.AdminId,
-            InviteCode = list.InviteCode,
-            CreatedAt = list.CreatedAt,
-            UpdatedAt = list.UpdatedAt
-        };
-    }
 }
 
-[Table("list_members")]
-public class ListMemberDto : BaseModel
+internal class ListMemberDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("list_id")] public Guid ListId { get; set; }
-
-    [Column("user_id")] public Guid? UserId { get; set; }
-
-    [Column("email")] public string Email { get; set; } = string.Empty;
-
-    [Column("split_percentage")] public decimal SplitPercentage { get; set; }
-
-    [Column("is_validator")] public bool IsValidator { get; set; }
-
-    [Column("status")] public string Status { get; set; } = "pending";
-
-    [Column("joined_at")] public DateTime? JoinedAt { get; set; }
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
+    public Guid Id { get; set; }
+    public Guid ListId { get; set; }
+    public Guid? UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public decimal SplitPercentage { get; set; }
+    public bool IsValidator { get; set; }
+    public string Status { get; set; } = "pending";
+    public DateTime? JoinedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     public ListMember ToModel()
     {
@@ -202,22 +238,6 @@ public class ListMemberDto : BaseModel
             Status = Status.ToLower() == "active" ? MemberStatus.Active : MemberStatus.Pending,
             JoinedAt = JoinedAt,
             CreatedAt = CreatedAt
-        };
-    }
-
-    public static ListMemberDto FromModel(ListMember member)
-    {
-        return new ListMemberDto
-        {
-            Id = member.Id,
-            ListId = member.ListId,
-            UserId = member.UserId,
-            Email = member.Email,
-            SplitPercentage = member.SplitPercentage,
-            IsValidator = member.IsValidator,
-            Status = member.Status == MemberStatus.Active ? "active" : "pending",
-            JoinedAt = member.JoinedAt,
-            CreatedAt = member.CreatedAt
         };
     }
 }
