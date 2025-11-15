@@ -1,161 +1,174 @@
 using System.Text.Json;
+using Dapper;
+using SplitExpenses.Api.Data;
 using SplitExpenses.Api.Models;
-using SplitExpenses.Api.Services;
-using Supabase.Postgrest.Attributes;
-using Supabase.Postgrest.Models;
 
 namespace SplitExpenses.Api.Repositories;
 
-public class UserRepository(ISupabaseService supabase) : IUserRepository
+public class UserRepository : IUserRepository
 {
+    private const string UserProjection = @"id,
+        email,
+        full_name AS \"FullName\",
+        picture_url AS \"PictureUrl\",
+        google_id AS \"GoogleId\",
+        password_hash AS \"PasswordHash\",
+        default_currency AS \"DefaultCurrency\",
+        COALESCE(notification_preferences::text, '{}') AS \"NotificationPreferencesJson\",
+        created_at AS \"CreatedAt\",
+        updated_at AS \"UpdatedAt\"";
+
+    private readonly IDbConnectionFactory _connectionFactory;
+
+    public UserRepository(IDbConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
     public async Task<User?> GetByIdAsync(Guid id)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<UserDto>()
-            .Where(u => u.Id == id)
-            .Single();
-
-        return response?.ToModel();
+        const string sql = $"SELECT {UserProjection} FROM users WHERE id = @Id LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(sql, new { Id = id });
+        return dto?.ToModel();
     }
 
     public async Task<User?> GetByEmailAsync(string email)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<UserDto>()
-            .Where(u => u.Email == email)
-            .Single();
-
-        return response?.ToModel();
+        const string sql = $"SELECT {UserProjection} FROM users WHERE LOWER(email) = LOWER(@Email) LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(sql, new { Email = email });
+        return dto?.ToModel();
     }
 
     public async Task<User?> GetByGoogleIdAsync(string googleId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<UserDto>()
-            .Where(u => u.GoogleId == googleId)
-            .Single();
-
-        return response?.ToModel();
+        const string sql = $"SELECT {UserProjection} FROM users WHERE google_id = @GoogleId LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<UserDto>(sql, new { GoogleId = googleId });
+        return dto?.ToModel();
     }
 
     public async Task<User> CreateAsync(User user)
     {
-        var client = supabase.GetClient();
+        var now = DateTime.UtcNow;
+        if (user.Id == Guid.Empty)
+            user.Id = Guid.NewGuid();
+        if (user.CreatedAt == default)
+            user.CreatedAt = now;
+        user.UpdatedAt = now;
+
         var dto = UserDto.FromModel(user);
 
-        var response = await client.From<UserDto>()
-            .Insert(dto);
+        var sql = $@"INSERT INTO users (
+                id, email, full_name, picture_url, google_id, password_hash, default_currency, notification_preferences, created_at, updated_at)
+            VALUES (@Id, @Email, @FullName, @PictureUrl, @GoogleId, @PasswordHash, @DefaultCurrency, CAST(@NotificationPreferencesJson AS jsonb), @CreatedAt, @UpdatedAt)
+            RETURNING {UserProjection}";
 
-        return response.Models.First().ToModel();
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var created = await connection.QuerySingleAsync<UserDto>(sql, dto);
+        return created.ToModel();
     }
 
     public async Task<User> UpdateAsync(User user)
     {
-        var client = supabase.GetClient();
+        user.UpdatedAt = DateTime.UtcNow;
         var dto = UserDto.FromModel(user);
 
-        var response = await client.From<UserDto>()
-            .Update(dto);
+        var sql = $@"UPDATE users SET
+                email = @Email,
+                full_name = @FullName,
+                picture_url = @PictureUrl,
+                google_id = @GoogleId,
+                password_hash = @PasswordHash,
+                default_currency = @DefaultCurrency,
+                notification_preferences = CAST(@NotificationPreferencesJson AS jsonb),
+                updated_at = @UpdatedAt
+            WHERE id = @Id
+            RETURNING {UserProjection}";
 
-        return response.Models.First().ToModel();
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var updated = await connection.QuerySingleAsync<UserDto>(sql, dto);
+        return updated.ToModel();
     }
 
     public async Task StoreRefreshTokenAsync(Guid userId, string tokenHash, DateTime expiresAt)
     {
-        var client = supabase.GetClient();
+        const string sql = @"INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at, revoked, created_at)
+            VALUES (@Id, @UserId, @TokenHash, @ExpiresAt, false, @CreatedAt)";
 
-        await client.From<RefreshTokenDto>()
-            .Insert(new RefreshTokenDto
-            {
-                UserId = userId,
-                TokenHash = tokenHash,
-                ExpiresAt = expiresAt
-            });
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await connection.ExecuteAsync(sql, new
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TokenHash = tokenHash,
+            ExpiresAt = expiresAt,
+            CreatedAt = DateTime.UtcNow
+        });
     }
 
     public async Task<RefreshTokenData?> GetRefreshTokenAsync(string tokenHash)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<RefreshTokenDto>()
-            .Where(t => t.TokenHash == tokenHash)
-            .Single();
-
-        if (response == null) return null;
-
-        return new RefreshTokenData
-        {
-            UserId = response.UserId,
-            ExpiresAt = response.ExpiresAt,
-            Revoked = response.Revoked
-        };
+        const string sql = @"SELECT user_id AS \"UserId\", expires_at AS \"ExpiresAt\", revoked AS \"Revoked\" FROM refresh_tokens WHERE token_hash = @TokenHash LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        return await connection.QuerySingleOrDefaultAsync<RefreshTokenData>(sql, new { TokenHash = tokenHash });
     }
 
     public async Task RevokeRefreshTokenAsync(string tokenHash)
     {
-        var client = supabase.GetClient();
-
-        await client.From<RefreshTokenDto>()
-            .Where(t => t.TokenHash == tokenHash)
-            .Set(t => t.Revoked, true)
-            .Update();
+        const string sql = "UPDATE refresh_tokens SET revoked = true WHERE token_hash = @TokenHash";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await connection.ExecuteAsync(sql, new { TokenHash = tokenHash });
     }
 
     public async Task StoreDeviceTokenAsync(Guid userId, string token, string platform)
     {
-        var client = supabase.GetClient();
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
 
-        // Elimina eventuali token duplicati
-        await client.From<DeviceTokenDto>()
-            .Where(d => d.Token == token)
-            .Delete();
+        const string deleteSql = "DELETE FROM device_tokens WHERE token = @Token";
+        await connection.ExecuteAsync(deleteSql, new { Token = token }, transaction);
 
-        // Inserisce nuovo token
-        await client.From<DeviceTokenDto>()
-            .Insert(new DeviceTokenDto
-            {
-                UserId = userId,
-                Token = token,
-                Platform = platform
-            });
+        const string insertSql = @"INSERT INTO device_tokens (id, user_id, token, platform, created_at)
+            VALUES (@Id, @UserId, @Token, @Platform, @CreatedAt)";
+
+        await connection.ExecuteAsync(insertSql, new
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Token = token,
+            Platform = platform,
+            CreatedAt = DateTime.UtcNow
+        }, transaction);
+
+        await transaction.CommitAsync();
     }
 
     public async Task<IEnumerable<string>> GetDeviceTokensAsync(Guid userId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<DeviceTokenDto>()
-            .Where(d => d.UserId == userId)
-            .Get();
-
-        return response.Models.Select(d => d.Token);
+        const string sql = "SELECT token FROM device_tokens WHERE user_id = @UserId";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        return await connection.QueryAsync<string>(sql, new { UserId = userId });
     }
 }
 
-// DTO classes per Supabase
-[Table("users")]
-public class UserDto : BaseModel
+internal class UserDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("email")] public string Email { get; set; } = string.Empty;
-
-    [Column("full_name")] public string FullName { get; set; } = string.Empty;
-
-    [Column("picture_url")] public string? PictureUrl { get; set; }
-
-    [Column("google_id")] public string GoogleId { get; set; } = string.Empty;
-
-    [Column("default_currency")] public string DefaultCurrency { get; set; } = "EUR";
-
-    [Column("notification_preferences")] public string NotificationPreferencesJson { get; set; } = "{}";
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
-
-    [Column("updated_at")] public DateTime UpdatedAt { get; set; }
+    public Guid Id { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? PictureUrl { get; set; }
+    public string? GoogleId { get; set; }
+    public string? PasswordHash { get; set; }
+    public string DefaultCurrency { get; set; } = "EUR";
+    public string NotificationPreferencesJson { get; set; } = "{}";
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     public User ToModel()
     {
-        var prefs = JsonSerializer.Deserialize<NotificationPreferences>(NotificationPreferencesJson) ??
-                    new NotificationPreferences();
+        var prefs = JsonSerializer.Deserialize<NotificationPreferences>(NotificationPreferencesJson) ?? new NotificationPreferences();
 
         return new User
         {
@@ -164,6 +177,7 @@ public class UserDto : BaseModel
             FullName = FullName,
             PictureUrl = PictureUrl,
             GoogleId = GoogleId,
+            PasswordHash = PasswordHash,
             DefaultCurrency = DefaultCurrency,
             NotificationPreferences = prefs,
             CreatedAt = CreatedAt,
@@ -180,6 +194,7 @@ public class UserDto : BaseModel
             FullName = user.FullName,
             PictureUrl = user.PictureUrl,
             GoogleId = user.GoogleId,
+            PasswordHash = user.PasswordHash,
             DefaultCurrency = user.DefaultCurrency,
             NotificationPreferencesJson = JsonSerializer.Serialize(user.NotificationPreferences),
             CreatedAt = user.CreatedAt,
@@ -188,32 +203,3 @@ public class UserDto : BaseModel
     }
 }
 
-[Table("refresh_tokens")]
-public class RefreshTokenDto : BaseModel
-{
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("user_id")] public Guid UserId { get; set; }
-
-    [Column("token_hash")] public string TokenHash { get; set; } = string.Empty;
-
-    [Column("expires_at")] public DateTime ExpiresAt { get; set; }
-
-    [Column("revoked")] public bool Revoked { get; set; }
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
-}
-
-[Table("device_tokens")]
-public class DeviceTokenDto : BaseModel
-{
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("user_id")] public Guid UserId { get; set; }
-
-    [Column("token")] public string Token { get; set; } = string.Empty;
-
-    [Column("platform")] public string Platform { get; set; } = string.Empty;
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
-}

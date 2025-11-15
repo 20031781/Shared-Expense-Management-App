@@ -118,7 +118,7 @@ public class ExpensesController : ControllerBase
 
         await _expenseRepository.AddValidationAsync(validation);
 
-        // Il trigger su Supabase aggiorna automaticamente lo stato della spesa
+        // Un trigger a livello di database aggiorna automaticamente lo stato della spesa
         await _notificationService.SendValidationResultNotificationAsync(id, request.Approved);
 
         return Ok(new { message = "Validation recorded" });

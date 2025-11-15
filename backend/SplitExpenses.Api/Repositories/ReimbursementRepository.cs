@@ -1,119 +1,155 @@
+using Dapper;
+using SplitExpenses.Api.Data;
 using SplitExpenses.Api.Models;
-using SplitExpenses.Api.Services;
-using Supabase.Postgrest;
-using Supabase.Postgrest.Attributes;
-using Supabase.Postgrest.Models;
 
 namespace SplitExpenses.Api.Repositories;
 
-public class ReimbursementRepository(ISupabaseService supabase) : IReimbursementRepository
+public class ReimbursementRepository : IReimbursementRepository
 {
+    private const string ReimbursementProjection = @"id AS \"Id\",
+        list_id AS \"ListId\",
+        from_user_id AS \"FromUserId\",
+        to_user_id AS \"ToUserId\",
+        amount AS \"Amount\",
+        currency AS \"Currency\",
+        status AS \"Status\",
+        completed_at AS \"CompletedAt\",
+        server_timestamp AS \"ServerTimestamp\",
+        created_at AS \"CreatedAt\"";
+
+    private readonly IDbConnectionFactory _connectionFactory;
+
+    public ReimbursementRepository(IDbConnectionFactory connectionFactory)
+    {
+        _connectionFactory = connectionFactory;
+    }
+
     public async Task<IEnumerable<Reimbursement>> GetListReimbursementsAsync(Guid listId)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ReimbursementDto>()
-            .Where(r => r.ListId == listId)
-            .Order("created_at", Constants.Ordering.Descending)
-            .Get();
-
-        return response.Models.Select(dto => dto.ToModel());
+        var sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE list_id = @ListId ORDER BY created_at DESC";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ReimbursementDto>(sql, new { ListId = listId });
+        return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<IEnumerable<Reimbursement>> GetUserReimbursementsAsync(Guid userId)
     {
-        var client = supabase.GetClient();
-
-        // Recupera rimborsi dove l'utente è coinvolto (from o to)
-        // Eseguiamo due query separate e uniamo i risultati
-        var fromUserTask = client.From<ReimbursementDto>()
-            .Where(r => r.FromUserId == userId)
-            .Order("created_at", Constants.Ordering.Descending)
-            .Get();
-
-        var toUserTask = client.From<ReimbursementDto>()
-            .Where(r => r.ToUserId == userId)
-            .Order("created_at", Constants.Ordering.Descending)
-            .Get();
-
-        await Task.WhenAll(fromUserTask, toUserTask);
-
-        var allReimbursements = fromUserTask.Result.Models
-            .Concat(toUserTask.Result.Models)
-            .DistinctBy(r => r.Id)
-            .OrderByDescending(r => r.CreatedAt);
-
-        return allReimbursements.Select(dto => dto.ToModel());
+        var sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE from_user_id = @UserId OR to_user_id = @UserId ORDER BY created_at DESC";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var rows = await connection.QueryAsync<ReimbursementDto>(sql, new { UserId = userId });
+        return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<Reimbursement?> GetByIdAsync(Guid id)
     {
-        var client = supabase.GetClient();
-        var response = await client.From<ReimbursementDto>()
-            .Where(r => r.Id == id)
-            .Single();
-
-        return response?.ToModel();
+        var sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE id = @Id LIMIT 1";
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ReimbursementDto>(sql, new { Id = id });
+        return dto?.ToModel();
     }
 
     public async Task<Reimbursement> CreateAsync(Reimbursement reimbursement)
     {
-        var client = supabase.GetClient();
-        var dto = ReimbursementDto.FromModel(reimbursement);
+        if (reimbursement.Id == Guid.Empty)
+            reimbursement.Id = Guid.NewGuid();
+        var now = DateTime.UtcNow;
+        if (reimbursement.CreatedAt == default)
+            reimbursement.CreatedAt = now;
+        reimbursement.ServerTimestamp = now;
 
-        var response = await client.From<ReimbursementDto>()
-            .Insert(dto);
+        const string sql = @"INSERT INTO reimbursements (id, list_id, from_user_id, to_user_id, amount, currency, status, completed_at, server_timestamp, created_at)
+            VALUES (@Id, @ListId, @FromUserId, @ToUserId, @Amount, @Currency, @StatusText, @CompletedAt, @ServerTimestamp, @CreatedAt)
+            RETURNING {ReimbursementProjection}";
 
-        return response.Models.First().ToModel();
+        var parameters = new
+        {
+            reimbursement.Id,
+            reimbursement.ListId,
+            reimbursement.FromUserId,
+            reimbursement.ToUserId,
+            reimbursement.Amount,
+            reimbursement.Currency,
+            StatusText = reimbursement.Status == ReimbursementStatus.Completed ? "completed" : "pending",
+            reimbursement.CompletedAt,
+            reimbursement.ServerTimestamp,
+            reimbursement.CreatedAt
+        };
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ReimbursementDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task<Reimbursement> UpdateAsync(Reimbursement reimbursement)
     {
-        var client = supabase.GetClient();
-        var dto = ReimbursementDto.FromModel(reimbursement);
+        reimbursement.ServerTimestamp = DateTime.UtcNow;
 
-        var response = await client.From<ReimbursementDto>()
-            .Update(dto);
+        const string sql = @"UPDATE reimbursements SET
+                amount = @Amount,
+                currency = @Currency,
+                status = @StatusText,
+                completed_at = @CompletedAt,
+                server_timestamp = @ServerTimestamp
+            WHERE id = @Id
+            RETURNING {ReimbursementProjection}";
 
-        return response.Models.First().ToModel();
+        var parameters = new
+        {
+            reimbursement.Id,
+            reimbursement.Amount,
+            reimbursement.Currency,
+            StatusText = reimbursement.Status == ReimbursementStatus.Completed ? "completed" : "pending",
+            reimbursement.CompletedAt,
+            reimbursement.ServerTimestamp
+        };
+
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleAsync<ReimbursementDto>(sql, parameters);
+        return dto.ToModel();
     }
 
     public async Task<int> GenerateReimbursementsForListAsync(Guid listId)
     {
-        var client = supabase.GetClient();
+        const string calculationSql = @"SELECT from_user_id AS \"FromUserId\", to_user_id AS \"ToUserId\", amount AS \"Amount\" FROM calculate_optimized_reimbursements(@ListId)";
+        const string insertSql = @"INSERT INTO reimbursements (id, list_id, from_user_id, to_user_id, amount, currency, status, server_timestamp, created_at)
+            VALUES (@Id, @ListId, @FromUserId, @ToUserId, @Amount, 'EUR', 'pending', @ServerTimestamp, @CreatedAt)";
 
-        // Chiama la stored procedure per generare rimborsi ottimizzati
-        var result = await client.Rpc("generate_reimbursements_for_list", new Dictionary<string, object>
+        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        var suggestions = await connection.QueryAsync<ReimbursementSuggestion>(calculationSql, new { ListId = listId });
+
+        var inserted = 0;
+        foreach (var suggestion in suggestions)
         {
-            { "list_id_param", listId }
-        });
+            if (suggestion.Amount <= 0) continue;
 
-        return 0; // TODO: parse result from stored procedure
+            inserted += await connection.ExecuteAsync(insertSql, new
+            {
+                Id = Guid.NewGuid(),
+                ListId = listId,
+                suggestion.FromUserId,
+                suggestion.ToUserId,
+                suggestion.Amount,
+                ServerTimestamp = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        return inserted;
     }
 }
 
-// DTO class per Supabase
-[Table("reimbursements")]
-public class ReimbursementDto : BaseModel
+internal class ReimbursementDto
 {
-    [PrimaryKey("id")] public Guid Id { get; set; }
-
-    [Column("list_id")] public Guid ListId { get; set; }
-
-    [Column("from_user_id")] public Guid FromUserId { get; set; }
-
-    [Column("to_user_id")] public Guid ToUserId { get; set; }
-
-    [Column("amount")] public decimal Amount { get; set; }
-
-    [Column("currency")] public string Currency { get; set; } = "EUR";
-
-    [Column("status")] public string Status { get; set; } = "pending";
-
-    [Column("completed_at")] public DateTime? CompletedAt { get; set; }
-
-    [Column("server_timestamp")] public DateTime ServerTimestamp { get; set; }
-
-    [Column("created_at")] public DateTime CreatedAt { get; set; }
+    public Guid Id { get; set; }
+    public Guid ListId { get; set; }
+    public Guid FromUserId { get; set; }
+    public Guid ToUserId { get; set; }
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "EUR";
+    public string Status { get; set; } = "pending";
+    public DateTime? CompletedAt { get; set; }
+    public DateTime ServerTimestamp { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     public Reimbursement ToModel()
     {
@@ -131,21 +167,6 @@ public class ReimbursementDto : BaseModel
             CreatedAt = CreatedAt
         };
     }
-
-    public static ReimbursementDto FromModel(Reimbursement reimbursement)
-    {
-        return new ReimbursementDto
-        {
-            Id = reimbursement.Id,
-            ListId = reimbursement.ListId,
-            FromUserId = reimbursement.FromUserId,
-            ToUserId = reimbursement.ToUserId,
-            Amount = reimbursement.Amount,
-            Currency = reimbursement.Currency,
-            Status = reimbursement.Status == ReimbursementStatus.Completed ? "completed" : "pending",
-            CompletedAt = reimbursement.CompletedAt,
-            ServerTimestamp = reimbursement.ServerTimestamp,
-            CreatedAt = reimbursement.CreatedAt
-        };
-    }
 }
+
+internal record ReimbursementSuggestion(Guid FromUserId, Guid ToUserId, decimal Amount);
