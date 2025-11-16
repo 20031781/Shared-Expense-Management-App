@@ -1,31 +1,33 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View,} from 'react-native';
 import {Button, Input} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from '@i18n';
+import {AppColors, useAppTheme} from '@theme';
 
 export const CreateListScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const {createList, isLoading} = useListsStore();
+    const {t} = useTranslation();
+    const {colors} = useAppTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const [name, setName] = useState('');
     const [error, setError] = useState('');
 
     const handleCreate = async () => {
         if (!name.trim()) {
-            setError('List name is required');
+            setError(t('lists.nameRequired'));
             return;
         }
 
         try {
             const list = await createList(name.trim());
-            Alert.alert('Success', 'List created successfully', [
-                {
-                    text: 'OK',
-                    onPress: () => navigation.navigate('ListDetails', {listId: list.id}),
-                },
+            Alert.alert(t('common.success'), t('lists.createSuccess'), [
+                {text: t('common.ok'), onPress: () => navigation.navigate('ListDetails', {listId: list.id})},
             ]);
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to create list');
+            Alert.alert(t('common.error'), error.message || t('lists.createError'));
         }
     };
 
@@ -35,14 +37,12 @@ export const CreateListScreen: React.FC = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.title}>Create New List</Text>
-                <Text style={styles.subtitle}>
-                    Give your expense list a name to get started
-                </Text>
+                <Text style={styles.title}>{t('lists.createListTitle')}</Text>
+                <Text style={styles.subtitle}>{t('lists.createListSubtitle')}</Text>
 
                 <Input
-                    label="List Name"
-                    placeholder="e.g., Weekend Trip, Apartment, etc."
+                    label={t('lists.nameLabel')}
+                    placeholder={t('lists.namePlaceholder')}
                     value={name}
                     onChangeText={(text) => {
                         setName(text);
@@ -54,14 +54,14 @@ export const CreateListScreen: React.FC = () => {
 
                 <View style={styles.buttons}>
                     <Button
-                        title="Create List"
+                        title={t('lists.createList')}
                         onPress={handleCreate}
                         loading={isLoading}
                         disabled={isLoading}
                         style={styles.button}
                     />
                     <Button
-                        title="Cancel"
+                        title={t('common.cancel')}
                         onPress={() => navigation.goBack()}
                         variant="secondary"
                         disabled={isLoading}
@@ -73,29 +73,30 @@ export const CreateListScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-    },
-    content: {
-        padding: 24,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#000000',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#8E8E93',
-        marginBottom: 32,
-    },
-    buttons: {
-        marginTop: 24,
-    },
-    button: {
-        marginBottom: 12,
-    },
-});
+const createStyles = (colors: AppColors) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        content: {
+            padding: 24,
+            gap: 20,
+        },
+        title: {
+            fontSize: 28,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        subtitle: {
+            fontSize: 16,
+            color: colors.secondaryText,
+        },
+        buttons: {
+            marginTop: 24,
+            gap: 12,
+        },
+        button: {
+            width: '100%',
+        },
+    });

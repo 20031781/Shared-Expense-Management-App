@@ -16,6 +16,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                                           google_id AS "GoogleId",
                                           password_hash AS "PasswordHash",
                                           default_currency AS "DefaultCurrency",
+                                          is_admin AS "IsAdmin",
                                           COALESCE(notification_preferences::text, '{}') AS "NotificationPreferencesJson",
                                           created_at AS "CreatedAt",
                                           updated_at AS "UpdatedAt"
@@ -58,8 +59,8 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
 
         const string sql = $"""
                             INSERT INTO users (
-                            id, email, full_name, picture_url, google_id, password_hash, default_currency, notification_preferences, created_at, updated_at)
-                            VALUES (@Id, @Email, @FullName, @PictureUrl, @GoogleId, @PasswordHash, @DefaultCurrency, CAST(@NotificationPreferencesJson AS jsonb), @CreatedAt, @UpdatedAt)
+                            id, email, full_name, picture_url, google_id, password_hash, default_currency, is_admin, notification_preferences, created_at, updated_at)
+                            VALUES (@Id, @Email, @FullName, @PictureUrl, @GoogleId, @PasswordHash, @DefaultCurrency, @IsAdmin, CAST(@NotificationPreferencesJson AS jsonb), @CreatedAt, @UpdatedAt)
                             RETURNING {UserProjection}
                             """;
 
@@ -81,6 +82,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                             google_id = @GoogleId,
                             password_hash = @PasswordHash,
                             default_currency = @DefaultCurrency,
+                            is_admin = @IsAdmin,
                             notification_preferences = CAST(@NotificationPreferencesJson AS jsonb),
                             updated_at = @UpdatedAt
                             WHERE id = @Id
@@ -168,6 +170,7 @@ internal class UserDto
     public string? GoogleId { get; init; }
     public string? PasswordHash { get; init; }
     public string DefaultCurrency { get; init; } = "EUR";
+    public bool IsAdmin { get; init; }
     public string NotificationPreferencesJson { get; init; } = "{}";
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
@@ -186,6 +189,7 @@ internal class UserDto
             GoogleId = GoogleId,
             PasswordHash = PasswordHash,
             DefaultCurrency = DefaultCurrency,
+            IsAdmin = IsAdmin,
             NotificationPreferences = prefs,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt
@@ -202,6 +206,7 @@ internal class UserDto
             GoogleId = user.GoogleId,
             PasswordHash = user.PasswordHash,
             DefaultCurrency = user.DefaultCurrency,
+            IsAdmin = user.IsAdmin,
             NotificationPreferencesJson = JsonSerializer.Serialize(user.NotificationPreferences),
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

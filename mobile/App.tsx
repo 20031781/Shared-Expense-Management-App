@@ -11,6 +11,7 @@ import {AuthNavigator, MainNavigator} from '@navigation/AppNavigator';
 import {useAuthStore} from '@store/auth.store';
 import {Loading} from '@/components';
 import {LanguageProvider} from '@i18n';
+import {ThemeProvider, useAppTheme} from '@theme';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -21,8 +22,9 @@ const queryClient = new QueryClient({
     },
 });
 
-export default function App() {
+const AppContent = () => {
     const {isAuthenticated, isLoading, initialize} = useAuthStore();
+    const {navigationTheme, statusBarStyle, colors} = useAppTheme();
 
     useEffect(() => {
         initialize();
@@ -35,16 +37,23 @@ export default function App() {
     return (
         <LanguageProvider>
             <QueryClientProvider client={queryClient}>
-                <GestureHandlerRootView style={{flex: 1}}>
+                <GestureHandlerRootView style={{flex: 1, backgroundColor: colors.background}}>
                     <SafeAreaProvider>
-                        <NavigationContainer>
+                        <NavigationContainer theme={navigationTheme}>
                             {isAuthenticated ? <MainNavigator/> : <AuthNavigator/>}
-                            {/*<MainNavigator />*/}
                         </NavigationContainer>
-                        <StatusBar style="auto"/>
+                        <StatusBar style={statusBarStyle}/>
                     </SafeAreaProvider>
                 </GestureHandlerRootView>
             </QueryClientProvider>
         </LanguageProvider>
+    );
+};
+
+export default function App() {
+    return (
+        <ThemeProvider>
+            <AppContent/>
+        </ThemeProvider>
     );
 }

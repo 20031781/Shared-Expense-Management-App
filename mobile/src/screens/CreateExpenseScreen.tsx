@@ -18,12 +18,15 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {useListsStore} from '@/store/lists.store';
 import {ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
+import {AppColors, useAppTheme} from '@theme';
 
 export const CreateExpenseScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const {listId} = route.params;
     const {t} = useTranslation();
+    const {colors} = useAppTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const {createExpense, uploadReceipt, isLoading} = useExpensesStore();
     const {members, fetchMembers} = useListsStore();
@@ -75,7 +78,7 @@ export const CreateExpenseScreen: React.FC = () => {
         const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
         if (status !== 'granted') {
-            Alert.alert(t('common.error'), 'Please allow access to your photos');
+            Alert.alert(t('common.error'), t('expenses.permissionPhotos'));
             return;
         }
 
@@ -95,7 +98,7 @@ export const CreateExpenseScreen: React.FC = () => {
         const {status} = await ImagePicker.requestCameraPermissionsAsync();
 
         if (status !== 'granted') {
-            Alert.alert(t('common.error'), 'Please allow access to your camera');
+            Alert.alert(t('common.error'), t('expenses.permissionCamera'));
             return;
         }
 
@@ -153,9 +156,9 @@ export const CreateExpenseScreen: React.FC = () => {
             >
                 <View>
                     <Text style={styles.memberEmail}>{member.email}</Text>
-                    <Text style={styles.memberMeta}>{member.splitPercentage}%</Text>
+                    <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
                 </View>
-                {isSelected && <Ionicons name="checkmark-circle" size={20} color="#34C759"/>}
+                {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
             </TouchableOpacity>
         );
     };
@@ -202,7 +205,7 @@ export const CreateExpenseScreen: React.FC = () => {
                         <Text style={selectedMember ? styles.payerValue : styles.payerPlaceholder}>
                             {selectedMember?.email || t('expenses.payerPlaceholder')}
                         </Text>
-                        <Ionicons name="chevron-down" size={20} color="#8E8E93"/>
+                        <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
                     </TouchableOpacity>
                     {errors.payer && <Text style={styles.errorText}>{errors.payer}</Text>}
                     <Text style={styles.helperText}>
@@ -224,22 +227,22 @@ export const CreateExpenseScreen: React.FC = () => {
 
                     <View style={styles.receiptButtons}>
                         <TouchableOpacity style={styles.receiptButton} onPress={handleTakePhoto}>
-                            <Ionicons name="camera-outline" size={24} color="#007AFF"/>
+                            <Ionicons name="camera-outline" size={24} color={colors.accent}/>
                             <Text style={styles.receiptButtonText}>{t('expenses.addReceiptCamera')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.receiptButton} onPress={handlePickImage}>
-                            <Ionicons name="images-outline" size={24} color="#007AFF"/>
+                            <Ionicons name="images-outline" size={24} color={colors.accent}/>
                             <Text style={styles.receiptButtonText}>{t('expenses.addReceiptGallery')}</Text>
                         </TouchableOpacity>
                     </View>
 
                     {receiptUri && (
                         <View style={styles.receiptPreview}>
-                            <Ionicons name="checkmark-circle" size={24} color="#34C759"/>
-                            <Text style={styles.receiptPreviewText}>Receipt added</Text>
+                            <Ionicons name="checkmark-circle" size={24} color={colors.success}/>
+                            <Text style={styles.receiptPreviewText}>{t('expenses.receiptAdded')}</Text>
                             <TouchableOpacity onPress={() => setReceiptUri(null)}>
-                                <Ionicons name="close-circle" size={24} color="#FF3B30"/>
+                                <Ionicons name="close-circle" size={24} color={colors.danger}/>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -269,7 +272,7 @@ export const CreateExpenseScreen: React.FC = () => {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{t('expenses.payerLabel')}</Text>
                             <TouchableOpacity onPress={() => setShowPayerPicker(false)}>
-                                <Ionicons name="close" size={24} color="#1C1C1E"/>
+                                <Ionicons name="close" size={24} color={colors.text}/>
                             </TouchableOpacity>
                         </View>
                         <ScrollView>
@@ -282,143 +285,145 @@ export const CreateExpenseScreen: React.FC = () => {
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F2F2F7',
-    },
-    content: {
-        padding: 16,
-        gap: 16,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1C1C1E',
-    },
-    payerSection: {
-        gap: 8,
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1C1C1E',
-    },
-    payerSelector: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 12,
-        paddingVertical: 14,
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#D1D1D6',
-        backgroundColor: '#FFFFFF',
-    },
-    payerSelectorEmpty: {
-        borderColor: '#FF3B30',
-    },
-    payerValue: {
-        fontSize: 16,
-        color: '#1C1C1E',
-    },
-    payerPlaceholder: {
-        fontSize: 16,
-        color: '#8E8E93',
-    },
-    helperText: {
-        fontSize: 12,
-        color: '#8E8E93',
-    },
-    errorText: {
-        fontSize: 12,
-        color: '#FF3B30',
-    },
-    receiptSection: {
-        gap: 12,
-    },
-    receiptButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        gap: 12,
-    },
-    receiptButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 10,
-        backgroundColor: '#E5F1FF',
-        gap: 8,
-    },
-    receiptButtonText: {
-        color: '#007AFF',
-        fontWeight: '600',
-    },
-    receiptPreview: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#F0FBF4',
-        padding: 12,
-        borderRadius: 10,
-    },
-    receiptPreviewText: {
-        color: '#1C1C1E',
-        fontWeight: '600',
-        flex: 1,
-    },
-    buttons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    button: {
-        flex: 1,
-    },
-    modalBackdrop: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        maxHeight: '60%',
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingBottom: 16,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#E5E5EA',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    memberOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 14,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: '#EFEFF4',
-    },
-    memberOptionSelected: {
-        backgroundColor: '#F0FBF4',
-    },
-    memberEmail: {
-        fontSize: 16,
-        color: '#1C1C1E',
-    },
-    memberMeta: {
-        fontSize: 12,
-        color: '#8E8E93',
-    },
-});
+const createStyles = (colors: AppColors) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        content: {
+            padding: 16,
+            gap: 16,
+        },
+        title: {
+            fontSize: 24,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        payerSection: {
+            gap: 8,
+        },
+        label: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        payerSelector: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 12,
+            paddingVertical: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+        },
+        payerSelectorEmpty: {
+            borderColor: colors.danger,
+        },
+        payerValue: {
+            fontSize: 16,
+            color: colors.text,
+        },
+        payerPlaceholder: {
+            fontSize: 16,
+            color: colors.secondaryText,
+        },
+        helperText: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        errorText: {
+            fontSize: 12,
+            color: colors.danger,
+        },
+        receiptSection: {
+            gap: 12,
+        },
+        receiptButtons: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            gap: 12,
+        },
+        receiptButton: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRadius: 10,
+            backgroundColor: colors.accentSoft,
+            gap: 8,
+        },
+        receiptButtonText: {
+            color: colors.accent,
+            fontWeight: '600',
+        },
+        receiptPreview: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            backgroundColor: colors.successBackground,
+            padding: 12,
+            borderRadius: 10,
+        },
+        receiptPreviewText: {
+            color: colors.text,
+            fontWeight: '600',
+            flex: 1,
+        },
+        buttons: {
+            flexDirection: 'row',
+            gap: 12,
+        },
+        button: {
+            flex: 1,
+        },
+        modalBackdrop: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.3)',
+            justifyContent: 'flex-end',
+        },
+        modalContent: {
+            maxHeight: '60%',
+            backgroundColor: colors.surface,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            paddingBottom: 16,
+        },
+        modalHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 20,
+            paddingVertical: 12,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.surfaceSecondary,
+        },
+        modalTitle: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        memberOption: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 20,
+            paddingVertical: 14,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.surfaceSecondary,
+        },
+        memberOptionSelected: {
+            backgroundColor: colors.surfaceSecondary,
+        },
+        memberEmail: {
+            fontSize: 16,
+            color: colors.text,
+        },
+        memberMeta: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+    });

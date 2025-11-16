@@ -1,9 +1,10 @@
-import React, {useState} from 'react';
-import {Alert, StyleSheet, Switch, Text, View} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {Alert, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Input} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useTranslation} from '@i18n';
+import {AppColors, useAppTheme} from '@theme';
 
 export const AddMemberScreen: React.FC = () => {
     const {t} = useTranslation();
@@ -12,20 +13,17 @@ export const AddMemberScreen: React.FC = () => {
     const {listId} = route.params;
 
     const {addMember, isLoading} = useListsStore();
+    const {colors} = useAppTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [email, setEmail] = useState('');
-    const [split, setSplit] = useState('50');
     const [isValidator, setIsValidator] = useState(false);
-    const [errors, setErrors] = useState<{email?: string; split?: string}>({});
+    const [errors, setErrors] = useState<{email?: string}>({});
 
     const validate = () => {
-        const nextErrors: {email?: string; split?: string} = {};
+        const nextErrors: {email?: string} = {};
         if (!email.trim()) {
             nextErrors.email = t('members.emailRequired');
-        }
-        const parsedSplit = parseFloat(split);
-        if (Number.isNaN(parsedSplit) || parsedSplit < 0 || parsedSplit > 100) {
-            nextErrors.split = t('members.splitRequired');
         }
         setErrors(nextErrors);
         return Object.keys(nextErrors).length === 0;
@@ -34,7 +32,7 @@ export const AddMemberScreen: React.FC = () => {
     const handleSubmit = async () => {
         if (!validate()) return;
         try {
-            await addMember(listId, email.trim(), parseFloat(split), isValidator);
+            await addMember(listId, email.trim(), isValidator);
             Alert.alert(t('common.success'), t('members.successBody'), [
                 {text: t('common.ok'), onPress: () => navigation.goBack()},
             ]);
@@ -44,8 +42,9 @@ export const AddMemberScreen: React.FC = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>{t('members.title')}</Text>
+            <Text style={styles.description}>{t('members.splitInfo')}</Text>
             <Input
                 label={t('members.emailLabel')}
                 placeholder="john@example.com"
@@ -58,23 +57,17 @@ export const AddMemberScreen: React.FC = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
             />
-            <Input
-                label={t('members.splitLabel')}
-                placeholder="50"
-                value={split}
-                onChangeText={(value) => {
-                    setSplit(value);
-                    setErrors((prev) => ({...prev, split: undefined}));
-                }}
-                error={errors.split}
-                keyboardType="numeric"
-            />
-            <View style={styles.switchRow}>
-                <View>
+            <View style={styles.switchCard}>
+                <View style={styles.switchTextWrapper}>
                     <Text style={styles.switchLabel}>{t('members.validatorLabel')}</Text>
                     <Text style={styles.switchHint}>{t('members.validatorHint')}</Text>
                 </View>
-                <Switch value={isValidator} onValueChange={setIsValidator}/>
+                <Switch
+                    value={isValidator}
+                    onValueChange={setIsValidator}
+                    trackColor={{false: colors.surfaceSecondary, true: colors.accent}}
+                    thumbColor={isValidator ? colors.accentText : colors.surface}
+                />
             </View>
             <Button title={t('members.submit')} onPress={handleSubmit} loading={isLoading} disabled={isLoading}/>
             <Button
@@ -84,40 +77,50 @@ export const AddMemberScreen: React.FC = () => {
                 style={styles.cancelButton}
                 disabled={isLoading}
             />
-        </View>
+        </ScrollView>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 16,
-        backgroundColor: '#FFFFFF',
-        gap: 16,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: '700',
-        marginBottom: 8,
-        color: '#1C1C1E',
-    },
-    switchRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingVertical: 12,
-    },
-    switchLabel: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1C1C1E',
-    },
-    switchHint: {
-        fontSize: 12,
-        color: '#8E8E93',
-        marginTop: 4,
-    },
-    cancelButton: {
-        marginTop: 8,
-    },
-});
+const createStyles = (colors: AppColors) =>
+    StyleSheet.create({
+        container: {
+            flexGrow: 1,
+            padding: 20,
+            gap: 16,
+            backgroundColor: colors.background,
+        },
+        title: {
+            fontSize: 24,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        description: {
+            fontSize: 14,
+            color: colors.secondaryText,
+        },
+        switchCard: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 16,
+            borderRadius: 16,
+            backgroundColor: colors.surface,
+        },
+        switchTextWrapper: {
+            flex: 1,
+            paddingRight: 12,
+            gap: 4,
+        },
+        switchLabel: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        switchHint: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        cancelButton: {
+            marginTop: 8,
+        },
+    });

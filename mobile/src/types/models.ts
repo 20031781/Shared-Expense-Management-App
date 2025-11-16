@@ -5,6 +5,7 @@ export interface User {
     googleId?: string;
     pictureUrl?: string;
     defaultCurrency?: string;
+    isAdmin?: boolean;
     createdAt: string;
     updatedAt: string;
 }

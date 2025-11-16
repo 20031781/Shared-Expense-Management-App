@@ -88,6 +88,7 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
         const string sql = """
                            UPDATE lists SET
                            name = @Name,
+                           admin_id = @AdminId,
                            invite_code = @InviteCode,
                            updated_at = @UpdatedAt
                            WHERE id = @Id
@@ -112,8 +113,8 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
         if (member.CreatedAt == default)
             member.CreatedAt = DateTime.UtcNow;
 
-        const string sql =
-            """
+        var sql =
+            $"""
             INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
             VALUES (@Id, @ListId, @UserId, @Email, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
             RETURNING {MemberProjection}
@@ -139,17 +140,17 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
 
     public async Task<ListMember> UpdateMemberAsync(ListMember member)
     {
-        const string sql = """
-                           UPDATE list_members SET
-                           user_id = @UserId,
-                           email = @Email,
-                           split_percentage = @SplitPercentage,
-                           is_validator = @IsValidator,
-                           status = @StatusText,
-                           joined_at = @JoinedAt
-                           WHERE id = @Id
-                           RETURNING {MemberProjection}
-                           """;
+        var sql = $"""
+                   UPDATE list_members SET
+                   user_id = @UserId,
+                   email = @Email,
+                   split_percentage = @SplitPercentage,
+                   is_validator = @IsValidator,
+                   status = @StatusText,
+                   joined_at = @JoinedAt
+                   WHERE id = @Id
+                   RETURNING {MemberProjection}
+                   """;
 
         var parameters = new
         {
@@ -181,6 +182,21 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql, new { MemberId = memberId });
         return dto?.ToModel();
+    }
+
+    public async Task<ListMember?> GetMemberByUserAsync(Guid listId, Guid userId)
+    {
+        const string sql = $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId AND user_id = @UserId LIMIT 1";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql, new { ListId = listId, UserId = userId });
+        return dto?.ToModel();
+    }
+
+    public async Task RemoveMemberAsync(Guid memberId)
+    {
+        const string sql = "DELETE FROM list_members WHERE id = @Id";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        await connection.ExecuteAsync(sql, new { Id = memberId });
     }
 
     private static string GenerateInviteCode()

@@ -1,6 +1,8 @@
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Npgsql;
 using SplitExpenses.Api.Models;
 using SplitExpenses.Api.Repositories;
 using SplitExpenses.Api.Services;
@@ -10,11 +12,22 @@ namespace SplitExpenses.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class ExpensesController(
-    IExpenseRepository expenseRepository,
-    INotificationService notificationService)
-    : ControllerBase
+public class ExpensesController : ControllerBase
 {
+    private readonly IExpenseRepository expenseRepository;
+    private readonly INotificationService notificationService;
+    private readonly IListRepository listRepository;
+
+    public ExpensesController(
+        IExpenseRepository expenseRepository,
+        INotificationService notificationService,
+        IListRepository listRepository)
+    {
+        this.expenseRepository = expenseRepository;
+        this.notificationService = notificationService;
+        this.listRepository = listRepository;
+    }
+
     [HttpGet("list/{listId}")]
     public async Task<IActionResult> GetListExpenses(Guid listId, [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate)
@@ -27,7 +40,7 @@ public class ExpensesController(
     public async Task<IActionResult> GetUserExpenses([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
-        var expenses = await _expenseRepository.GetUserExpensesAsync(userId, fromDate, toDate);
+        var expenses = await expenseRepository.GetUserExpensesAsync(userId, fromDate, toDate);
         return Ok(expenses);
     }
 
@@ -91,10 +104,22 @@ public class ExpensesController(
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
         if (expense.AuthorId != userId || expense.Status != ExpenseStatus.Draft) return Forbid();
 
+        var members = await listRepository.GetListMembersAsync(expense.ListId);
+        var activeValidators = members
+            .Where(m => m.IsValidator && m.Status == MemberStatus.Active && m.UserId.HasValue)
+            .Where(m => m.UserId != expense.AuthorId)
+            .ToList();
+
+        if (activeValidators.Count == 0)
+            return BadRequest("At least one active validator is required to submit expenses.");
+
         expense.Status = ExpenseStatus.Submitted;
         await expenseRepository.UpdateAsync(expense);
 
         // Invia notifiche ai validatori
+        foreach (var validator in activeValidators)
+            await notificationService.SendValidationRequestNotificationAsync(id, validator.UserId!.Value);
+
         await notificationService.SendNewExpenseNotificationAsync(id);
 
         return Ok(expense);
@@ -105,6 +130,19 @@ public class ExpensesController(
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
 
+        var expense = await expenseRepository.GetByIdAsync(id);
+        if (expense == null) return NotFound();
+        if (expense.Status != ExpenseStatus.Submitted)
+            return BadRequest("Expense is not awaiting validation");
+
+        var members = await listRepository.GetListMembersAsync(expense.ListId);
+        var validators = members
+            .Where(m => m.IsValidator && m.Status == MemberStatus.Active && m.UserId.HasValue)
+            .Where(m => m.UserId != expense.AuthorId)
+            .ToList();
+
+        if (validators.All(v => v.UserId != userId)) return Forbid();
+
         var validation = new ExpenseValidation
         {
             ExpenseId = id,
@@ -113,12 +151,36 @@ public class ExpensesController(
             Notes = request.Notes
         };
 
-        await expenseRepository.AddValidationAsync(validation);
+        try
+        {
+            await expenseRepository.AddValidationAsync(validation);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+        {
+            return Conflict(new { message = "Validation already recorded" });
+        }
 
-        // Un trigger a livello di database aggiorna automaticamente lo stato della spesa
-        await notificationService.SendValidationResultNotificationAsync(id, request.Approved);
+        if (!request.Approved)
+        {
+            await expenseRepository.UpdateStatusAsync(id, ExpenseStatus.Rejected);
+            await notificationService.SendValidationResultNotificationAsync(id, false);
+            return Ok(new { message = "Validation recorded", status = ExpenseStatus.Rejected.ToString().ToLower() });
+        }
 
-        return Ok(new { message = "Validation recorded" });
+        var validations = await expenseRepository.GetExpenseValidationsAsync(id);
+        var approvedCount = validations.Count(v => v.Status == ValidationStatus.Validated);
+        if (approvedCount >= validators.Count)
+        {
+            await expenseRepository.UpdateStatusAsync(id, ExpenseStatus.Validated);
+            await notificationService.SendValidationResultNotificationAsync(id, true);
+            return Ok(new { message = "Validation recorded", status = ExpenseStatus.Validated.ToString().ToLower() });
+        }
+
+        return Ok(new
+        {
+            message = "Validation recorded",
+            status = ExpenseStatus.Submitted.ToString().ToLower()
+        });
     }
 
     [HttpGet("{id}/splits")]

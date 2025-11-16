@@ -6,8 +6,9 @@ import {useListsStore} from '@/store/lists.store';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useAuthStore} from '@/store/auth.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {Expense, ListMember} from '@/types';
+import {Expense, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
+import {AppColors, useAppTheme} from '@theme';
 
 type SummaryFilter = '7' | '30' | '90' | 'all';
 
@@ -16,6 +17,8 @@ export const ListDetailsScreen: React.FC = () => {
     const route = useRoute<any>();
     const {listId} = route.params;
     const {t} = useTranslation();
+    const {colors} = useAppTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     const {user} = useAuthStore();
     const {currentList, members, fetchListById, fetchMembers} = useListsStore();
@@ -51,6 +54,10 @@ export const ListDetailsScreen: React.FC = () => {
         navigation.navigate('AddMember', {listId});
     };
 
+    const handleEditMember = (member: ListMember) => {
+        navigation.navigate('EditMember', {listId, memberId: member.id});
+    };
+
     const handleExpensePress = (expense: Expense) => {
         navigation.navigate('ExpenseDetails', {expenseId: expense.id});
     };
@@ -61,15 +68,8 @@ export const ListDetailsScreen: React.FC = () => {
         const inviteCode = currentList.inviteCode;
         Alert.alert(
             t('lists.invite'),
-            `Share this code with others to invite them:\n\n${inviteCode}`,
-            [
-                {
-                    text: 'Copy', onPress: () => {
-                        Alert.alert(t('common.success'), 'Invite code copied to clipboard');
-                    }
-                },
-                {text: t('common.close'), style: 'cancel'},
-            ]
+            t('lists.inviteDescription', {code: inviteCode}),
+            [{text: t('common.close'), style: 'cancel'}]
         );
     };
 
@@ -108,13 +108,20 @@ export const ListDetailsScreen: React.FC = () => {
         return <Loading/>;
     }
 
-    const isAdmin = currentList.adminId === user?.id;
+    const isAdmin = currentList.adminId === user?.id || !!user?.isAdmin;
     const currency = expenses[0]?.currency ?? 'EUR';
 
     const renderExpense = (expense: Expense) => {
         const payer = expense.paidByMemberId ? memberMap.get(expense.paidByMemberId) : undefined;
+        const statusKey = (expense.status as string).toLowerCase();
+        const statusLabel = t(`expenses.status.${statusKey}`);
+        const awaitingValidation = statusKey === 'submitted';
         return (
-            <Card key={expense.id} onPress={() => handleExpensePress(expense)}>
+            <Card
+                key={expense.id}
+                onPress={() => handleExpensePress(expense)}
+                style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
+            >
                 <View style={styles.expenseItem}>
                     <View style={styles.expenseInfo}>
                         <Text style={styles.expenseTitle}>{expense.title}</Text>
@@ -132,35 +139,54 @@ export const ListDetailsScreen: React.FC = () => {
                         <Text style={styles.expenseAmount}>
                             {currency} {expense.amount.toFixed(2)}
                         </Text>
-                        <View style={[styles.statusBadge, styles[`status${expense.status}`]]}>
-                            <Text style={styles.statusText}>{expense.status}</Text>
+                        <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
+                            <Text style={styles.statusText}>{statusLabel}</Text>
                         </View>
+                        {awaitingValidation && (
+                            <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>
+                        )}
                     </View>
                 </View>
             </Card>
         );
     };
 
-    const renderMember = (member: ListMember) => (
-        <Card key={member.id}>
-            <View style={styles.memberItem}>
-                <View style={styles.memberInfo}>
-                    <Text style={styles.memberEmail}>{member.email}</Text>
-                    <View style={styles.memberBadges}>
-                        <Text style={styles.memberSplit}>{member.splitPercentage}%</Text>
-                        {member.isValidator && (
-                            <View style={styles.validatorBadge}>
-                                <Ionicons name="shield-checkmark" size={14} color="#34C759"/>
-                                <Text style={styles.validatorText}>Validator</Text>
-                            </View>
+    const renderMember = (member: ListMember) => {
+        const isActive = member.status === MemberStatus.Active;
+        const label = member.email || member.user?.fullName || t('members.unknown');
+        return (
+            <Card key={member.id} style={styles.memberCard}>
+                <View style={styles.memberItem}>
+                    <View style={styles.memberInfo}>
+                        <Text style={styles.memberEmail}>{label}</Text>
+                        <View style={styles.memberBadges}>
+                            <Text style={styles.memberSplit}>
+                                {t('members.splitValue', {value: member.splitPercentage ?? 0})}
+                        </Text>
+                            {member.isValidator && (
+                                <View style={styles.validatorBadge}>
+                                    <Ionicons name="shield-checkmark" size={14} color={colors.success}/>
+                                    <Text style={styles.validatorText}>{t('members.validatorBadge')}</Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                    <View style={styles.memberActions}>
+                        <View
+                            style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
+                        {isAdmin && (
+                            <TouchableOpacity
+                                onPress={() => handleEditMember(member)}
+                                style={styles.memberActionButton}
+                            >
+                                <Ionicons name="create-outline" size={18} color={colors.accent}/>
+                            </TouchableOpacity>
                         )}
                     </View>
                 </View>
-                <View
-                    style={[styles.statusDot, member.status === 'active' ? styles.activeStatus : styles.pendingStatus]}/>
-            </View>
-        </Card>
-    );
+            </Card>
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -173,7 +199,7 @@ export const ListDetailsScreen: React.FC = () => {
                     <Text style={styles.listName}>{currentList.name}</Text>
                     {isAdmin && (
                         <TouchableOpacity onPress={handleShareInvite} style={styles.inviteButton}>
-                            <Ionicons name="share-outline" size={24} color="#007AFF"/>
+                            <Ionicons name="share-outline" size={24} color={colors.accent}/>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -205,20 +231,25 @@ export const ListDetailsScreen: React.FC = () => {
                         {perMemberBreakdown.length === 0 ? (
                             <Text style={styles.chartEmpty}>{t('lists.chartEmpty')}</Text>
                         ) : (
-                            perMemberBreakdown.map((item) => (
-                                <View key={item.memberId} style={styles.chartRow}>
-                                    <Text style={styles.chartLabel}>{item.member?.email ?? 'Unknown'}</Text>
-                                    <View style={styles.chartBarWrapper}>
-                                        <View
-                                            style={[
-                                                styles.chartBar,
-                                                {width: `${Math.max((item.amount / chartMax) * 100, 5)}%`},
-                                            ]}
-                                        />
+                            perMemberBreakdown.map((item) => {
+                                const memberLabel = item.member?.email
+                                    ?? item.member?.user?.fullName
+                                    ?? t('members.unknown');
+                                return (
+                                    <View key={item.memberId} style={styles.chartRow}>
+                                        <Text style={styles.chartLabel}>{memberLabel}</Text>
+                                        <View style={styles.chartBarWrapper}>
+                                            <View
+                                                style={[
+                                                    styles.chartBar,
+                                                    {width: `${Math.max((item.amount / chartMax) * 100, 5)}%`},
+                                                ]}
+                                            />
+                                        </View>
+                                        <Text style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
                                     </View>
-                                    <Text style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
-                                </View>
-                            ))
+                                );
+                            })
                         )}
                     </View>
                 </View>
@@ -273,284 +304,311 @@ export const ListDetailsScreen: React.FC = () => {
 
             {activeTab === 'expenses' && (
                 <TouchableOpacity style={styles.fab} onPress={handleAddExpense}>
-                    <Ionicons name="add" size={32} color="#FFFFFF"/>
+                    <Ionicons name="add" size={32} color={colors.accentText}/>
                 </TouchableOpacity>
             )}
 
             {activeTab === 'members' && isAdmin && (
                 <TouchableOpacity style={styles.fab} onPress={handleAddMember}>
-                    <Ionicons name="person-add" size={24} color="#FFFFFF"/>
+                    <Ionicons name="person-add" size={24} color={colors.accentText}/>
                 </TouchableOpacity>
             )}
         </View>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F2F2F7',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 16,
-    },
-    listName: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1C1C1E',
-    },
-    inviteButton: {
-        padding: 8,
-        borderRadius: 12,
-        backgroundColor: '#E5F1FF',
-    },
-    summaryCard: {
-        marginHorizontal: 16,
-        marginBottom: 16,
-        padding: 16,
-        borderRadius: 16,
-        backgroundColor: '#FFFFFF',
-        gap: 12,
-    },
-    summaryHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    summaryTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1C1C1E',
-    },
-    filterRow: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    filterChip: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 16,
-        backgroundColor: '#F2F2F7',
-    },
-    filterChipActive: {
-        backgroundColor: '#007AFF',
-    },
-    filterChipText: {
-        color: '#1C1C1E',
-        fontSize: 12,
-        fontWeight: '600',
-    },
-    filterChipTextActive: {
-        color: '#FFFFFF',
-    },
-    totalRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    totalLabel: {
-        fontSize: 16,
-        color: '#6C6C70',
-    },
-    totalValue: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#1C1C1E',
-    },
-    chartContainer: {
-        gap: 12,
-    },
-    chartEmpty: {
-        textAlign: 'center',
-        color: '#8E8E93',
-        fontSize: 14,
-    },
-    chartRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    chartLabel: {
-        flex: 1,
-        fontSize: 14,
-        color: '#1C1C1E',
-    },
-    chartBarWrapper: {
-        flex: 2,
-        height: 10,
-        backgroundColor: '#E5E5EA',
-        borderRadius: 8,
-        overflow: 'hidden',
-    },
-    chartBar: {
-        height: '100%',
-        backgroundColor: '#34C759',
-        borderRadius: 8,
-    },
-    chartValue: {
-        width: 90,
-        textAlign: 'right',
-        fontSize: 12,
-        color: '#1C1C1E',
-    },
-    tabs: {
-        flexDirection: 'row',
-        marginHorizontal: 16,
-        marginBottom: 12,
-        borderRadius: 12,
-        backgroundColor: '#E5E5EA',
-    },
-    tab: {
-        flex: 1,
-        paddingVertical: 12,
-        alignItems: 'center',
-        borderRadius: 12,
-    },
-    activeTab: {
-        backgroundColor: '#FFFFFF',
-    },
-    tabText: {
-        fontSize: 14,
-        color: '#8E8E93',
-        fontWeight: '600',
-    },
-    activeTabText: {
-        color: '#007AFF',
-    },
-    content: {
-        padding: 16,
-        gap: 12,
-    },
-    empty: {
-        alignItems: 'center',
-        padding: 24,
-        gap: 12,
-    },
-    emptyIcon: {
-        fontSize: 32,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#6C6C70',
-    },
-    expenseItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        gap: 16,
-    },
-    expenseInfo: {
-        flex: 1,
-        gap: 4,
-    },
-    expenseTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1C1C1E',
-    },
-    expenseMeta: {
-        fontSize: 12,
-        color: '#8E8E93',
-    },
-    expensePayer: {
-        fontSize: 12,
-        color: '#0A7C4A',
-        fontWeight: '600',
-    },
-    expenseRight: {
-        alignItems: 'flex-end',
-        gap: 8,
-    },
-    expenseAmount: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1C1C1E',
-    },
-    statusBadge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    statusdraft: {
-        backgroundColor: '#F2F2F7',
-    },
-    statussubmitted: {
-        backgroundColor: '#FFF4E5',
-    },
-    statusvalidated: {
-        backgroundColor: '#E5F7ED',
-    },
-    statusrejected: {
-        backgroundColor: '#FDE8E8',
-    },
-    statusText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#1C1C1E',
-    },
-    memberItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 16,
-    },
-    memberInfo: {
-        flex: 1,
-    },
-    memberEmail: {
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    memberBadges: {
-        flexDirection: 'row',
-        gap: 8,
-        marginTop: 4,
-    },
-    memberSplit: {
-        fontSize: 12,
-        color: '#8E8E93',
-    },
-    validatorBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        backgroundColor: '#E5F7ED',
-        borderRadius: 12,
-    },
-    validatorText: {
-        fontSize: 12,
-        color: '#0A7C4A',
-    },
-    statusDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-    },
-    activeStatus: {
-        backgroundColor: '#34C759',
-    },
-    pendingStatus: {
-        backgroundColor: '#FFCC00',
-    },
-    fab: {
-        position: 'absolute',
-        right: 16,
-        bottom: 16,
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#007AFF',
-        alignItems: 'center',
-        justifyContent: 'center',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: {width: 0, height: 2},
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-    },
-});
+const createStyles = (colors: AppColors) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
+        },
+        header: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: 16,
+        },
+        listName: {
+            fontSize: 24,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        inviteButton: {
+            padding: 8,
+            borderRadius: 12,
+            backgroundColor: colors.accentSoft,
+        },
+        summaryCard: {
+            marginHorizontal: 16,
+            marginBottom: 16,
+            padding: 16,
+            borderRadius: 16,
+            backgroundColor: colors.surface,
+            gap: 12,
+        },
+        summaryHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        summaryTitle: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        filterRow: {
+            flexDirection: 'row',
+            gap: 8,
+        },
+        filterChip: {
+            paddingHorizontal: 10,
+            paddingVertical: 6,
+            borderRadius: 16,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        filterChipActive: {
+            backgroundColor: colors.accent,
+        },
+        filterChipText: {
+            color: colors.secondaryText,
+            fontSize: 12,
+            fontWeight: '600',
+        },
+        filterChipTextActive: {
+            color: colors.accentText,
+        },
+        totalRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        totalLabel: {
+            fontSize: 16,
+            color: colors.secondaryText,
+        },
+        totalValue: {
+            fontSize: 24,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        chartContainer: {
+            gap: 12,
+        },
+        chartEmpty: {
+            textAlign: 'center',
+            color: colors.secondaryText,
+            fontSize: 14,
+        },
+        chartRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+        },
+        chartLabel: {
+            flex: 1,
+            fontSize: 14,
+            color: colors.text,
+        },
+        chartBarWrapper: {
+            flex: 2,
+            height: 10,
+            backgroundColor: colors.surfaceSecondary,
+            borderRadius: 8,
+            overflow: 'hidden',
+        },
+        chartBar: {
+            height: '100%',
+            backgroundColor: colors.success,
+            borderRadius: 8,
+        },
+        chartValue: {
+            width: 90,
+            textAlign: 'right',
+            fontSize: 12,
+            color: colors.text,
+        },
+        tabs: {
+            flexDirection: 'row',
+            marginHorizontal: 16,
+            marginBottom: 12,
+            borderRadius: 12,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        tab: {
+            flex: 1,
+            paddingVertical: 12,
+            alignItems: 'center',
+            borderRadius: 12,
+        },
+        activeTab: {
+            backgroundColor: colors.surface,
+        },
+        tabText: {
+            fontSize: 14,
+            color: colors.secondaryText,
+            fontWeight: '600',
+        },
+        activeTabText: {
+            color: colors.accent,
+        },
+        content: {
+            padding: 16,
+            gap: 12,
+        },
+        empty: {
+            alignItems: 'center',
+            padding: 24,
+            gap: 12,
+        },
+        emptyIcon: {
+            fontSize: 32,
+        },
+        emptyText: {
+            fontSize: 16,
+            color: colors.secondaryText,
+            textAlign: 'center',
+        },
+        expenseCard: {
+            marginHorizontal: 0,
+        },
+        pendingExpenseCard: {
+            backgroundColor: colors.pendingSurface,
+        },
+        expenseItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 16,
+        },
+        expenseInfo: {
+            flex: 1,
+            gap: 4,
+        },
+        expenseTitle: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        expenseMeta: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        expensePayer: {
+            fontSize: 12,
+            color: colors.success,
+            fontWeight: '600',
+        },
+        expenseRight: {
+            alignItems: 'flex-end',
+            gap: 8,
+        },
+        expenseAmount: {
+            fontSize: 18,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        statusBadge: {
+            paddingHorizontal: 10,
+            paddingVertical: 4,
+            borderRadius: 12,
+        },
+        statusdraft: {
+            backgroundColor: colors.surfaceSecondary,
+        },
+        statussubmitted: {
+            backgroundColor: colors.pendingSurface,
+        },
+        statusvalidated: {
+            backgroundColor: colors.successBackground,
+        },
+        statusrejected: {
+            backgroundColor: colors.dangerBackground,
+        },
+        statusText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        pendingStatusText: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            textAlign: 'right',
+        },
+        memberCard: {
+            marginHorizontal: 0,
+        },
+        memberItem: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+        },
+        memberInfo: {
+            flex: 1,
+        },
+        memberEmail: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        memberBadges: {
+            flexDirection: 'row',
+            gap: 8,
+            marginTop: 4,
+        },
+        memberSplit: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        validatorBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            backgroundColor: colors.successBackground,
+            borderRadius: 12,
+        },
+        validatorText: {
+            fontSize: 12,
+            color: colors.success,
+        },
+        memberActions: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+        },
+        memberActionButton: {
+            padding: 4,
+            borderRadius: 8,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        statusDot: {
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+        },
+        activeStatus: {
+            backgroundColor: colors.success,
+        },
+        pendingStatus: {
+            backgroundColor: colors.warning,
+        },
+        fab: {
+            position: 'absolute',
+            right: 16,
+            bottom: 16,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.accent,
+            alignItems: 'center',
+            justifyContent: 'center',
+            elevation: 4,
+            shadowColor: colors.shadow,
+            shadowOffset: {width: 0, height: 2},
+            shadowOpacity: 0.2,
+            shadowRadius: 4,
+        },
+    });

@@ -9,6 +9,7 @@ public class User
     public string? GoogleId { get; set; }
     public string? PasswordHash { get; set; }
     public string DefaultCurrency { get; set; } = "EUR";
+    public bool IsAdmin { get; set; }
     public NotificationPreferences NotificationPreferences { get; set; } = new();
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

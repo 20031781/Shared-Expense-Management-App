@@ -15,7 +15,7 @@ interface ListsState {
     createList: (name: string) => Promise<List>;
     updateList: (id: string, name: string) => Promise<void>;
     deleteList: (id: string) => Promise<void>;
-    addMember: (listId: string, email: string, splitPercentage: number, isValidator: boolean) => Promise<void>;
+    addMember: (listId: string, email: string, isValidator: boolean) => Promise<void>;
     updateMember: (listId: string, memberId: string, updates: Partial<ListMember>) => Promise<void>;
     removeMember: (listId: string, memberId: string) => Promise<void>;
     joinList: (inviteCode: string) => Promise<void>;
@@ -105,10 +105,10 @@ export const useListsStore = create<ListsState>((set, get) => ({
         }
     },
 
-    addMember: async (listId: string, email: string, splitPercentage: number, isValidator: boolean) => {
+    addMember: async (listId: string, email: string, isValidator: boolean) => {
         try {
             set({isLoading: true, error: null});
-            const member = await listsService.addMember(listId, email, splitPercentage, isValidator);
+            const member = await listsService.addMember(listId, email, isValidator);
             set(state => ({
                 members: [...state.members, member],
                 isLoading: false
