@@ -40,11 +40,9 @@ public class SyncService : ISyncService
         return result;
     }
 
-    public Task<IEnumerable<SyncQueueItem>> GetPendingSyncItemsAsync(Guid userId)
-    {
+    public Task<IEnumerable<SyncQueueItem>> GetPendingSyncItemsAsync(Guid userId) => throw
         // TODO: Implementare query a sync_queue
-        throw new NotImplementedException();
-    }
+        new NotImplementedException();
 
     private async Task ProcessSyncItemAsync(SyncQueueItem item)
     {
@@ -61,15 +59,11 @@ public class SyncService : ISyncService
         }
     }
 
-    private Task ProcessExpenseSyncAsync(SyncQueueItem item)
-    {
+    private Task ProcessExpenseSyncAsync(SyncQueueItem item) => throw
         // TODO: Implementare logica sincronizzazione spese con gestione conflitti
-        throw new NotImplementedException();
-    }
+        new NotImplementedException();
 
-    private Task ProcessReimbursementSyncAsync(SyncQueueItem item)
-    {
+    private Task ProcessReimbursementSyncAsync(SyncQueueItem item) => throw
         // TODO: Implementare logica sincronizzazione rimborsi
-        throw new NotImplementedException();
-    }
+        new NotImplementedException();
 }

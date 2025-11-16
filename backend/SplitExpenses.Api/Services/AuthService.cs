@@ -9,30 +9,20 @@ using SplitExpenses.Api.Repositories;
 
 namespace SplitExpenses.Api.Services;
 
-public class AuthService : IAuthService
+public class AuthService(IConfiguration configuration, IUserRepository userRepository)
+    : IAuthService
 {
-    private readonly IConfiguration _configuration;
-    private readonly IUserRepository _userRepository;
-
-    public AuthService(IConfiguration configuration, IUserRepository userRepository)
-    {
-        _configuration = configuration;
-        _userRepository = userRepository;
-    }
-
     public async Task<AuthResult> RegisterWithEmailAsync(string email, string password)
     {
         try
         {
-            var existingUser = await _userRepository.GetByEmailAsync(email);
+            var existingUser = await userRepository.GetByEmailAsync(email);
             if (existingUser != null)
-            {
                 return new AuthResult
                 {
                     Success = false,
                     ErrorMessage = "User already exists"
                 };
-            }
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(password);
 
@@ -43,7 +33,7 @@ public class AuthService : IAuthService
                 PasswordHash = passwordHash
             };
 
-            user = await _userRepository.CreateAsync(user);
+            user = await userRepository.CreateAsync(user);
 
             var accessToken = GenerateJwtToken(user);
             var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id);
@@ -70,24 +60,14 @@ public class AuthService : IAuthService
     {
         try
         {
-            var user = await _userRepository.GetByEmailAsync(email);
-            if (user == null || string.IsNullOrEmpty(user.PasswordHash))
-            {
+            var user = await userRepository.GetByEmailAsync(email);
+            if (user == null || string.IsNullOrEmpty(user.PasswordHash) ||
+                !BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 return new AuthResult
                 {
                     Success = false,
                     ErrorMessage = "Invalid credentials"
                 };
-            }
-
-            if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
-            {
-                return new AuthResult
-                {
-                    Success = false,
-                    ErrorMessage = "Invalid credentials"
-                };
-            }
 
             var accessToken = GenerateJwtToken(user);
             var refreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id);
@@ -114,17 +94,17 @@ public class AuthService : IAuthService
     {
         try
         {
-            var clientId = _configuration["Google:ClientId"];
+            var clientId = configuration["Google:ClientId"];
 
             // Verifica il token Google
             var payload = await GoogleJsonWebSignature.ValidateAsync(googleIdToken,
                 new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { clientId }
+                    Audience = [clientId]
                 });
 
             // Cerca o crea l'utente
-            var user = await _userRepository.GetByGoogleIdAsync(payload.Subject);
+            var user = await userRepository.GetByGoogleIdAsync(payload.Subject);
 
             if (user == null)
             {
@@ -136,7 +116,7 @@ public class AuthService : IAuthService
                     GoogleId = payload.Subject
                 };
 
-                user = await _userRepository.CreateAsync(user);
+                user = await userRepository.CreateAsync(user);
             }
 
             // Genera JWT e refresh token
@@ -166,7 +146,7 @@ public class AuthService : IAuthService
         try
         {
             var tokenHash = ComputeHash(refreshToken);
-            var storedToken = await _userRepository.GetRefreshTokenAsync(tokenHash);
+            var storedToken = await userRepository.GetRefreshTokenAsync(tokenHash);
 
             if (storedToken == null || storedToken.Revoked || storedToken.ExpiresAt < DateTime.UtcNow)
                 return new AuthResult
@@ -175,7 +155,7 @@ public class AuthService : IAuthService
                     ErrorMessage = "Invalid or expired refresh token"
                 };
 
-            var user = await _userRepository.GetByIdAsync(storedToken.UserId);
+            var user = await userRepository.GetByIdAsync(storedToken.UserId);
             if (user == null)
                 return new AuthResult
                 {
@@ -184,7 +164,7 @@ public class AuthService : IAuthService
                 };
 
             // Revoca il vecchio token e genera uno nuovo
-            await _userRepository.RevokeRefreshTokenAsync(tokenHash);
+            await userRepository.RevokeRefreshTokenAsync(tokenHash);
             var newAccessToken = GenerateJwtToken(user);
             var newRefreshToken = await GenerateAndStoreRefreshTokenAsync(user.Id);
 
@@ -209,17 +189,17 @@ public class AuthService : IAuthService
     public async Task RevokeRefreshTokenAsync(string refreshToken)
     {
         var tokenHash = ComputeHash(refreshToken);
-        await _userRepository.RevokeRefreshTokenAsync(tokenHash);
+        await userRepository.RevokeRefreshTokenAsync(tokenHash);
     }
 
     public string GenerateJwtToken(User user)
     {
-        var jwtKey = _configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
-        var jwtIssuer = _configuration["Jwt:Issuer"] ??
+        var jwtKey = configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured");
+        var jwtIssuer = configuration["Jwt:Issuer"] ??
                         throw new InvalidOperationException("JWT Issuer not configured");
-        var jwtAudience = _configuration["Jwt:Audience"] ??
+        var jwtAudience = configuration["Jwt:Audience"] ??
                           throw new InvalidOperationException("JWT Audience not configured");
-        var expiryMinutes = int.Parse(_configuration["Jwt:ExpiryMinutes"] ?? "60");
+        var expiryMinutes = int.Parse(configuration["Jwt:ExpiryMinutes"] ?? "60");
 
         var claims = new[]
         {
@@ -247,9 +227,9 @@ public class AuthService : IAuthService
     {
         var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         var tokenHash = ComputeHash(refreshToken);
-        var expiryDays = int.Parse(_configuration["Jwt:RefreshTokenExpiryDays"] ?? "30");
+        var expiryDays = int.Parse(configuration["Jwt:RefreshTokenExpiryDays"] ?? "30");
 
-        await _userRepository.StoreRefreshTokenAsync(userId, tokenHash, DateTime.UtcNow.AddDays(expiryDays));
+        await userRepository.StoreRefreshTokenAsync(userId, tokenHash, DateTime.UtcNow.AddDays(expiryDays));
 
         return refreshToken;
     }
@@ -263,7 +243,7 @@ public class AuthService : IAuthService
 
 public class RefreshTokenData
 {
-    public Guid UserId { get; set; }
-    public DateTime ExpiresAt { get; set; }
-    public bool Revoked { get; set; }
+    public Guid UserId { get; init; }
+    public DateTime ExpiresAt { get; init; }
+    public bool Revoked { get; init; }
 }

@@ -5,57 +5,56 @@ using SplitExpenses.Api.Models;
 
 namespace SplitExpenses.Api.Repositories;
 
-public class ListRepository : IListRepository
+public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepository
 {
-    private const string ListProjection = @"l.id AS \"Id\",
-        l.name AS \"Name\",
-        l.admin_id AS \"AdminId\",
-        l.invite_code AS \"InviteCode\",
-        l.created_at AS \"CreatedAt\",
-        l.updated_at AS \"UpdatedAt\"";
+    private const string ListProjection = """
+                                          l.id AS "Id",
+                                          l.name AS "Name",
+                                          l.admin_id AS "AdminId",
+                                          l.invite_code AS "InviteCode",
+                                          l.created_at AS "CreatedAt",
+                                          l.updated_at AS "UpdatedAt"
+                                          """;
 
-    private const string MemberProjection = @"id AS \"Id\",
-        list_id AS \"ListId\",
-        user_id AS \"UserId\",
-        email AS \"Email\",
-        split_percentage AS \"SplitPercentage\",
-        is_validator AS \"IsValidator\",
-        status AS \"Status\",
-        joined_at AS \"JoinedAt\",
-        created_at AS \"CreatedAt\"";
-
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public ListRepository(IDbConnectionFactory connectionFactory)
-    {
-        _connectionFactory = connectionFactory;
-    }
+    private const string MemberProjection = """
+                                            id AS "Id",
+                                            list_id AS "ListId",
+                                            user_id AS "UserId",
+                                            email AS "Email",
+                                            split_percentage AS "SplitPercentage",
+                                            is_validator AS "IsValidator",
+                                            status AS "Status",
+                                            joined_at AS "JoinedAt",
+                                            created_at AS "CreatedAt"
+                                            """;
 
     public async Task<List?> GetByIdAsync(Guid id)
     {
-        var sql = $"SELECT {ListProjection} FROM lists l WHERE l.id = @Id LIMIT 1";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = $"SELECT {ListProjection} FROM lists l WHERE l.id = @Id LIMIT 1";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ListDto>(sql, new { Id = id });
         return dto?.ToModel();
     }
 
     public async Task<IEnumerable<List>> GetUserListsAsync(Guid userId)
     {
-        var sql = $@"SELECT DISTINCT {ListProjection}
-            FROM lists l
-            LEFT JOIN list_members lm ON lm.list_id = l.id
-            WHERE l.admin_id = @UserId OR (lm.user_id = @UserId AND lm.status = 'active')
-            ORDER BY l.created_at DESC";
+        const string sql = $"""
+                            SELECT DISTINCT {ListProjection}
+                            FROM lists l
+                            LEFT JOIN list_members lm ON lm.list_id = l.id
+                            WHERE l.admin_id = @UserId OR (lm.user_id = @UserId AND lm.status = 'active')
+                            ORDER BY l.created_at DESC
+                            """;
 
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ListDto>(sql, new { UserId = userId });
         return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<List?> GetByInviteCodeAsync(string inviteCode)
     {
-        var sql = $"SELECT {ListProjection} FROM lists l WHERE l.invite_code = @InviteCode LIMIT 1";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = $"SELECT {ListProjection} FROM lists l WHERE l.invite_code = @InviteCode LIMIT 1";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ListDto>(sql, new { InviteCode = inviteCode });
         return dto?.ToModel();
     }
@@ -72,11 +71,13 @@ public class ListRepository : IListRepository
             list.CreatedAt = now;
         list.UpdatedAt = now;
 
-        const string sql = @"INSERT INTO lists (id, name, admin_id, invite_code, created_at, updated_at)
-            VALUES (@Id, @Name, @AdminId, @InviteCode, @CreatedAt, @UpdatedAt)
-            RETURNING id AS \"Id\", name AS \"Name\", admin_id AS \"AdminId\", invite_code AS \"InviteCode\", created_at AS \"CreatedAt\", updated_at AS \"UpdatedAt\"";
+        const string sql = """
+                           INSERT INTO lists (id, name, admin_id, invite_code, created_at, updated_at)
+                           VALUES (@Id, @Name, @AdminId, @InviteCode, @CreatedAt, @UpdatedAt)
+                           RETURNING id AS "Id", name AS "Name", admin_id AS "AdminId", invite_code AS "InviteCode", created_at AS "CreatedAt", updated_at AS "UpdatedAt";
+                           """;
 
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleAsync<ListDto>(sql, list);
         return dto.ToModel();
     }
@@ -84,14 +85,15 @@ public class ListRepository : IListRepository
     public async Task<List> UpdateAsync(List list)
     {
         list.UpdatedAt = DateTime.UtcNow;
-        const string sql = @"UPDATE lists SET
-                name = @Name,
-                invite_code = @InviteCode,
-                updated_at = @UpdatedAt
-            WHERE id = @Id
-            RETURNING id AS \"Id\", name AS \"Name\", admin_id AS \"AdminId\", invite_code AS \"InviteCode\", created_at AS \"CreatedAt\", updated_at AS \"UpdatedAt\"";
-
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = """
+                           UPDATE lists SET
+                           name = @Name,
+                           invite_code = @InviteCode,
+                           updated_at = @UpdatedAt
+                           WHERE id = @Id
+                           RETURNING id AS "Id", name AS "Name", admin_id AS "AdminId", invite_code AS "InviteCode", created_at AS "CreatedAt", updated_at AS "UpdatedAt";
+                           """;
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleAsync<ListDto>(sql, list);
         return dto.ToModel();
     }
@@ -99,7 +101,7 @@ public class ListRepository : IListRepository
     public async Task DeleteAsync(Guid id)
     {
         const string sql = "DELETE FROM lists WHERE id = @Id";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         await connection.ExecuteAsync(sql, new { Id = id });
     }
 
@@ -110,9 +112,12 @@ public class ListRepository : IListRepository
         if (member.CreatedAt == default)
             member.CreatedAt = DateTime.UtcNow;
 
-        const string sql = @"INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
+        const string sql =
+            """
+            INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
             VALUES (@Id, @ListId, @UserId, @Email, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
-            RETURNING {MemberProjection}";
+            RETURNING {MemberProjection}
+            """;
 
         var parameters = new
         {
@@ -127,22 +132,24 @@ public class ListRepository : IListRepository
             member.CreatedAt
         };
 
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleAsync<ListMemberDto>(sql, parameters);
         return dto.ToModel();
     }
 
     public async Task<ListMember> UpdateMemberAsync(ListMember member)
     {
-        const string sql = @"UPDATE list_members SET
-                user_id = @UserId,
-                email = @Email,
-                split_percentage = @SplitPercentage,
-                is_validator = @IsValidator,
-                status = @StatusText,
-                joined_at = @JoinedAt
-            WHERE id = @Id
-            RETURNING {MemberProjection}";
+        const string sql = """
+                           UPDATE list_members SET
+                           user_id = @UserId,
+                           email = @Email,
+                           split_percentage = @SplitPercentage,
+                           is_validator = @IsValidator,
+                           status = @StatusText,
+                           joined_at = @JoinedAt
+                           WHERE id = @Id
+                           RETURNING {MemberProjection}
+                           """;
 
         var parameters = new
         {
@@ -155,7 +162,7 @@ public class ListRepository : IListRepository
             member.JoinedAt
         };
 
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleAsync<ListMemberDto>(sql, parameters);
         return dto.ToModel();
     }
@@ -163,15 +170,15 @@ public class ListRepository : IListRepository
     public async Task<IEnumerable<ListMember>> GetListMembersAsync(Guid listId)
     {
         var sql = $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId ORDER BY created_at";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ListMemberDto>(sql, new { ListId = listId });
         return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<ListMember?> GetMemberAsync(Guid memberId)
     {
-        var sql = $"SELECT {MemberProjection} FROM list_members WHERE id = @MemberId LIMIT 1";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = $"SELECT {MemberProjection} FROM list_members WHERE id = @MemberId LIMIT 1";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql, new { MemberId = memberId });
         return dto?.ToModel();
     }
@@ -192,16 +199,15 @@ public class ListRepository : IListRepository
 
 internal class ListDto
 {
-    public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public Guid AdminId { get; set; }
-    public string InviteCode { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public Guid Id { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public Guid AdminId { get; init; }
+    public string InviteCode { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
 
-    public List ToModel()
-    {
-        return new List
+    public List ToModel() =>
+        new()
         {
             Id = Id,
             Name = Name,
@@ -210,24 +216,22 @@ internal class ListDto
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt
         };
-    }
 }
 
 internal class ListMemberDto
 {
-    public Guid Id { get; set; }
-    public Guid ListId { get; set; }
-    public Guid? UserId { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public decimal SplitPercentage { get; set; }
-    public bool IsValidator { get; set; }
-    public string Status { get; set; } = "pending";
-    public DateTime? JoinedAt { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public Guid Id { get; init; }
+    public Guid ListId { get; init; }
+    public Guid? UserId { get; init; }
+    public string Email { get; init; } = string.Empty;
+    public decimal SplitPercentage { get; init; }
+    public bool IsValidator { get; init; }
+    public string Status { get; init; } = "pending";
+    public DateTime? JoinedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
 
-    public ListMember ToModel()
-    {
-        return new ListMember
+    public ListMember ToModel() =>
+        new()
         {
             Id = Id,
             ListId = ListId,
@@ -235,9 +239,10 @@ internal class ListMemberDto
             Email = Email,
             SplitPercentage = SplitPercentage,
             IsValidator = IsValidator,
-            Status = Status.ToLower() == "active" ? MemberStatus.Active : MemberStatus.Pending,
+            Status = Status.Equals("active", StringComparison.CurrentCultureIgnoreCase)
+                ? MemberStatus.Active
+                : MemberStatus.Pending,
             JoinedAt = JoinedAt,
             CreatedAt = CreatedAt
         };
-    }
 }

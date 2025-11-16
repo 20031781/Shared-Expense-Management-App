@@ -4,46 +4,43 @@ using SplitExpenses.Api.Models;
 
 namespace SplitExpenses.Api.Repositories;
 
-public class ReimbursementRepository : IReimbursementRepository
+public class ReimbursementRepository(IDbConnectionFactory connectionFactory) : IReimbursementRepository
 {
-    private const string ReimbursementProjection = @"id AS \"Id\",
-        list_id AS \"ListId\",
-        from_user_id AS \"FromUserId\",
-        to_user_id AS \"ToUserId\",
-        amount AS \"Amount\",
-        currency AS \"Currency\",
-        status AS \"Status\",
-        completed_at AS \"CompletedAt\",
-        server_timestamp AS \"ServerTimestamp\",
-        created_at AS \"CreatedAt\"";
-
-    private readonly IDbConnectionFactory _connectionFactory;
-
-    public ReimbursementRepository(IDbConnectionFactory connectionFactory)
-    {
-        _connectionFactory = connectionFactory;
-    }
+    private const string ReimbursementProjection = """
+                                                   id AS "Id",
+                                                   list_id AS "ListId",
+                                                   from_user_id AS "FromUserId",
+                                                   to_user_id AS "ToUserId",
+                                                   amount AS "Amount",
+                                                   currency AS "Currency",
+                                                   status AS "Status",
+                                                   completed_at AS "CompletedAt",
+                                                   server_timestamp AS "ServerTimestamp",
+                                                   created_at AS "CreatedAt"";
+                                                   """;
 
     public async Task<IEnumerable<Reimbursement>> GetListReimbursementsAsync(Guid listId)
     {
-        var sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE list_id = @ListId ORDER BY created_at DESC";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql =
+            $"SELECT {ReimbursementProjection} FROM reimbursements WHERE list_id = @ListId ORDER BY created_at DESC";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ReimbursementDto>(sql, new { ListId = listId });
         return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<IEnumerable<Reimbursement>> GetUserReimbursementsAsync(Guid userId)
     {
-        var sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE from_user_id = @UserId OR to_user_id = @UserId ORDER BY created_at DESC";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql =
+            $"SELECT {ReimbursementProjection} FROM reimbursements WHERE from_user_id = @UserId OR to_user_id = @UserId ORDER BY created_at DESC";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ReimbursementDto>(sql, new { UserId = userId });
         return rows.Select(dto => dto.ToModel());
     }
 
     public async Task<Reimbursement?> GetByIdAsync(Guid id)
     {
-        var sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE id = @Id LIMIT 1";
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string sql = $"SELECT {ReimbursementProjection} FROM reimbursements WHERE id = @Id LIMIT 1";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ReimbursementDto>(sql, new { Id = id });
         return dto?.ToModel();
     }
@@ -57,9 +54,12 @@ public class ReimbursementRepository : IReimbursementRepository
             reimbursement.CreatedAt = now;
         reimbursement.ServerTimestamp = now;
 
-        const string sql = @"INSERT INTO reimbursements (id, list_id, from_user_id, to_user_id, amount, currency, status, completed_at, server_timestamp, created_at)
+        const string sql =
+            """
+            INSERT INTO reimbursements (id, list_id, from_user_id, to_user_id, amount, currency, status, completed_at, server_timestamp, created_at)
             VALUES (@Id, @ListId, @FromUserId, @ToUserId, @Amount, @Currency, @StatusText, @CompletedAt, @ServerTimestamp, @CreatedAt)
-            RETURNING {ReimbursementProjection}";
+            RETURNING {ReimbursementProjection}
+            """;
 
         var parameters = new
         {
@@ -75,7 +75,7 @@ public class ReimbursementRepository : IReimbursementRepository
             reimbursement.CreatedAt
         };
 
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleAsync<ReimbursementDto>(sql, parameters);
         return dto.ToModel();
     }
@@ -84,14 +84,16 @@ public class ReimbursementRepository : IReimbursementRepository
     {
         reimbursement.ServerTimestamp = DateTime.UtcNow;
 
-        const string sql = @"UPDATE reimbursements SET
-                amount = @Amount,
-                currency = @Currency,
-                status = @StatusText,
-                completed_at = @CompletedAt,
-                server_timestamp = @ServerTimestamp
-            WHERE id = @Id
-            RETURNING {ReimbursementProjection}";
+        const string sql = """
+                           UPDATE reimbursements SET
+                           amount = @Amount,
+                           currency = @Currency,
+                           status = @StatusText,
+                           completed_at = @CompletedAt,
+                           server_timestamp = @ServerTimestamp
+                           WHERE id = @Id
+                           RETURNING {ReimbursementProjection}
+                           """;
 
         var parameters = new
         {
@@ -103,18 +105,22 @@ public class ReimbursementRepository : IReimbursementRepository
             reimbursement.ServerTimestamp
         };
 
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleAsync<ReimbursementDto>(sql, parameters);
         return dto.ToModel();
     }
 
     public async Task<int> GenerateReimbursementsForListAsync(Guid listId)
     {
-        const string calculationSql = @"SELECT from_user_id AS \"FromUserId\", to_user_id AS \"ToUserId\", amount AS \"Amount\" FROM calculate_optimized_reimbursements(@ListId)";
-        const string insertSql = @"INSERT INTO reimbursements (id, list_id, from_user_id, to_user_id, amount, currency, status, server_timestamp, created_at)
-            VALUES (@Id, @ListId, @FromUserId, @ToUserId, @Amount, 'EUR', 'pending', @ServerTimestamp, @CreatedAt)";
-
-        await using var connection = await _connectionFactory.CreateConnectionAsync();
+        const string
+            calculationSql = """
+                             SELECT from_user_id AS "FromUserId", to_user_id AS "ToUserId", amount AS "Amount" FROM calculate_optimized_reimbursements(@ListId)";
+                             """;
+        const string insertSql = """
+                                 INSERT INTO reimbursements (id, list_id, from_user_id, to_user_id, amount, currency, status, server_timestamp, created_at)
+                                 VALUES (@Id, @ListId, @FromUserId, @ToUserId, @Amount, 'EUR', 'pending', @ServerTimestamp, @CreatedAt)";
+                                 """;
+        await using var connection = await connectionFactory.CreateConnectionAsync();
         var suggestions = await connection.QueryAsync<ReimbursementSuggestion>(calculationSql, new { ListId = listId });
 
         var inserted = 0;
@@ -140,20 +146,19 @@ public class ReimbursementRepository : IReimbursementRepository
 
 internal class ReimbursementDto
 {
-    public Guid Id { get; set; }
-    public Guid ListId { get; set; }
-    public Guid FromUserId { get; set; }
-    public Guid ToUserId { get; set; }
-    public decimal Amount { get; set; }
-    public string Currency { get; set; } = "EUR";
-    public string Status { get; set; } = "pending";
-    public DateTime? CompletedAt { get; set; }
-    public DateTime ServerTimestamp { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public Guid Id { get; init; }
+    public Guid ListId { get; init; }
+    public Guid FromUserId { get; init; }
+    public Guid ToUserId { get; init; }
+    public decimal Amount { get; init; }
+    public string Currency { get; init; } = "EUR";
+    public string Status { get; init; } = "pending";
+    public DateTime? CompletedAt { get; init; }
+    public DateTime ServerTimestamp { get; init; }
+    public DateTime CreatedAt { get; init; }
 
-    public Reimbursement ToModel()
-    {
-        return new Reimbursement
+    public Reimbursement ToModel() =>
+        new()
         {
             Id = Id,
             ListId = ListId,
@@ -161,12 +166,13 @@ internal class ReimbursementDto
             ToUserId = ToUserId,
             Amount = Amount,
             Currency = Currency,
-            Status = Status.ToLower() == "completed" ? ReimbursementStatus.Completed : ReimbursementStatus.Pending,
+            Status = Status.Equals("completed", StringComparison.CurrentCultureIgnoreCase)
+                ? ReimbursementStatus.Completed
+                : ReimbursementStatus.Pending,
             CompletedAt = CompletedAt,
             ServerTimestamp = ServerTimestamp,
             CreatedAt = CreatedAt
         };
-    }
 }
 
 internal record ReimbursementSuggestion(Guid FromUserId, Guid ToUserId, decimal Amount);
