@@ -27,7 +27,7 @@ public class ExpensesController(
     public async Task<IActionResult> GetUserExpenses([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
-        var expenses = await expenseRepository.GetUserExpensesAsync(userId, fromDate, toDate);
+        var expenses = await _expenseRepository.GetUserExpensesAsync(userId, fromDate, toDate);
         return Ok(expenses);
     }
 
@@ -163,11 +163,6 @@ public record CreateExpenseRequest(
     string? Notes,
     Guid PaidByMemberId);
 
-public record UpdateExpenseRequest(
-    string Title,
-    decimal Amount,
-    DateTime ExpenseDate,
-    string? Notes,
-    Guid PaidByMemberId);
+public record UpdateExpenseRequest(string Title, decimal Amount, DateTime ExpenseDate, string? Notes, Guid PaidByMemberId);
 
 public record ValidateExpenseRequest(bool Approved, string? Notes);

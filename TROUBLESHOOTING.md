@@ -225,6 +225,12 @@ adb logcat
 **iOS (in Xcode):**
 Window → Devices and Simulators → View Device Logs
 
+### Errore: "Rendered more hooks than during the previous render"
+
+**Problema:** In `mobile/src/screens/ListDetailsScreen.tsx` il componente restituiva `<Loading />` prima di eseguire alcuni `useMemo`, quindi al render successivo React vedeva più hook del previsto e bloccava l'app quando si apriva una lista esistente.
+
+**Soluzione:** Mantieni tutti gli hook (useMemo, useEffect, ecc.) in cima al componente e solo dopo gestisci i `return` condizionali. Nel fix attuale gli hook vengono eseguiti sempre e la guardia `if (!currentList)` vive subito dopo i calcoli, evitando il crash.
+
 ## API Testing
 
 ### Test con cURL

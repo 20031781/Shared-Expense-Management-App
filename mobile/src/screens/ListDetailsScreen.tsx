@@ -73,13 +73,6 @@ export const ListDetailsScreen: React.FC = () => {
         );
     };
 
-    if (!currentList) {
-        return <Loading/>;
-    }
-
-    const isAdmin = currentList.adminId === user?.id;
-    const currency = expenses[0]?.currency ?? 'EUR';
-
     const filteredExpenses = useMemo(() => {
         if (summaryRange === 'all') return expenses;
         const days = parseInt(summaryRange, 10);
@@ -110,6 +103,13 @@ export const ListDetailsScreen: React.FC = () => {
     }, [filteredExpenses, memberMap]);
 
     const chartMax = perMemberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
+
+    if (!currentList) {
+        return <Loading/>;
+    }
+
+    const isAdmin = currentList.adminId === user?.id;
+    const currency = expenses[0]?.currency ?? 'EUR';
 
     const renderExpense = (expense: Expense) => {
         const payer = expense.paidByMemberId ? memberMap.get(expense.paidByMemberId) : undefined;
