@@ -23,6 +23,45 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
+-- Helper: Compatibilità public.current_user_id() in ambienti senza Supabase Auth
+-- ============================================================================
+-- In PostgreSQL standalone non esiste la funzione public.current_user_id().
+-- Definiamo quindi un helper che recupera l'utente corrente dai claim JWT
+-- (come fa Supabase) oppure da una variabile di sessione personalizzata
+-- "app.current_user_id" per gli script di test/locali.
+CREATE OR REPLACE FUNCTION public.current_user_id()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    v_user_id text;
+BEGIN
+    BEGIN
+        v_user_id := current_setting('request.jwt.claim.sub', true);
+    EXCEPTION WHEN others THEN
+        v_user_id := NULL;
+    END;
+
+    IF v_user_id IS NOT NULL AND v_user_id <> '' THEN
+        RETURN v_user_id::uuid;
+    END IF;
+
+    BEGIN
+        v_user_id := current_setting('app.current_user_id', true);
+    EXCEPTION WHEN others THEN
+        v_user_id := NULL;
+    END;
+
+    IF v_user_id IS NOT NULL AND v_user_id <> '' THEN
+        RETURN v_user_id::uuid;
+    END IF;
+
+    RETURN NULL;
+END;
+$$;
+
+-- ============================================================================
 -- TABELLA: users
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS users (
