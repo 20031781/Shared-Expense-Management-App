@@ -26,10 +26,9 @@ class ListsService {
         return apiService.get<ListMember[]>(`/lists/${listId}/members`);
     }
 
-    async addMember(listId: string, email: string, splitPercentage: number, isValidator: boolean): Promise<ListMember> {
+    async addMember(listId: string, email: string, isValidator: boolean): Promise<ListMember> {
         return apiService.post<ListMember>(`/lists/${listId}/members`, {
             email,
-            splitPercentage,
             isValidator,
         });
     }

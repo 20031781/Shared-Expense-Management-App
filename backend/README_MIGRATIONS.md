@@ -15,6 +15,7 @@ Per produzione, usa **Supabase hosted** con le migrations complete in `../supaba
 0. **000_reset_database.sql** - ⚠️ RESET completo (cancella tutto!)
 1. **001_initial_schema.sql** - Schema completo (tabelle, indici, trigger)
 2. **002_stored_procedures.sql** - Funzioni per calcolo rimborsi
+3. **003_roles_and_member_split.sql** - Flag Admin utente + percentuali membri
 
 ---
 

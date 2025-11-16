@@ -180,6 +180,24 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         return dto.ToModel();
     }
 
+    public async Task UpdateStatusAsync(Guid id, ExpenseStatus status)
+    {
+        const string sql = """
+                           UPDATE expenses
+                           SET status = @StatusText,
+                               updated_at = now(),
+                               server_timestamp = now()
+                           WHERE id = @Id
+                           """;
+
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        await connection.ExecuteAsync(sql, new
+        {
+            Id = id,
+            StatusText = status.ToString().ToLower()
+        });
+    }
+
     public async Task DeleteAsync(Guid id)
     {
         const string sql = "DELETE FROM expenses WHERE id = @Id";

@@ -9,8 +9,10 @@ import {CreateListScreen} from '@/screens/CreateListScreen';
 import {ListDetailsScreen} from '@/screens/ListDetailsScreen';
 import {CreateExpenseScreen} from '@/screens/CreateExpenseScreen';
 import {AddMemberScreen} from '@/screens/AddMemberScreen';
+import {EditMemberScreen} from '@/screens/EditMemberScreen';
 import {SettingsScreen} from '@/screens/SettingsScreen';
 import {useTranslation} from '@i18n';
+import {useAppTheme} from '@theme';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -44,6 +46,11 @@ const ListsStack = () => {
                 component={AddMemberScreen}
                 options={{title: t('members.title'), presentation: 'modal'}}
             />
+            <Stack.Screen
+                name="EditMember"
+                component={EditMemberScreen}
+                options={{title: t('members.editTitle'), presentation: 'modal'}}
+            />
         </Stack.Navigator>
     );
 };
@@ -69,6 +76,7 @@ export const AuthNavigator = () => (
 
 export const MainNavigator = () => {
     const {t} = useTranslation();
+    const {colors} = useAppTheme();
     return (
         <Tab.Navigator
             screenOptions={({route}) => ({
@@ -83,8 +91,12 @@ export const MainNavigator = () => {
 
                     return <Ionicons name={iconName} size={size} color={color}/>;
                 },
-                tabBarActiveTintColor: '#007AFF',
-                tabBarInactiveTintColor: '#8E8E93',
+                tabBarActiveTintColor: colors.accent,
+                tabBarInactiveTintColor: colors.secondaryText,
+                tabBarStyle: {
+                    backgroundColor: colors.surface,
+                    borderTopColor: colors.surfaceSecondary,
+                },
                 headerShown: false,
             })}
         >

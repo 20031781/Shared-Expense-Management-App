@@ -9,6 +9,7 @@ public interface IExpenseRepository
     Task<IEnumerable<Expense>> GetUserExpensesAsync(Guid userId, DateTime? fromDate = null, DateTime? toDate = null);
     Task<Expense> CreateAsync(Expense expense);
     Task<Expense> UpdateAsync(Expense expense);
+    Task UpdateStatusAsync(Guid id, ExpenseStatus status);
     Task DeleteAsync(Guid id);
     Task<ExpenseValidation> AddValidationAsync(ExpenseValidation validation);
     Task<IEnumerable<ExpenseValidation>> GetExpenseValidationsAsync(Guid expenseId);

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {StyleSheet, Text, TextInput, TextInputProps, View, ViewStyle,} from 'react-native';
+import {AppColors, useAppTheme} from '@theme';
 
 interface InputProps extends TextInputProps {
     label?: string;
@@ -14,6 +15,9 @@ export const Input: React.FC<InputProps> = ({
                                                 style,
                                                 ...props
                                             }) => {
+    const {colors} = useAppTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
+
     return (
         <View style={[styles.container, containerStyle]}>
             {label && <Text style={styles.label}>{label}</Text>}
@@ -23,7 +27,7 @@ export const Input: React.FC<InputProps> = ({
                     error && styles.inputError,
                     style,
                 ]}
-                placeholderTextColor="#8E8E93"
+                placeholderTextColor={colors.placeholder}
                 {...props}
             />
             {error && <Text style={styles.error}>{error}</Text>}
@@ -31,32 +35,33 @@ export const Input: React.FC<InputProps> = ({
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        marginVertical: 8,
-    },
-    label: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#000000',
-        marginBottom: 8,
-    },
-    input: {
-        backgroundColor: '#F2F2F7',
-        borderRadius: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        fontSize: 16,
-        color: '#000000',
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    inputError: {
-        borderColor: '#FF3B30',
-    },
-    error: {
-        fontSize: 12,
-        color: '#FF3B30',
-        marginTop: 4,
-    },
-});
+const createStyles = (colors: AppColors) =>
+    StyleSheet.create({
+        container: {
+            marginVertical: 8,
+        },
+        label: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.secondaryText,
+            marginBottom: 8,
+        },
+        input: {
+            backgroundColor: colors.inputBackground,
+            borderRadius: 8,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            fontSize: 16,
+            color: colors.text,
+            borderWidth: 1,
+            borderColor: 'transparent',
+        },
+        inputError: {
+            borderColor: colors.danger,
+        },
+        error: {
+            fontSize: 12,
+            color: colors.danger,
+            marginTop: 4,
+        },
+    });

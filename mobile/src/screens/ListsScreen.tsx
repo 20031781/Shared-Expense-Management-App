@@ -1,15 +1,20 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Button, Card, Loading} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {List} from '@/types';
 import {useNavigation} from '@react-navigation/native';
+import {useTranslation} from '@i18n';
+import {AppColors, useAppTheme} from '@theme';
 
 export const ListsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const {lists, isLoading, fetchLists, deleteList} = useListsStore();
     const [refreshing, setRefreshing] = useState(false);
+    const {t} = useTranslation();
+    const {colors} = useAppTheme();
+    const styles = useMemo(() => createStyles(colors), [colors]);
 
     useEffect(() => {
         loadLists();
@@ -34,34 +39,26 @@ export const ListsScreen: React.FC = () => {
     };
 
     const handleJoinList = () => {
-        Alert.alert(
-            'Join List',
-            'Enter the invite code to join an existing list',
-            [
-                {text: 'Cancel', style: 'cancel'},
-                {
-                    text: 'Coming Soon',
-                    onPress: () => {},
-                },
-            ]
-        );
+        Alert.alert(t('lists.joinTitle'), t('lists.joinDescription'), [
+            {text: t('lists.joinAction'), style: 'default'},
+        ]);
     };
 
     const handleDeleteList = (list: List) => {
         Alert.alert(
-            'Delete List',
-            `Are you sure you want to delete "${list.name}"?`,
+            t('lists.deleteTitle'),
+            t('lists.deleteBody', {name: list.name}),
             [
-                {text: 'Cancel', style: 'cancel'},
+                {text: t('common.cancel'), style: 'cancel'},
                 {
-                    text: 'Delete',
+                    text: t('common.confirm'),
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             await deleteList(list.id);
-                            Alert.alert('Success', 'List deleted successfully');
+                            Alert.alert(t('common.success'), t('lists.deleteSuccess'));
                         } catch (error: any) {
-                            Alert.alert('Error', error.message);
+                            Alert.alert(t('common.error'), error.message ?? t('lists.deleteError'));
                         }
                     },
                 },
@@ -75,14 +72,14 @@ export const ListsScreen: React.FC = () => {
                 <View style={styles.listInfo}>
                     <Text style={styles.listName}>{item.name}</Text>
                     <Text style={styles.listDate}>
-                        Created {new Date(item.createdAt).toLocaleDateString()}
+                        {new Date(item.createdAt).toLocaleDateString()}
                     </Text>
                 </View>
                 <TouchableOpacity
                     onPress={() => handleDeleteList(item)}
                     style={styles.deleteButton}
                 >
-                    <Ionicons name="trash-outline" size={20} color="#FF3B30"/>
+                    <Ionicons name="trash-outline" size={20} color={colors.danger}/>
                 </TouchableOpacity>
             </View>
         </Card>
@@ -91,12 +88,10 @@ export const ListsScreen: React.FC = () => {
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>No lists yet</Text>
-            <Text style={styles.emptyText}>
-                Create your first list or join an existing one
-            </Text>
+            <Text style={styles.emptyTitle}>{t('lists.emptyTitle')}</Text>
+            <Text style={styles.emptyText}>{t('lists.emptySubtitle')}</Text>
             <Button
-                title="Create List"
+                title={t('lists.createList')}
                 onPress={handleCreateList}
                 style={styles.emptyButton}
             />
@@ -124,101 +119,103 @@ export const ListsScreen: React.FC = () => {
                     style={styles.fabButton}
                     onPress={handleCreateList}
                 >
-                    <Ionicons name="add" size={32} color="#FFFFFF"/>
+                    <Ionicons name="add" size={32} color={colors.accentText}/>
                 </TouchableOpacity>
                 <TouchableOpacity
                     style={[styles.fabButton, styles.fabSecondary]}
                     onPress={handleJoinList}
                 >
-                    <Ionicons name="enter-outline" size={24} color="#007AFF"/>
+                    <Ionicons name="enter-outline" size={24} color={colors.accent}/>
                 </TouchableOpacity>
             </View>
         </View>
     );
 };
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F2F2F7',
-    },
-    listContainer: {
-        paddingVertical: 8,
-        flexGrow: 1,
-    },
-    listItem: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    listInfo: {
-        flex: 1,
-    },
-    listName: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#000000',
-        marginBottom: 4,
-    },
-    listDate: {
-        fontSize: 14,
-        color: '#8E8E93',
-    },
-    deleteButton: {
-        padding: 8,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 40,
-    },
-    emptyIcon: {
-        fontSize: 64,
-        marginBottom: 16,
-    },
-    emptyTitle: {
-        fontSize: 24,
-        fontWeight: '600',
-        color: '#000000',
-        marginBottom: 8,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#8E8E93',
-        textAlign: 'center',
-        marginBottom: 24,
-    },
-    emptyButton: {
-        minWidth: 200,
-    },
-    fab: {
-        position: 'absolute',
-        right: 16,
-        bottom: 16,
-        alignItems: 'flex-end',
-    },
-    fabButton: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#007AFF',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4,
+const createStyles = (colors: AppColors) =>
+    StyleSheet.create({
+        container: {
+            flex: 1,
+            backgroundColor: colors.background,
         },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 8,
-        marginTop: 12,
-    },
-    fabSecondary: {
-        backgroundColor: '#FFFFFF',
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-    },
-});
+        listContainer: {
+            paddingVertical: 8,
+            flexGrow: 1,
+        },
+        listItem: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        listInfo: {
+            flex: 1,
+        },
+        listName: {
+            fontSize: 18,
+            fontWeight: '600',
+            color: colors.text,
+            marginBottom: 4,
+        },
+        listDate: {
+            fontSize: 14,
+            color: colors.secondaryText,
+        },
+        deleteButton: {
+            padding: 8,
+        },
+        emptyContainer: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 40,
+        },
+        emptyIcon: {
+            fontSize: 64,
+            marginBottom: 16,
+        },
+        emptyTitle: {
+            fontSize: 24,
+            fontWeight: '600',
+            color: colors.text,
+            marginBottom: 8,
+            textAlign: 'center',
+        },
+        emptyText: {
+            fontSize: 16,
+            color: colors.secondaryText,
+            textAlign: 'center',
+            marginBottom: 24,
+        },
+        emptyButton: {
+            minWidth: 200,
+        },
+        fab: {
+            position: 'absolute',
+            right: 16,
+            bottom: 16,
+            alignItems: 'flex-end',
+        },
+        fabButton: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.accent,
+            justifyContent: 'center',
+            alignItems: 'center',
+            shadowColor: colors.shadow,
+            shadowOffset: {
+                width: 0,
+                height: 4,
+            },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 8,
+            marginTop: 12,
+        },
+        fabSecondary: {
+            backgroundColor: colors.surface,
+            width: 48,
+            height: 48,
+            borderRadius: 24,
+        },
+    });
