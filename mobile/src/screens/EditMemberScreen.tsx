@@ -21,6 +21,7 @@ export const EditMemberScreen: React.FC = () => {
     const member = members.find((m) => m.id === memberId);
     const formatSplit = (value?: number) => (value ?? 0).toFixed(2);
 
+    const [displayName, setDisplayName] = useState(member?.displayName ?? '');
     const [split, setSplit] = useState(formatSplit(member?.splitPercentage));
     const [isValidator, setIsValidator] = useState(member?.isValidator ?? false);
     const [status, setStatus] = useState<MemberStatus>(member?.status ?? MemberStatus.Pending);
@@ -34,6 +35,7 @@ export const EditMemberScreen: React.FC = () => {
 
     useEffect(() => {
         if (member) {
+            setDisplayName(member.displayName ?? '');
             setSplit(formatSplit(member.splitPercentage));
             setIsValidator(member.isValidator);
             setStatus(member.status);
@@ -55,10 +57,13 @@ export const EditMemberScreen: React.FC = () => {
         if (!validate()) return;
 
         try {
+            const trimmedDisplayName = displayName.trim();
             await updateMember(listId, member.id, {
+                displayName: trimmedDisplayName || undefined,
                 splitPercentage: parseFloat(split),
                 isValidator,
                 status,
+                clearDisplayName: trimmedDisplayName ? undefined : true,
             });
             Alert.alert(t('common.success'), t('members.editSuccess'), [
                 {text: t('common.ok'), onPress: () => navigation.goBack()},
@@ -100,6 +105,15 @@ export const EditMemberScreen: React.FC = () => {
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>{t('members.editTitle')}</Text>
             <Text style={styles.subtitle}>{member.email}</Text>
+
+            <Input
+                label={t('members.displayNameLabel')}
+                placeholder={t('members.displayNamePlaceholder')}
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+            />
+            <Text style={styles.switchHint}>{t('members.displayNameHint')}</Text>
 
             <Input
                 label={t('members.splitLabel')}

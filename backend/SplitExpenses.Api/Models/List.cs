@@ -20,6 +20,7 @@ public class ListMember
     public Guid ListId { get; set; }
     public Guid? UserId { get; set; }
     public string Email { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
     public decimal SplitPercentage { get; set; } = 0;
     public bool IsValidator { get; set; }
     public MemberStatus Status { get; set; }

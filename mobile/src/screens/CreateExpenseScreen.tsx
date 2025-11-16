@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -54,6 +54,13 @@ export const CreateExpenseScreen: React.FC = () => {
 
     const selectedMember = useMemo(() => members.find((m) => m.id === selectedMemberId), [members, selectedMemberId]);
     const hasMembers = members.length > 0;
+    const getMemberLabel = useCallback((member?: ListMember) => {
+        if (!member) return t('members.unknown');
+        return (member.displayName && member.displayName.trim())
+            || member.user?.fullName
+            || member.email
+            || t('members.unknown');
+    }, [t]);
 
     const validate = () => {
         const newErrors: {title?: string; amount?: string; payer?: string} = {};
@@ -155,7 +162,7 @@ export const CreateExpenseScreen: React.FC = () => {
                 }}
             >
                 <View>
-                    <Text style={styles.memberEmail}>{member.email}</Text>
+                    <Text style={styles.memberEmail}>{getMemberLabel(member)}</Text>
                     <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
                 </View>
                 {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
@@ -203,7 +210,7 @@ export const CreateExpenseScreen: React.FC = () => {
                         disabled={!hasMembers}
                     >
                         <Text style={selectedMember ? styles.payerValue : styles.payerPlaceholder}>
-                            {selectedMember?.email || t('expenses.payerPlaceholder')}
+                            {selectedMember ? getMemberLabel(selectedMember) : t('expenses.payerPlaceholder')}
                         </Text>
                         <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
                     </TouchableOpacity>

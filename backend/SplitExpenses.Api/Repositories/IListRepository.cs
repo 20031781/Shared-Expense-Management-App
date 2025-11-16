@@ -15,5 +15,6 @@ public interface IListRepository
     Task<IEnumerable<ListMember>> GetListMembersAsync(Guid listId);
     Task<ListMember?> GetMemberAsync(Guid memberId);
     Task<ListMember?> GetMemberByUserAsync(Guid listId, Guid userId);
+    Task<ListMember?> GetMemberByEmailAsync(Guid listId, string email);
     Task RemoveMemberAsync(Guid memberId);
 }

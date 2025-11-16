@@ -17,6 +17,7 @@ export const AddMemberScreen: React.FC = () => {
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const [email, setEmail] = useState('');
+    const [displayName, setDisplayName] = useState('');
     const [isValidator, setIsValidator] = useState(false);
     const [errors, setErrors] = useState<{email?: string}>({});
 
@@ -32,7 +33,7 @@ export const AddMemberScreen: React.FC = () => {
     const handleSubmit = async () => {
         if (!validate()) return;
         try {
-            await addMember(listId, email.trim(), isValidator);
+            await addMember(listId, email.trim(), displayName.trim() || undefined, isValidator);
             Alert.alert(t('common.success'), t('members.successBody'), [
                 {text: t('common.ok'), onPress: () => navigation.goBack()},
             ]);
@@ -45,6 +46,14 @@ export const AddMemberScreen: React.FC = () => {
         <ScrollView contentContainerStyle={styles.container}>
             <Text style={styles.title}>{t('members.title')}</Text>
             <Text style={styles.description}>{t('members.splitInfo')}</Text>
+            <Input
+                label={t('members.displayNameLabel')}
+                placeholder={t('members.displayNamePlaceholder')}
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+            />
+            <Text style={styles.hint}>{t('members.displayNameHint')}</Text>
             <Input
                 label={t('members.emailLabel')}
                 placeholder="john@example.com"
@@ -97,6 +106,11 @@ const createStyles = (colors: AppColors) =>
         description: {
             fontSize: 14,
             color: colors.secondaryText,
+        },
+        hint: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            marginTop: -8,
         },
         switchCard: {
             flexDirection: 'row',

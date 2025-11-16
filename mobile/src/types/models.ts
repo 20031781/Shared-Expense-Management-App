@@ -29,12 +29,21 @@ export interface ListMember {
     listId: string;
     userId?: string;
     email: string;
+    displayName?: string | null;
     splitPercentage: number;
     isValidator: boolean;
     status: MemberStatus;
     joinedAt?: string;
     createdAt: string;
     user?: User;
+}
+
+export interface UpdateMemberPayload {
+    splitPercentage?: number;
+    isValidator?: boolean;
+    status?: MemberStatus;
+    displayName?: string | null;
+    clearDisplayName?: boolean;
 }
 
 export enum ExpenseStatus {

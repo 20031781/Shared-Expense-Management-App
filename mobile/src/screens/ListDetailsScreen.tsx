@@ -1,5 +1,5 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {Alert, Linking, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Button, Card, Loading} from '@/components';
 import {useListsStore} from '@/store/lists.store';
@@ -9,6 +9,7 @@ import {useNavigation, useRoute} from '@react-navigation/native';
 import {Expense, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import listsService from '@/services/lists.service';
 
 type SummaryFilter = '7' | '30' | '90' | 'all';
 
@@ -62,16 +63,13 @@ export const ListDetailsScreen: React.FC = () => {
         navigation.navigate('ExpenseDetails', {expenseId: expense.id});
     };
 
-    const handleShareInvite = async () => {
-        if (!currentList) return;
-
-        const inviteCode = currentList.inviteCode;
-        Alert.alert(
-            t('lists.invite'),
-            t('lists.inviteDescription', {code: inviteCode}),
-            [{text: t('common.close'), style: 'cancel'}]
-        );
-    };
+    const getMemberLabel = useCallback((member?: ListMember) => {
+        if (!member) return t('members.unknown');
+        return (member.displayName && member.displayName.trim())
+            || member.user?.fullName
+            || member.email
+            || t('members.unknown');
+    }, [t]);
 
     const filteredExpenses = useMemo(() => {
         if (summaryRange === 'all') return expenses;
@@ -132,7 +130,7 @@ export const ListDetailsScreen: React.FC = () => {
                             {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
                         </Text>
                         {payer && (
-                            <Text style={styles.expensePayer}>{t('expenses.paidBy', {name: payer.email})}</Text>
+                            <Text style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>
                         )}
                     </View>
                     <View style={styles.expenseRight}>
@@ -153,7 +151,7 @@ export const ListDetailsScreen: React.FC = () => {
 
     const renderMember = (member: ListMember) => {
         const isActive = member.status === MemberStatus.Active;
-        const label = member.email || member.user?.fullName || t('members.unknown');
+        const label = getMemberLabel(member);
         return (
             <Card key={member.id} style={styles.memberCard}>
                 <View style={styles.memberItem}>
@@ -172,8 +170,18 @@ export const ListDetailsScreen: React.FC = () => {
                         </View>
                     </View>
                     <View style={styles.memberActions}>
-                        <View
-                            style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
+                        <View style={styles.memberStatusBlock}>
+                            <View style={styles.memberStatusWrapper}>
+                                <View
+                                    style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
+                                <Text style={styles.memberStatusText}>
+                                    {isActive ? t('members.statusActiveShort') : t('members.statusPendingShort')}
+                                </Text>
+                            </View>
+                            {!isActive && (
+                                <Text style={styles.memberPendingHint}>{t('members.pendingExplanation')}</Text>
+                            )}
+                        </View>
                         {isAdmin && (
                             <TouchableOpacity
                                 onPress={() => handleEditMember(member)}
@@ -186,6 +194,24 @@ export const ListDetailsScreen: React.FC = () => {
                 </View>
             </Card>
         );
+    };
+
+    const handleShareInvite = async () => {
+        if (!currentList) return;
+        try {
+            const whatsappUrl = await listsService.generateWhatsAppInvite(currentList.id, currentList.name);
+            const canOpen = await Linking.canOpenURL(whatsappUrl);
+            if (canOpen) {
+                await Linking.openURL(whatsappUrl);
+            } else {
+                Alert.alert(
+                    t('lists.inviteFallbackTitle'),
+                    t('lists.inviteFallbackBody', {code: currentList.inviteCode})
+                );
+            }
+        } catch (error: any) {
+            Alert.alert(t('common.error'), error.message || t('lists.inviteShareError'));
+        }
     };
 
     return (
@@ -232,9 +258,7 @@ export const ListDetailsScreen: React.FC = () => {
                             <Text style={styles.chartEmpty}>{t('lists.chartEmpty')}</Text>
                         ) : (
                             perMemberBreakdown.map((item) => {
-                                const memberLabel = item.member?.email
-                                    ?? item.member?.user?.fullName
-                                    ?? t('members.unknown');
+                                const memberLabel = getMemberLabel(item.member);
                                 return (
                                     <View key={item.memberId} style={styles.chartRow}>
                                         <Text style={styles.chartLabel}>{memberLabel}</Text>
@@ -295,7 +319,10 @@ export const ListDetailsScreen: React.FC = () => {
                                     {isAdmin && <Button title={t('lists.addMember')} onPress={handleAddMember}/>}
                                 </View>
                             ) : (
-                                members.map(renderMember)
+                                <>
+                                    <Text style={styles.statusLegend}>{t('members.statusLegend')}</Text>
+                                    {members.map(renderMember)}
+                                </>
                             )}
                         </>
                     )}
@@ -557,6 +584,12 @@ const createStyles = (colors: AppColors) =>
             gap: 8,
             marginTop: 4,
         },
+        statusLegend: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            marginBottom: 8,
+            marginLeft: 16,
+        },
         memberSplit: {
             fontSize: 12,
             color: colors.secondaryText,
@@ -578,6 +611,26 @@ const createStyles = (colors: AppColors) =>
             flexDirection: 'row',
             alignItems: 'center',
             gap: 12,
+        },
+        memberStatusBlock: {
+            flex: 1,
+            alignItems: 'flex-end',
+            gap: 4,
+        },
+        memberStatusWrapper: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+        },
+        memberStatusText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: colors.secondaryText,
+        },
+        memberPendingHint: {
+            fontSize: 11,
+            color: colors.warning,
+            textAlign: 'right',
         },
         memberActionButton: {
             padding: 4,
