@@ -113,12 +113,11 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
         if (member.CreatedAt == default)
             member.CreatedAt = DateTime.UtcNow;
 
-        var sql =
-            $"""
-            INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
-            VALUES (@Id, @ListId, @UserId, @Email, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
-            RETURNING {MemberProjection}
-            """;
+        const string sql = $"""
+                            INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
+                            VALUES (@Id, @ListId, @UserId, @Email, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
+                            RETURNING {MemberProjection}
+                            """;
 
         var parameters = new
         {
@@ -140,17 +139,17 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
 
     public async Task<ListMember> UpdateMemberAsync(ListMember member)
     {
-        var sql = $"""
-                   UPDATE list_members SET
-                   user_id = @UserId,
-                   email = @Email,
-                   split_percentage = @SplitPercentage,
-                   is_validator = @IsValidator,
-                   status = @StatusText,
-                   joined_at = @JoinedAt
-                   WHERE id = @Id
-                   RETURNING {MemberProjection}
-                   """;
+        const string sql = $"""
+                            UPDATE list_members SET
+                            user_id = @UserId,
+                            email = @Email,
+                            split_percentage = @SplitPercentage,
+                            is_validator = @IsValidator,
+                            status = @StatusText,
+                            joined_at = @JoinedAt
+                            WHERE id = @Id
+                            RETURNING {MemberProjection}
+                            """;
 
         var parameters = new
         {
@@ -170,7 +169,7 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
 
     public async Task<IEnumerable<ListMember>> GetListMembersAsync(Guid listId)
     {
-        var sql = $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId ORDER BY created_at";
+        const string sql = $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId ORDER BY created_at";
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ListMemberDto>(sql, new { ListId = listId });
         return rows.Select(dto => dto.ToModel());
@@ -186,9 +185,11 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
 
     public async Task<ListMember?> GetMemberByUserAsync(Guid listId, Guid userId)
     {
-        const string sql = $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId AND user_id = @UserId LIMIT 1";
+        const string sql =
+            $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId AND user_id = @UserId LIMIT 1";
         await using var connection = await connectionFactory.CreateConnectionAsync();
-        var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql, new { ListId = listId, UserId = userId });
+        var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql,
+            new { ListId = listId, UserId = userId });
         return dto?.ToModel();
     }
 

@@ -39,8 +39,6 @@ public class NotificationService : INotificationService
 
     public async Task SendNewExpenseNotificationAsync(Guid expenseId)
     {
-        if (_messaging == null) return;
-
         var expense = await _expenseRepository.GetByIdAsync(expenseId);
         if (expense == null) return;
 
@@ -50,8 +48,6 @@ public class NotificationService : INotificationService
 
     public async Task SendValidationRequestNotificationAsync(Guid expenseId, Guid validatorId)
     {
-        if (_messaging == null) return;
-
         var expense = await _expenseRepository.GetByIdAsync(expenseId);
         if (expense == null) return;
 
@@ -87,8 +83,6 @@ public class NotificationService : INotificationService
 
     public async Task SendValidationResultNotificationAsync(Guid expenseId, bool approved)
     {
-        if (_messaging == null) return;
-
         var expense = await _expenseRepository.GetByIdAsync(expenseId);
         if (expense == null) return;
 
@@ -125,15 +119,13 @@ public class NotificationService : INotificationService
 
     public async Task SendNewReimbursementNotificationAsync(Guid reimbursementId)
     {
-        if (_messaging == null) return;
-
         var reimbursement = await _reimbursementRepository.GetByIdAsync(reimbursementId);
         if (reimbursement == null) return;
 
         // Notifica a chi deve pagare
-        var fromTokens = await _userRepository.GetDeviceTokensAsync(reimbursement.FromUserId);
+        await _userRepository.GetDeviceTokensAsync(reimbursement.FromUserId);
         // Notifica a chi deve ricevere
-        var toTokens = await _userRepository.GetDeviceTokensAsync(reimbursement.ToUserId);
+        await _userRepository.GetDeviceTokensAsync(reimbursement.ToUserId);
 
         // TODO: Invia notifiche a entrambe le parti
     }

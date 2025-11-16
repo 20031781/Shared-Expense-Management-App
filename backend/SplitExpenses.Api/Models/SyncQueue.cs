@@ -1,6 +1,6 @@
 namespace SplitExpenses.Api.Models;
 
-public class SyncQueueItem
+public abstract class SyncQueueItem
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }

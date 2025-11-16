@@ -46,7 +46,7 @@ public class ListsController(IListRepository listRepository) : ControllerBase
             {
                 ListId = list.Id,
                 Email = member.Email,
-                SplitPercentage = member.SplitPercentage,
+                SplitPercentage = member.SplitPercentage ?? 0,
                 IsValidator = member.IsValidator,
                 Status = MemberStatus.Pending
             });
@@ -169,7 +169,7 @@ public class ListsController(IListRepository listRepository) : ControllerBase
     [HttpPost("{id:guid}/accept-invite")]
     public async Task<IActionResult> AcceptInvite(Guid id)
     {
-        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        if (!TryGetCurrentUserId(out _)) return Unauthorized();
         // TODO: Implementare logica accettazione invito
         return Ok(new { message = "Invite accepted" });
     }
@@ -185,6 +185,7 @@ public class ListsController(IListRepository listRepository) : ControllerBase
     private bool TryGetCurrentUserId(out Guid userId)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        userId = Guid.Empty;
         return userIdClaim != null && Guid.TryParse(userIdClaim.Value, out userId);
     }
 
@@ -193,28 +194,28 @@ public class ListsController(IListRepository listRepository) : ControllerBase
     private bool CanManageList(List list, Guid currentUserId) => list.AdminId == currentUserId || IsAppAdmin();
 }
 
-public record class CreateListRequest
+public record CreateListRequest
 {
     public string Name { get; init; } = string.Empty;
-    public List<CreateMemberRequest> Members { get; init; } = new();
+    public List<CreateMemberRequest> Members { get; init; } = [];
 }
 
-public record CreateMemberRequest(string Email, decimal? SplitPercentage, bool IsValidator);
+public abstract record CreateMemberRequest(string Email, decimal? SplitPercentage, bool IsValidator);
 
-public record class AddMemberRequest
+public record AddMemberRequest
 {
     public string Email { get; init; } = string.Empty;
     public decimal? SplitPercentage { get; init; }
     public bool IsValidator { get; init; }
 }
 
-public record class UpdateListRequest
+public record UpdateListRequest
 {
     public string? Name { get; init; }
     public Guid? AdminId { get; init; }
 }
 
-public record class UpdateMemberRequest
+public record UpdateMemberRequest
 {
     public decimal? SplitPercentage { get; init; }
     public bool? IsValidator { get; init; }

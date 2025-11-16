@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,23 +11,13 @@ namespace SplitExpenses.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class ExpensesController : ControllerBase
+public class ExpensesController(
+    IExpenseRepository expenseRepository,
+    INotificationService notificationService,
+    IListRepository listRepository)
+    : ControllerBase
 {
-    private readonly IExpenseRepository expenseRepository;
-    private readonly INotificationService notificationService;
-    private readonly IListRepository listRepository;
-
-    public ExpensesController(
-        IExpenseRepository expenseRepository,
-        INotificationService notificationService,
-        IListRepository listRepository)
-    {
-        this.expenseRepository = expenseRepository;
-        this.notificationService = notificationService;
-        this.listRepository = listRepository;
-    }
-
-    [HttpGet("list/{listId}")]
+    [HttpGet("list/{listId:guid}")]
     public async Task<IActionResult> GetListExpenses(Guid listId, [FromQuery] DateTime? fromDate,
         [FromQuery] DateTime? toDate)
     {
@@ -44,7 +33,7 @@ public class ExpensesController : ControllerBase
         return Ok(expenses);
     }
 
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetExpense(Guid id)
     {
         var expense = await expenseRepository.GetByIdAsync(id);
@@ -75,7 +64,7 @@ public class ExpensesController : ControllerBase
         return CreatedAtAction(nameof(GetExpense), new { id = expense.Id }, expense);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{id:guid}")]
     public async Task<IActionResult> UpdateExpense(Guid id, [FromBody] UpdateExpenseRequest request)
     {
         var expense = await expenseRepository.GetByIdAsync(id);
@@ -95,7 +84,7 @@ public class ExpensesController : ControllerBase
         return Ok(expense);
     }
 
-    [HttpPost("{id}/submit")]
+    [HttpPost("{id:guid}/submit")]
     public async Task<IActionResult> SubmitExpense(Guid id)
     {
         var expense = await expenseRepository.GetByIdAsync(id);
@@ -106,7 +95,7 @@ public class ExpensesController : ControllerBase
 
         var members = await listRepository.GetListMembersAsync(expense.ListId);
         var activeValidators = members
-            .Where(m => m.IsValidator && m.Status == MemberStatus.Active && m.UserId.HasValue)
+            .Where(m => m is { IsValidator: true, Status: MemberStatus.Active, UserId: not null })
             .Where(m => m.UserId != expense.AuthorId)
             .ToList();
 
@@ -125,7 +114,7 @@ public class ExpensesController : ControllerBase
         return Ok(expense);
     }
 
-    [HttpPost("{id}/validate")]
+    [HttpPost("{id:guid}/validate")]
     public async Task<IActionResult> ValidateExpense(Guid id, [FromBody] ValidateExpenseRequest request)
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
@@ -137,7 +126,7 @@ public class ExpensesController : ControllerBase
 
         var members = await listRepository.GetListMembersAsync(expense.ListId);
         var validators = members
-            .Where(m => m.IsValidator && m.Status == MemberStatus.Active && m.UserId.HasValue)
+            .Where(m => m is { IsValidator: true, Status: MemberStatus.Active, UserId: not null })
             .Where(m => m.UserId != expense.AuthorId)
             .ToList();
 
@@ -164,33 +153,31 @@ public class ExpensesController : ControllerBase
         {
             await expenseRepository.UpdateStatusAsync(id, ExpenseStatus.Rejected);
             await notificationService.SendValidationResultNotificationAsync(id, false);
-            return Ok(new { message = "Validation recorded", status = ExpenseStatus.Rejected.ToString().ToLower() });
+            return Ok(new { message = "Validation recorded", status = nameof(ExpenseStatus.Rejected).ToLower() });
         }
 
         var validations = await expenseRepository.GetExpenseValidationsAsync(id);
         var approvedCount = validations.Count(v => v.Status == ValidationStatus.Validated);
-        if (approvedCount >= validators.Count)
-        {
-            await expenseRepository.UpdateStatusAsync(id, ExpenseStatus.Validated);
-            await notificationService.SendValidationResultNotificationAsync(id, true);
-            return Ok(new { message = "Validation recorded", status = ExpenseStatus.Validated.ToString().ToLower() });
-        }
+        if (approvedCount < validators.Count)
+            return Ok(new
+            {
+                message = "Validation recorded",
+                status = nameof(ExpenseStatus.Submitted).ToLower()
+            });
+        await expenseRepository.UpdateStatusAsync(id, ExpenseStatus.Validated);
+        await notificationService.SendValidationResultNotificationAsync(id, true);
+        return Ok(new { message = "Validation recorded", status = nameof(ExpenseStatus.Validated).ToLower() });
 
-        return Ok(new
-        {
-            message = "Validation recorded",
-            status = ExpenseStatus.Submitted.ToString().ToLower()
-        });
     }
 
-    [HttpGet("{id}/splits")]
+    [HttpGet("{id:guid}/splits")]
     public async Task<IActionResult> GetExpenseSplits(Guid id)
     {
         var splits = await expenseRepository.GetExpenseSplitsAsync(id);
         return Ok(splits);
     }
 
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteExpense(Guid id)
     {
         var expense = await expenseRepository.GetByIdAsync(id);
@@ -206,13 +193,9 @@ public class ExpensesController : ControllerBase
     private bool TryGetCurrentUserId(out Guid userId)
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
-        if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out userId))
-        {
-            userId = Guid.Empty;
-            return false;
-        }
-
-        return true;
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out userId)) return true;
+        userId = Guid.Empty;
+        return false;
     }
 }
 
@@ -225,6 +208,11 @@ public record CreateExpenseRequest(
     string? Notes,
     Guid PaidByMemberId);
 
-public record UpdateExpenseRequest(string Title, decimal Amount, DateTime ExpenseDate, string? Notes, Guid PaidByMemberId);
+public record UpdateExpenseRequest(
+    string Title,
+    decimal Amount,
+    DateTime ExpenseDate,
+    string? Notes,
+    Guid PaidByMemberId);
 
 public record ValidateExpenseRequest(bool Approved, string? Notes);
