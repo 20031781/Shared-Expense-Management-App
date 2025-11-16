@@ -55,9 +55,12 @@ export interface Expense {
     receiptUrl?: string;
     status: ExpenseStatus;
     serverTimestamp: string;
+    paidByMemberId?: string | null;
+    insertedAt: string;
     createdAt: string;
     updatedAt: string;
     author?: User;
+    paidByMember?: ListMember;
     validations?: ExpenseValidation[];
     splits?: ExpenseSplit[];
 }

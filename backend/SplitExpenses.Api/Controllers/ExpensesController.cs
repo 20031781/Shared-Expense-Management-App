@@ -34,7 +34,7 @@ public class ExpensesController : ControllerBase
     [HttpGet("user")]
     public async Task<IActionResult> GetUserExpenses([FromQuery] DateTime? fromDate, [FromQuery] DateTime? toDate)
     {
-        var userId = GetCurrentUserId();
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
         var expenses = await _expenseRepository.GetUserExpensesAsync(userId, fromDate, toDate);
         return Ok(expenses);
     }
@@ -50,7 +50,8 @@ public class ExpensesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateExpense([FromBody] CreateExpenseRequest request)
     {
-        var userId = GetCurrentUserId();
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
+        if (request.PaidByMemberId == Guid.Empty) return BadRequest("PaidByMemberId is required");
         var expense = new Expense
         {
             ListId = request.ListId,
@@ -60,6 +61,7 @@ public class ExpensesController : ControllerBase
             Currency = request.Currency,
             ExpenseDate = request.ExpenseDate,
             Notes = request.Notes,
+            PaidByMemberId = request.PaidByMemberId,
             Status = ExpenseStatus.Draft
         };
 
@@ -75,12 +77,14 @@ public class ExpensesController : ControllerBase
         if (expense == null) return NotFound();
 
         // Solo l'autore può modificare spese in draft
-        if (expense.AuthorId != GetCurrentUserId() || expense.Status != ExpenseStatus.Draft) return Forbid();
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
+        if (expense.AuthorId != userId || expense.Status != ExpenseStatus.Draft) return Forbid();
 
         expense.Title = request.Title;
         expense.Amount = request.Amount;
         expense.ExpenseDate = request.ExpenseDate;
         expense.Notes = request.Notes;
+        expense.PaidByMemberId = request.PaidByMemberId;
 
         expense = await _expenseRepository.UpdateAsync(expense);
         return Ok(expense);
@@ -92,7 +96,8 @@ public class ExpensesController : ControllerBase
         var expense = await _expenseRepository.GetByIdAsync(id);
         if (expense == null) return NotFound();
 
-        if (expense.AuthorId != GetCurrentUserId() || expense.Status != ExpenseStatus.Draft) return Forbid();
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
+        if (expense.AuthorId != userId || expense.Status != ExpenseStatus.Draft) return Forbid();
 
         expense.Status = ExpenseStatus.Submitted;
         await _expenseRepository.UpdateAsync(expense);
@@ -106,7 +111,7 @@ public class ExpensesController : ControllerBase
     [HttpPost("{id}/validate")]
     public async Task<IActionResult> ValidateExpense(Guid id, [FromBody] ValidateExpenseRequest request)
     {
-        var userId = GetCurrentUserId();
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
 
         var validation = new ExpenseValidation
         {
@@ -137,16 +142,23 @@ public class ExpensesController : ControllerBase
         var expense = await _expenseRepository.GetByIdAsync(id);
         if (expense == null) return NotFound();
 
-        if (expense.AuthorId != GetCurrentUserId() || expense.Status != ExpenseStatus.Draft) return Forbid();
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
+        if (expense.AuthorId != userId || expense.Status != ExpenseStatus.Draft) return Forbid();
 
         await _expenseRepository.DeleteAsync(id);
         return NoContent();
     }
 
-    private Guid GetCurrentUserId()
+    private bool TryGetCurrentUserId(out Guid userId)
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-        return Guid.Parse(userIdClaim!.Value);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub");
+        if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out userId))
+        {
+            userId = Guid.Empty;
+            return false;
+        }
+
+        return true;
     }
 }
 
@@ -156,8 +168,9 @@ public record CreateExpenseRequest(
     decimal Amount,
     string Currency,
     DateTime ExpenseDate,
-    string? Notes);
+    string? Notes,
+    Guid PaidByMemberId);
 
-public record UpdateExpenseRequest(string Title, decimal Amount, DateTime ExpenseDate, string? Notes);
+public record UpdateExpenseRequest(string Title, decimal Amount, DateTime ExpenseDate, string? Notes, Guid PaidByMemberId);
 
 public record ValidateExpenseRequest(bool Approved, string? Notes);

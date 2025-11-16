@@ -13,12 +13,15 @@ public class Expense
     public string? ReceiptUrl { get; set; }
     public ExpenseStatus Status { get; set; }
     public DateTime ServerTimestamp { get; set; }
+    public Guid? PaidByMemberId { get; set; }
+    public DateTime InsertedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
     // Navigation
     public List? List { get; set; }
     public User? Author { get; set; }
+    public ListMember? PaidByMember { get; set; }
     public ICollection<ExpenseValidation> Validations { get; set; } = new List<ExpenseValidation>();
     public ICollection<ExpenseSplit> Splits { get; set; } = new List<ExpenseSplit>();
 }

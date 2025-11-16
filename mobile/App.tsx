@@ -10,6 +10,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {AuthNavigator, MainNavigator} from '@navigation/AppNavigator';
 import {useAuthStore} from '@store/auth.store';
 import {Loading} from '@/components';
+import {LanguageProvider} from '@i18n';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -32,16 +33,18 @@ export default function App() {
     }
 
     return (
-        <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{flex: 1}}>
-                <SafeAreaProvider>
-                    <NavigationContainer>
-                        {isAuthenticated ? <MainNavigator/> : <AuthNavigator/>}
-                        {/*<MainNavigator />*/}
-                    </NavigationContainer>
-                    <StatusBar style="auto"/>
-                </SafeAreaProvider>
-            </GestureHandlerRootView>
-        </QueryClientProvider>
+        <LanguageProvider>
+            <QueryClientProvider client={queryClient}>
+                <GestureHandlerRootView style={{flex: 1}}>
+                    <SafeAreaProvider>
+                        <NavigationContainer>
+                            {isAuthenticated ? <MainNavigator/> : <AuthNavigator/>}
+                            {/*<MainNavigator />*/}
+                        </NavigationContainer>
+                        <StatusBar style="auto"/>
+                    </SafeAreaProvider>
+                </GestureHandlerRootView>
+            </QueryClientProvider>
+        </LanguageProvider>
     );
 }

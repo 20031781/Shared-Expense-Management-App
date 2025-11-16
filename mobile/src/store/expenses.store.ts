@@ -1,6 +1,6 @@
 import {create} from 'zustand';
 import {Expense, ValidationStatus} from '@/types';
-import expensesService from '@/services/expenses.service';
+import expensesService, {CreateExpenseData} from '@/services/expenses.service';
 
 interface ExpensesState {
     expenses: Expense[];
@@ -11,8 +11,8 @@ interface ExpensesState {
     fetchListExpenses: (listId: string, fromDate?: string, toDate?: string) => Promise<void>;
     fetchUserExpenses: (fromDate?: string, toDate?: string) => Promise<void>;
     fetchExpenseById: (id: string) => Promise<void>;
-    createExpense: (data: any) => Promise<Expense>;
-    updateExpense: (id: string, data: any) => Promise<void>;
+    createExpense: (data: CreateExpenseData) => Promise<Expense>;
+    updateExpense: (id: string, data: Partial<CreateExpenseData>) => Promise<void>;
     deleteExpense: (id: string) => Promise<void>;
     submitExpense: (id: string) => Promise<void>;
     validateExpense: (id: string, status: ValidationStatus, notes?: string) => Promise<void>;
@@ -57,7 +57,7 @@ export const useExpensesStore = create<ExpensesState>((set) => ({
         }
     },
 
-    createExpense: async (data: any) => {
+    createExpense: async (data: CreateExpenseData) => {
         try {
             set({isLoading: true, error: null});
             const expense = await expensesService.createExpense(data);
@@ -72,7 +72,7 @@ export const useExpensesStore = create<ExpensesState>((set) => ({
         }
     },
 
-    updateExpense: async (id: string, data: any) => {
+    updateExpense: async (id: string, data: Partial<CreateExpenseData>) => {
         try {
             set({isLoading: true, error: null});
             const updatedExpense = await expensesService.updateExpense(id, data);

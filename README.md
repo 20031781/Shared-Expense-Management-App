@@ -25,10 +25,13 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Creazione e gestione liste spese
 - ✅ Aggiunta spese con foto scontrino
 - ✅ Divisione automatica spese tra membri
+- ✅ Riepilogo spese con filtri temporali e grafici
+- ✅ Selezione del pagatore e tracciamento della data di inserimento
 - ✅ Calcolo rimborsi ottimizzati
 - ✅ Notifiche push
 - ✅ Sincronizzazione offline
 - ✅ App mobile iOS/Android
+- ✅ Impostazioni multilingua (Italiano/Inglese)
 
 ## 🚀 Quick Start
 
