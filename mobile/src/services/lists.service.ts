@@ -1,4 +1,4 @@
-import {List, ListMember} from '@/types';
+import {List, ListMember, UpdateMemberPayload} from '@/types';
 import apiService from './api.service';
 
 class ListsService {
@@ -26,14 +26,15 @@ class ListsService {
         return apiService.get<ListMember[]>(`/lists/${listId}/members`);
     }
 
-    async addMember(listId: string, email: string, isValidator: boolean): Promise<ListMember> {
+    async addMember(listId: string, email: string, isValidator: boolean, displayName?: string): Promise<ListMember> {
         return apiService.post<ListMember>(`/lists/${listId}/members`, {
             email,
             isValidator,
+            displayName,
         });
     }
 
-    async updateMember(listId: string, memberId: string, updates: Partial<ListMember>): Promise<ListMember> {
+    async updateMember(listId: string, memberId: string, updates: UpdateMemberPayload): Promise<ListMember> {
         return apiService.put<ListMember>(`/lists/${listId}/members/${memberId}`, updates);
     }
 
@@ -41,13 +42,21 @@ class ListsService {
         return apiService.delete(`/lists/${listId}/members/${memberId}`);
     }
 
-    async joinListByCode(inviteCode: string): Promise<List> {
-        return apiService.post<List>('/lists/join', {inviteCode});
+    async joinListByCode(inviteCode: string, displayName?: string): Promise<List> {
+        return apiService.post<List>('/lists/join', {inviteCode, displayName});
+    }
+
+    async acceptInvite(listId: string): Promise<ListMember> {
+        return apiService.post<ListMember>(`/lists/${listId}/accept-invite`);
+    }
+
+    async getListByInviteCode(inviteCode: string): Promise<List> {
+        return apiService.get<List>(`/lists/invite/${inviteCode}`);
     }
 
     async generateInviteLink(listId: string): Promise<string> {
         const list = await this.getListById(listId);
-        return `splitexpenses://join/${list.inviteCode}`;
+        return `splitexpenses://accept/${list.inviteCode}`;
     }
 
     async generateWhatsAppInvite(listId: string, listName: string): Promise<string> {
@@ -55,7 +64,7 @@ class ListsService {
         const message = encodeURIComponent(
             `Ciao! Ti invito ad unirti alla lista "${listName}" su Split Expenses.\n\n` +
             `Codice invito: ${list.inviteCode}\n\n` +
-            `Oppure clicca qui: splitexpenses://join/${list.inviteCode}`
+            `Per accettare apri questo link dal telefono con l'app installata: splitexpenses://accept/${list.inviteCode}`
         );
         return `whatsapp://send?text=${message}`;
     }

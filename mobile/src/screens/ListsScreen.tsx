@@ -1,7 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {Button, Card, Loading} from '@/components';
+import {Button, Card, Input, Loading} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {List} from '@/types';
 import {useNavigation} from '@react-navigation/native';
@@ -10,8 +10,12 @@ import {AppColors, useAppTheme} from '@theme';
 
 export const ListsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const {lists, isLoading, fetchLists, deleteList} = useListsStore();
+    const {lists, isLoading, fetchLists, deleteList, joinList} = useListsStore();
     const [refreshing, setRefreshing] = useState(false);
+    const [isJoinModalVisible, setJoinModalVisible] = useState(false);
+    const [inviteCode, setInviteCode] = useState('');
+    const [joinError, setJoinError] = useState<string | undefined>();
+    const [joining, setJoining] = useState(false);
     const {t} = useTranslation();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -39,9 +43,34 @@ export const ListsScreen: React.FC = () => {
     };
 
     const handleJoinList = () => {
-        Alert.alert(t('lists.joinTitle'), t('lists.joinDescription'), [
-            {text: t('lists.joinAction'), style: 'default'},
-        ]);
+        setJoinError(undefined);
+        setInviteCode('');
+        setJoinModalVisible(true);
+    };
+
+    const closeJoinModal = () => {
+        setJoinModalVisible(false);
+        setJoinError(undefined);
+        setInviteCode('');
+    };
+
+    const handleConfirmJoin = async () => {
+        const trimmed = inviteCode.trim();
+        if (!trimmed) {
+            setJoinError(t('lists.joinCodeRequired'));
+            return;
+        }
+
+        try {
+            setJoining(true);
+            await joinList(trimmed.toUpperCase());
+            Alert.alert(t('common.success'), t('lists.joinSuccess'));
+            closeJoinModal();
+        } catch (error: any) {
+            Alert.alert(t('common.error'), error.message || t('lists.joinError'));
+        } finally {
+            setJoining(false);
+        }
     };
 
     const handleDeleteList = (list: List) => {
@@ -128,6 +157,46 @@ export const ListsScreen: React.FC = () => {
                     <Ionicons name="enter-outline" size={24} color={colors.accent}/>
                 </TouchableOpacity>
             </View>
+
+            <Modal visible={isJoinModalVisible} transparent animationType="fade">
+                <View style={styles.joinModalBackdrop}>
+                    <View style={styles.joinModalContent}>
+                        <View style={styles.joinModalHeader}>
+                            <Text style={styles.joinModalTitle}>{t('lists.joinTitle')}</Text>
+                            <TouchableOpacity onPress={closeJoinModal}>
+                                <Ionicons name="close" size={22} color={colors.text}/>
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.joinModalDescription}>{t('lists.joinDescription')}</Text>
+                        <Input
+                            label={t('lists.joinPlaceholder')}
+                            placeholder="ABC123"
+                            autoCapitalize="characters"
+                            value={inviteCode}
+                            onChangeText={(value) => {
+                                setInviteCode(value);
+                                setJoinError(undefined);
+                            }}
+                            error={joinError}
+                        />
+                        <Text style={styles.joinHelper}>{t('lists.joinHelper')}</Text>
+                        <View style={styles.joinButtons}>
+                            <Button
+                                title={t('lists.joinSubmit')}
+                                onPress={handleConfirmJoin}
+                                loading={joining}
+                                disabled={joining}
+                            />
+                            <Button
+                                title={t('common.cancel')}
+                                onPress={closeJoinModal}
+                                variant="secondary"
+                                disabled={joining}
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 };
@@ -217,5 +286,39 @@ const createStyles = (colors: AppColors) =>
             width: 48,
             height: 48,
             borderRadius: 24,
+        },
+        joinModalBackdrop: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.35)',
+            justifyContent: 'center',
+            padding: 24,
+        },
+        joinModalContent: {
+            backgroundColor: colors.surface,
+            borderRadius: 24,
+            padding: 20,
+            gap: 12,
+        },
+        joinModalHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+        },
+        joinModalTitle: {
+            fontSize: 20,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        joinModalDescription: {
+            fontSize: 14,
+            color: colors.secondaryText,
+        },
+        joinHelper: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            marginTop: -8,
+        },
+        joinButtons: {
+            gap: 8,
         },
     });

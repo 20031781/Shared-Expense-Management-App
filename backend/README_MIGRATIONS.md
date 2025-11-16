@@ -16,6 +16,7 @@ Per produzione, usa **Supabase hosted** con le migrations complete in `../supaba
 1. **001_initial_schema.sql** - Schema completo (tabelle, indici, trigger)
 2. **002_stored_procedures.sql** - Funzioni per calcolo rimborsi
 3. **003_roles_and_member_split.sql** - Flag Admin utente + percentuali membri
+4. **004_member_display_name_and_expense_fix.sql** - Display name membri + colonne mancanti per le spese
 
 ---
 
@@ -52,12 +53,18 @@ Con DataGrip (consigliato):
    - Clicca **Execute** (Ctrl+Enter)
    - Apri `002_stored_procedures.sql`
    - Clicca **Execute** (Ctrl+Enter)
+   - Apri `003_roles_and_member_split.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `004_member_display_name_and_expense_fix.sql`
+   - Clicca **Execute** (Ctrl+Enter)
 
 ### Con psql (CLI)
 
 ```bash
 docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 001_initial_schema.sql
 docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 002_stored_procedures.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 003_roles_and_member_split.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 004_member_display_name_and_expense_fix.sql
 ```
 
 ---

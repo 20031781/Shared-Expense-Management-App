@@ -50,10 +50,16 @@ Usa le migrations semplificate per sviluppo locale.
     - Password: `postgres`
 
 2. Esegui in ordine i file SQL in `backend/migrations/`:
-    - Apri `001_initial_schema.sql`
-    - Clicca **Execute** (Ctrl+Enter)
-    - Apri `002_stored_procedures.sql`
-    - Clicca **Execute** (Ctrl+Enter)
+   - Apri `001_initial_schema.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `002_stored_procedures.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `003_roles_and_member_split.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `004_member_display_name_and_expense_fix.sql`
+   - Clicca **Execute** (Ctrl+Enter)
+   - Apri `005_expense_date_column.sql`
+   - Clicca **Execute** (Ctrl+Enter)
 
 **Con psql (CLI):**
 
@@ -61,7 +67,12 @@ Usa le migrations semplificate per sviluppo locale.
 cd backend/migrations
 docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 001_initial_schema.sql
 docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 002_stored_procedures.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 003_roles_and_member_split.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 004_member_display_name_and_expense_fix.sql
+docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 005_expense_date_column.sql
 ```
+
+> 💡 **Importante**: la migrazione `003` abilita il campo `split_percentage` (necessario per modificare i membri) e la `005` rinomina il campo `expense_date` evitando l'errore 500 in fase di creazione di una spesa. Assicurati di applicarle entrambe.
 
 **Verifica che funzioni:**
 
@@ -159,6 +170,38 @@ Vedrai un QR code nel terminale.
 1. Apri **Expo Go**
 2. Scansiona il **QR code**
 3. Aspetta che l'app si carichi
+
+#### Condividere l'invito via WhatsApp
+
+- Nella schermata **Dettaglio lista** tocca l'icona di condivisione (in alto a destra) per generare il messaggio WhatsApp con il link `splitexpenses://accept/<CODICE>`. Funziona sia su Android installato via Expo Go sia con l'APK creato via `npm run build:android-apk`.
+- Chi riceve il messaggio deve avere l'app installata e, aprendo il link, accetta automaticamente l'invito (se era già stato aggiunto) oppure si unisce alla lista con il codice.
+- Fino a quando un membro non accetta l'invito rimarrà con il **pallino giallo** in elenco: significa che è ancora in stato "In attesa".
+
+---
+
+### 4. Generare un APK di test (deploy manuale)
+
+Quando vuoi condividere rapidamente l'app senza passare dagli store puoi creare un `.apk` firmato tramite **EAS Build**.
+
+1. Installa le dipendenze ed effettua il login su Expo/EAS:
+
+   ```powershell
+   cd mobile
+   npm install
+   npx expo login
+   ```
+
+2. Avvia la build usando il profilo `preview` definito in `mobile/eas.json` (produce direttamente un APK installabile):
+
+   ```powershell
+   npm run build:android-apk
+   ```
+
+3. Alla fine EAS fornisce un link per scaricare il file `.apk`. Se preferisci una build locale (senza cloud) aggiungi `-- --local` al comando precedente; il file verrà salvato nella cartella `mobile/dist/`.
+
+4. Copia l'APK sui dispositivi di test (WhatsApp, e-mail o USB) e installalo manualmente abilitando l'origine sconosciuta.
+
+> ℹ️ Il profilo `preview` imposta automaticamente il tipo `apk` e non richiede Google Play; è pensato per la validazione rapida delle nuove build.
 
 ---
 

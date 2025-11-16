@@ -21,6 +21,7 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
                                             list_id AS "ListId",
                                             user_id AS "UserId",
                                             email AS "Email",
+                                            display_name AS "DisplayName",
                                             split_percentage AS "SplitPercentage",
                                             is_validator AS "IsValidator",
                                             status AS "Status",
@@ -114,8 +115,8 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
             member.CreatedAt = DateTime.UtcNow;
 
         const string sql = $"""
-                            INSERT INTO list_members (id, list_id, user_id, email, split_percentage, is_validator, status, joined_at, created_at)
-                            VALUES (@Id, @ListId, @UserId, @Email, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
+                            INSERT INTO list_members (id, list_id, user_id, email, display_name, split_percentage, is_validator, status, joined_at, created_at)
+                            VALUES (@Id, @ListId, @UserId, @Email, @DisplayName, @SplitPercentage, @IsValidator, @StatusText, @JoinedAt, @CreatedAt)
                             RETURNING {MemberProjection}
                             """;
 
@@ -125,6 +126,7 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
             member.ListId,
             member.UserId,
             member.Email,
+            member.DisplayName,
             member.SplitPercentage,
             member.IsValidator,
             StatusText = member.Status == MemberStatus.Active ? "active" : "pending",
@@ -143,6 +145,7 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
                             UPDATE list_members SET
                             user_id = @UserId,
                             email = @Email,
+                            display_name = @DisplayName,
                             split_percentage = @SplitPercentage,
                             is_validator = @IsValidator,
                             status = @StatusText,
@@ -156,6 +159,7 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
             member.Id,
             member.UserId,
             member.Email,
+            member.DisplayName,
             member.SplitPercentage,
             member.IsValidator,
             StatusText = member.Status == MemberStatus.Active ? "active" : "pending",
@@ -190,6 +194,16 @@ public class ListRepository(IDbConnectionFactory connectionFactory) : IListRepos
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql,
             new { ListId = listId, UserId = userId });
+        return dto?.ToModel();
+    }
+
+    public async Task<ListMember?> GetMemberByEmailAsync(Guid listId, string email)
+    {
+        const string sql =
+            $"SELECT {MemberProjection} FROM list_members WHERE list_id = @ListId AND LOWER(email) = LOWER(@Email) LIMIT 1";
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        var dto = await connection.QuerySingleOrDefaultAsync<ListMemberDto>(sql,
+            new { ListId = listId, Email = email });
         return dto?.ToModel();
     }
 
@@ -241,6 +255,7 @@ internal class ListMemberDto
     public Guid ListId { get; init; }
     public Guid? UserId { get; init; }
     public string Email { get; init; } = string.Empty;
+    public string? DisplayName { get; init; }
     public decimal SplitPercentage { get; init; }
     public bool IsValidator { get; init; }
     public string Status { get; init; } = "pending";
@@ -254,6 +269,7 @@ internal class ListMemberDto
             ListId = ListId,
             UserId = UserId,
             Email = Email,
+            DisplayName = DisplayName,
             SplitPercentage = SplitPercentage,
             IsValidator = IsValidator,
             Status = Status.Equals("active", StringComparison.CurrentCultureIgnoreCase)

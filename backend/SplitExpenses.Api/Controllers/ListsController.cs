@@ -42,14 +42,20 @@ public class ListsController(IListRepository listRepository) : ControllerBase
 
         // Aggiungi membri
         foreach (var member in request.Members)
+        {
+            if (string.IsNullOrWhiteSpace(member.Email))
+                continue;
+
             await listRepository.AddMemberAsync(new ListMember
             {
                 ListId = list.Id,
-                Email = member.Email,
+                Email = member.Email.Trim(),
+                DisplayName = NormalizeDisplayName(member.DisplayName),
                 SplitPercentage = member.SplitPercentage ?? 0,
                 IsValidator = member.IsValidator,
                 Status = MemberStatus.Pending
             });
+        }
 
         return CreatedAtAction(nameof(GetList), new { id = list.Id }, list);
     }
@@ -74,7 +80,8 @@ public class ListsController(IListRepository listRepository) : ControllerBase
         var member = await listRepository.AddMemberAsync(new ListMember
         {
             ListId = id,
-            Email = request.Email,
+            Email = request.Email.Trim(),
+            DisplayName = NormalizeDisplayName(request.DisplayName),
             SplitPercentage = request.SplitPercentage ?? 0,
             IsValidator = request.IsValidator,
             Status = MemberStatus.Pending
@@ -144,6 +151,14 @@ public class ListsController(IListRepository listRepository) : ControllerBase
         if (request.Status.HasValue)
             member.Status = request.Status.Value;
 
+        if (request.ClearDisplayName == true)
+            member.DisplayName = null;
+        else if (request.DisplayName is not null)
+            member.DisplayName = NormalizeDisplayName(request.DisplayName);
+
+        if (member.Status == MemberStatus.Active && member.JoinedAt == null)
+            member.JoinedAt = DateTime.UtcNow;
+
         var updated = await listRepository.UpdateMemberAsync(member);
         return Ok(updated);
     }
@@ -169,17 +184,92 @@ public class ListsController(IListRepository listRepository) : ControllerBase
     [HttpPost("{id:guid}/accept-invite")]
     public async Task<IActionResult> AcceptInvite(Guid id)
     {
-        if (!TryGetCurrentUserId(out _)) return Unauthorized();
-        // TODO: Implementare logica accettazione invito
-        return Ok(new { message = "Invite accepted" });
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+
+        var email = GetCurrentUserEmail();
+        if (string.IsNullOrWhiteSpace(email))
+            return BadRequest("Email is required to accept invites");
+
+        var list = await listRepository.GetByIdAsync(id);
+        if (list == null) return NotFound();
+
+        var member = await listRepository.GetMemberByUserAsync(id, userId)
+                     ?? await listRepository.GetMemberByEmailAsync(id, email);
+
+        if (member == null)
+            return NotFound("Invitation not found");
+
+        member.UserId = userId;
+        member.Email = email;
+        member.Status = MemberStatus.Active;
+        member.JoinedAt ??= DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(member.DisplayName))
+            member.DisplayName = BuildDefaultDisplayName(email);
+
+        var updated = await listRepository.UpdateMemberAsync(member);
+        return Ok(updated);
+    }
+
+    [HttpPost("join")]
+    public async Task<IActionResult> JoinList([FromBody] JoinListRequest request)
+    {
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(request.InviteCode))
+            return BadRequest("Invite code is required");
+
+        var normalizedCode = request.InviteCode.Trim().ToUpperInvariant();
+        var list = await listRepository.GetByInviteCodeAsync(normalizedCode);
+        if (list == null) return NotFound("Invalid invite code");
+
+        var email = GetCurrentUserEmail();
+        if (string.IsNullOrWhiteSpace(email))
+            return BadRequest("Email is required to join lists");
+
+        await EnsureActiveMembershipAsync(list.Id, userId, email, request.DisplayName);
+        return Ok(list);
     }
 
     [HttpGet("invite/{code}")]
     public async Task<IActionResult> GetListByInviteCode(string code)
     {
-        var list = await listRepository.GetByInviteCodeAsync(code);
+        var normalized = code?.Trim().ToUpperInvariant();
+        var list = await listRepository.GetByInviteCodeAsync(normalized ?? code);
         if (list == null) return NotFound();
         return Ok(list);
+    }
+
+    private async Task EnsureActiveMembershipAsync(Guid listId, Guid userId, string email, string? requestedDisplayName)
+    {
+        var normalizedDisplayName = NormalizeDisplayName(requestedDisplayName);
+        var member = await listRepository.GetMemberByUserAsync(listId, userId)
+                     ?? await listRepository.GetMemberByEmailAsync(listId, email);
+
+        if (member != null)
+        {
+            member.UserId = userId;
+            member.Email = email;
+            member.Status = MemberStatus.Active;
+            member.JoinedAt ??= DateTime.UtcNow;
+            if (normalizedDisplayName != null)
+                member.DisplayName = normalizedDisplayName;
+            else if (string.IsNullOrWhiteSpace(member.DisplayName))
+                member.DisplayName = BuildDefaultDisplayName(email);
+
+            await listRepository.UpdateMemberAsync(member);
+            return;
+        }
+
+        await listRepository.AddMemberAsync(new ListMember
+        {
+            ListId = listId,
+            UserId = userId,
+            Email = email,
+            DisplayName = normalizedDisplayName ?? BuildDefaultDisplayName(email),
+            SplitPercentage = 0,
+            IsValidator = false,
+            Status = MemberStatus.Active,
+            JoinedAt = DateTime.UtcNow
+        });
     }
 
     private bool TryGetCurrentUserId(out Guid userId)
@@ -188,6 +278,20 @@ public class ListsController(IListRepository listRepository) : ControllerBase
         userId = Guid.Empty;
         return userIdClaim != null && Guid.TryParse(userIdClaim.Value, out userId);
     }
+
+    private string? GetCurrentUserEmail()
+    {
+        return User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
+    }
+
+    private static string BuildDefaultDisplayName(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return "Member";
+        var parts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 0 ? parts[0] : email;
+    }
+
+    private static string? NormalizeDisplayName(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private bool IsAppAdmin() => User.IsInRole("Admin");
 
@@ -200,13 +304,14 @@ public record CreateListRequest
     public List<CreateMemberRequest> Members { get; init; } = [];
 }
 
-public abstract record CreateMemberRequest(string Email, decimal? SplitPercentage, bool IsValidator);
+public record CreateMemberRequest(string Email, decimal? SplitPercentage, bool IsValidator, string? DisplayName = null);
 
 public record AddMemberRequest
 {
     public string Email { get; init; } = string.Empty;
     public decimal? SplitPercentage { get; init; }
     public bool IsValidator { get; init; }
+    public string? DisplayName { get; init; }
 }
 
 public record UpdateListRequest
@@ -220,4 +325,12 @@ public record UpdateMemberRequest
     public decimal? SplitPercentage { get; init; }
     public bool? IsValidator { get; init; }
     public MemberStatus? Status { get; init; }
+    public string? DisplayName { get; init; }
+    public bool? ClearDisplayName { get; init; }
+}
+
+public record JoinListRequest
+{
+    public string InviteCode { get; init; } = string.Empty;
+    public string? DisplayName { get; init; }
 }

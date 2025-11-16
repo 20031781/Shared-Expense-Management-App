@@ -1,5 +1,5 @@
 import {create} from 'zustand';
-import {List, ListMember} from '@/types';
+import {List, ListMember, UpdateMemberPayload} from '@/types';
 import listsService from '@/services/lists.service';
 
 interface ListsState {
@@ -15,10 +15,11 @@ interface ListsState {
     createList: (name: string) => Promise<List>;
     updateList: (id: string, name: string) => Promise<void>;
     deleteList: (id: string) => Promise<void>;
-    addMember: (listId: string, email: string, isValidator: boolean) => Promise<void>;
-    updateMember: (listId: string, memberId: string, updates: Partial<ListMember>) => Promise<void>;
+    addMember: (listId: string, email: string, displayName: string | undefined, isValidator: boolean) => Promise<void>;
+    updateMember: (listId: string, memberId: string, updates: UpdateMemberPayload) => Promise<void>;
     removeMember: (listId: string, memberId: string) => Promise<void>;
-    joinList: (inviteCode: string) => Promise<void>;
+    joinList: (inviteCode: string, displayName?: string) => Promise<void>;
+    acceptInviteByCode: (inviteCode: string) => Promise<void>;
     setCurrentList: (list: List | null) => void;
     clearError: () => void;
 }
@@ -105,10 +106,10 @@ export const useListsStore = create<ListsState>((set, get) => ({
         }
     },
 
-    addMember: async (listId: string, email: string, isValidator: boolean) => {
+    addMember: async (listId: string, email: string, displayName: string | undefined, isValidator: boolean) => {
         try {
             set({isLoading: true, error: null});
-            const member = await listsService.addMember(listId, email, isValidator);
+            const member = await listsService.addMember(listId, email, isValidator, displayName);
             set(state => ({
                 members: [...state.members, member],
                 isLoading: false
@@ -119,7 +120,7 @@ export const useListsStore = create<ListsState>((set, get) => ({
         }
     },
 
-    updateMember: async (listId: string, memberId: string, updates: Partial<ListMember>) => {
+    updateMember: async (listId: string, memberId: string, updates: UpdateMemberPayload) => {
         try {
             set({isLoading: true, error: null});
             const updatedMember = await listsService.updateMember(listId, memberId, updates);
@@ -147,14 +148,37 @@ export const useListsStore = create<ListsState>((set, get) => ({
         }
     },
 
-    joinList: async (inviteCode: string) => {
+    joinList: async (inviteCode: string, displayName?: string) => {
         try {
             set({isLoading: true, error: null});
-            const list = await listsService.joinListByCode(inviteCode);
-            set(state => ({
-                lists: [...state.lists, list],
-                isLoading: false
-            }));
+            const normalizedCode = inviteCode.trim().toUpperCase();
+            const list = await listsService.joinListByCode(normalizedCode, displayName);
+            set(state => {
+                const exists = state.lists.some(l => l.id === list.id);
+                return {
+                    lists: exists ? state.lists : [...state.lists, list],
+                    isLoading: false
+                };
+            });
+        } catch (error: any) {
+            set({error: error.message, isLoading: false});
+            throw error;
+        }
+    },
+
+    acceptInviteByCode: async (inviteCode: string) => {
+        try {
+            set({isLoading: true, error: null});
+            const normalizedCode = inviteCode.trim().toUpperCase();
+            const list = await listsService.getListByInviteCode(normalizedCode);
+            await listsService.acceptInvite(list.id);
+            set(state => {
+                const exists = state.lists.some(l => l.id === list.id);
+                return {
+                    lists: exists ? state.lists : [...state.lists, list],
+                    isLoading: false
+                };
+            });
         } catch (error: any) {
             set({error: error.message, isLoading: false});
             throw error;
