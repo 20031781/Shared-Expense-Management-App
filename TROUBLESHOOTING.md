@@ -60,12 +60,12 @@ https://your-domain.com/signin-google
 
 ### Errore: "Request failed with status code 400" quando creo una lista
 
-**Problema:** Il payload JSON di creazione lista non viene deserializzato perché `CreateMemberRequest` è marcato come `abstract`, quindi l'API restituisce 400 prima di raggiungere i breakpoint.
+**Problema:** Con l'attributo `[ApiController]` attivo, ogni proprietà non-nullable del DTO è obbligatoria. `CreateListRequest` richiedeva `Members`, quindi una richiesta senza il campo veniva respinta durante il model binding e Rider non poteva mai arrivare al breakpoint nell'`action`.
 
 **Soluzione:**
-1. Apri `backend/SplitExpenses.Api/Controllers/ListsController.cs`.
-2. Sostituisci la dichiarazione `public abstract record CreateMemberRequest(...)` con `public record CreateMemberRequest(...)`.
-3. Ricompila/rilancia l'API; la richiesta `POST /api/lists` accetta ora correttamente la collezione `Members` e i breakpoint verranno colpiti.
+1. Il DTO (`backend/SplitExpenses.Api/Controllers/ListsController.cs`) inizializza ora `Members` a una lista vuota, così il model binding non fallisce più quando il campo manca.
+2. Il client mobile (`mobile/src/services/lists.service.ts`) invia sempre `members: []`, rendendo esplicito il payload accettato dall'API.
+3. Riavvia l'API in modalità Debug: qualsiasi `POST /api/lists` raggiungerà il breakpoint impostato su `CreateList` e restituirà `201 Created` se il token è valido.
 
 ### Errore: "Firebase credentials not found"
 

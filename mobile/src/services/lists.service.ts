@@ -11,7 +11,7 @@ class ListsService {
     }
 
     async createList(name: string): Promise<List> {
-        return apiService.post<List>('/lists', {name});
+        return apiService.post<List>('/lists', {name, members: []});
     }
 
     async updateList(id: string, name: string): Promise<List> {

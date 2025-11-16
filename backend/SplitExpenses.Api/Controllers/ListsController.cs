@@ -98,7 +98,11 @@ public class ListsController(IListRepository listRepository) : ControllerBase
     }
 }
 
-public record CreateListRequest(string Name, List<CreateMemberRequest> Members);
+public record class CreateListRequest
+{
+    public string Name { get; init; } = string.Empty;
+    public List<CreateMemberRequest> Members { get; init; } = new();
+}
 
 public record CreateMemberRequest(string Email, decimal SplitPercentage, bool IsValidator);
 
