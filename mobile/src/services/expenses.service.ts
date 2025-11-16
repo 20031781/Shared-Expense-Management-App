@@ -1,7 +1,7 @@
 import {Expense, ExpenseSplit, ExpenseValidation, ValidationStatus} from '@/types';
 import apiService from './api.service';
 
-interface CreateExpenseData {
+export interface CreateExpenseData {
     listId: string;
     title: string;
     amount: number;
@@ -9,6 +9,7 @@ interface CreateExpenseData {
     expenseDate: string;
     notes?: string;
     receiptUrl?: string;
+    paidByMemberId: string;
 }
 
 class ExpensesService {

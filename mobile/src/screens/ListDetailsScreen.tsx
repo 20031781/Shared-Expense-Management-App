@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Button, Card, Loading} from '@/components';
@@ -7,11 +7,15 @@ import {useExpensesStore} from '@/store/expenses.store';
 import {useAuthStore} from '@/store/auth.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Expense, ListMember} from '@/types';
+import {useTranslation} from '@i18n';
+
+type SummaryFilter = '7' | '30' | '90' | 'all';
 
 export const ListDetailsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const {listId} = route.params;
+    const {t} = useTranslation();
 
     const {user} = useAuthStore();
     const {currentList, members, fetchListById, fetchMembers} = useListsStore();
@@ -19,6 +23,7 @@ export const ListDetailsScreen: React.FC = () => {
 
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'expenses' | 'members'>('expenses');
+    const [summaryRange, setSummaryRange] = useState<SummaryFilter>('30');
 
     useEffect(() => {
         loadData();
@@ -55,16 +60,15 @@ export const ListDetailsScreen: React.FC = () => {
 
         const inviteCode = currentList.inviteCode;
         Alert.alert(
-            'Invite Code',
+            t('lists.invite'),
             `Share this code with others to invite them:\n\n${inviteCode}`,
             [
                 {
                     text: 'Copy', onPress: () => {
-                        // In production, use Clipboard.setString(inviteCode)
-                        Alert.alert('Copied', 'Invite code copied to clipboard');
+                        Alert.alert(t('common.success'), 'Invite code copied to clipboard');
                     }
                 },
-                {text: 'Close', style: 'cancel'},
+                {text: t('common.close'), style: 'cancel'},
             ]
         );
     };
@@ -74,27 +78,68 @@ export const ListDetailsScreen: React.FC = () => {
     }
 
     const isAdmin = currentList.adminId === user?.id;
+    const currency = expenses[0]?.currency ?? 'EUR';
 
-    const renderExpense = (expense: Expense) => (
-        <Card key={expense.id} onPress={() => handleExpensePress(expense)}>
-            <View style={styles.expenseItem}>
-                <View style={styles.expenseInfo}>
-                    <Text style={styles.expenseTitle}>{expense.title}</Text>
-                    <Text style={styles.expenseDate}>
-                        {new Date(expense.expenseDate).toLocaleDateString()}
-                    </Text>
-                </View>
-                <View style={styles.expenseRight}>
-                    <Text style={styles.expenseAmount}>
-                        {expense.currency} {expense.amount.toFixed(2)}
-                    </Text>
-                    <View style={[styles.statusBadge, styles[`status${expense.status}`]]}>
-                        <Text style={styles.statusText}>{expense.status}</Text>
+    const filteredExpenses = useMemo(() => {
+        if (summaryRange === 'all') return expenses;
+        const days = parseInt(summaryRange, 10);
+        const threshold = new Date();
+        threshold.setDate(threshold.getDate() - days);
+        return expenses.filter((expense) => new Date(expense.expenseDate) >= threshold);
+    }, [expenses, summaryRange]);
+
+    const totalAmount = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
+
+    const memberMap = useMemo(() => {
+        const map = new Map<string, ListMember>();
+        members.forEach((member) => map.set(member.id, member));
+        return map;
+    }, [members]);
+
+    const perMemberBreakdown = useMemo(() => {
+        const accumulator = new Map<string, number>();
+        filteredExpenses.forEach((expense) => {
+            if (!expense.paidByMemberId) return;
+            accumulator.set(expense.paidByMemberId, (accumulator.get(expense.paidByMemberId) ?? 0) + expense.amount);
+        });
+        return Array.from(accumulator.entries()).map(([memberId, amount]) => ({
+            member: memberMap.get(memberId),
+            amount,
+            memberId,
+        })).sort((a, b) => b.amount - a.amount);
+    }, [filteredExpenses, memberMap]);
+
+    const chartMax = perMemberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
+
+    const renderExpense = (expense: Expense) => {
+        const payer = expense.paidByMemberId ? memberMap.get(expense.paidByMemberId) : undefined;
+        return (
+            <Card key={expense.id} onPress={() => handleExpensePress(expense)}>
+                <View style={styles.expenseItem}>
+                    <View style={styles.expenseInfo}>
+                        <Text style={styles.expenseTitle}>{expense.title}</Text>
+                        <Text style={styles.expenseMeta}>
+                            {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
+                        </Text>
+                        <Text style={styles.expenseMeta}>
+                            {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
+                        </Text>
+                        {payer && (
+                            <Text style={styles.expensePayer}>{t('expenses.paidBy', {name: payer.email})}</Text>
+                        )}
+                    </View>
+                    <View style={styles.expenseRight}>
+                        <Text style={styles.expenseAmount}>
+                            {currency} {expense.amount.toFixed(2)}
+                        </Text>
+                        <View style={[styles.statusBadge, styles[`status${expense.status}`]]}>
+                            <Text style={styles.statusText}>{expense.status}</Text>
+                        </View>
                     </View>
                 </View>
-            </View>
-        </Card>
-    );
+            </Card>
+        );
+    };
 
     const renderMember = (member: ListMember) => (
         <Card key={member.id}>
@@ -133,13 +178,58 @@ export const ListDetailsScreen: React.FC = () => {
                     )}
                 </View>
 
+                <View style={styles.summaryCard}>
+                    <View style={styles.summaryHeader}>
+                        <Text style={styles.summaryTitle}>{t('lists.summaryTitle')}</Text>
+                        <View style={styles.filterRow}>
+                            {(['7', '30', '90', 'all'] as SummaryFilter[]).map((filter) => (
+                                <TouchableOpacity
+                                    key={filter}
+                                    style={[styles.filterChip, summaryRange === filter && styles.filterChipActive]}
+                                    onPress={() => setSummaryRange(filter)}
+                                >
+                                    <Text
+                                        style={[styles.filterChipText, summaryRange === filter && styles.filterChipTextActive]}
+                                    >
+                                        {filter === 'all' ? t('lists.filterAll') : filter === '7' ? t('lists.filter7') : filter === '30' ? t('lists.filter30') : t('lists.filter90')}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalLabel}>{t('lists.totalSpent')}</Text>
+                        <Text style={styles.totalValue}>{currency} {totalAmount.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.chartContainer}>
+                        {perMemberBreakdown.length === 0 ? (
+                            <Text style={styles.chartEmpty}>{t('lists.chartEmpty')}</Text>
+                        ) : (
+                            perMemberBreakdown.map((item) => (
+                                <View key={item.memberId} style={styles.chartRow}>
+                                    <Text style={styles.chartLabel}>{item.member?.email ?? 'Unknown'}</Text>
+                                    <View style={styles.chartBarWrapper}>
+                                        <View
+                                            style={[
+                                                styles.chartBar,
+                                                {width: `${Math.max((item.amount / chartMax) * 100, 5)}%`},
+                                            ]}
+                                        />
+                                    </View>
+                                    <Text style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
+                                </View>
+                            ))
+                        )}
+                    </View>
+                </View>
+
                 <View style={styles.tabs}>
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'expenses' && styles.activeTab]}
                         onPress={() => setActiveTab('expenses')}
                     >
                         <Text style={[styles.tabText, activeTab === 'expenses' && styles.activeTabText]}>
-                            Expenses ({expenses.length})
+                            {t('lists.expensesTab', {count: expenses.length})}
                         </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -147,7 +237,7 @@ export const ListDetailsScreen: React.FC = () => {
                         onPress={() => setActiveTab('members')}
                     >
                         <Text style={[styles.tabText, activeTab === 'members' && styles.activeTabText]}>
-                            Members ({members.length})
+                            {t('lists.membersTab', {count: members.length})}
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -158,8 +248,8 @@ export const ListDetailsScreen: React.FC = () => {
                             {expenses.length === 0 ? (
                                 <View style={styles.empty}>
                                     <Text style={styles.emptyIcon}>💸</Text>
-                                    <Text style={styles.emptyText}>No expenses yet</Text>
-                                    <Button title="Add Expense" onPress={handleAddExpense}/>
+                                    <Text style={styles.emptyText}>{t('lists.emptyExpenses')}</Text>
+                                    <Button title={t('lists.addExpense')} onPress={handleAddExpense}/>
                                 </View>
                             ) : (
                                 expenses.map(renderExpense)
@@ -170,8 +260,8 @@ export const ListDetailsScreen: React.FC = () => {
                             {members.length === 0 ? (
                                 <View style={styles.empty}>
                                     <Text style={styles.emptyIcon}>👥</Text>
-                                    <Text style={styles.emptyText}>No members yet</Text>
-                                    {isAdmin && <Button title="Add Member" onPress={handleAddMember}/>}
+                                    <Text style={styles.emptyText}>{t('lists.emptyMembers')}</Text>
+                                    {isAdmin && <Button title={t('lists.addMember')} onPress={handleAddMember}/>}
                                 </View>
                             ) : (
                                 members.map(renderMember)
@@ -206,95 +296,206 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 16,
-        backgroundColor: '#FFFFFF',
     },
     listName: {
         fontSize: 24,
-        fontWeight: 'bold',
-        color: '#000000',
+        fontWeight: '700',
+        color: '#1C1C1E',
     },
     inviteButton: {
         padding: 8,
+        borderRadius: 12,
+        backgroundColor: '#E5F1FF',
+    },
+    summaryCard: {
+        marginHorizontal: 16,
+        marginBottom: 16,
+        padding: 16,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        gap: 12,
+    },
+    summaryHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    summaryTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1C1C1E',
+    },
+    filterRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    filterChip: {
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#F2F2F7',
+    },
+    filterChipActive: {
+        backgroundColor: '#007AFF',
+    },
+    filterChipText: {
+        color: '#1C1C1E',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    filterChipTextActive: {
+        color: '#FFFFFF',
+    },
+    totalRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    totalLabel: {
+        fontSize: 16,
+        color: '#6C6C70',
+    },
+    totalValue: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#1C1C1E',
+    },
+    chartContainer: {
+        gap: 12,
+    },
+    chartEmpty: {
+        textAlign: 'center',
+        color: '#8E8E93',
+        fontSize: 14,
+    },
+    chartRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    chartLabel: {
+        flex: 1,
+        fontSize: 14,
+        color: '#1C1C1E',
+    },
+    chartBarWrapper: {
+        flex: 2,
+        height: 10,
+        backgroundColor: '#E5E5EA',
+        borderRadius: 8,
+        overflow: 'hidden',
+    },
+    chartBar: {
+        height: '100%',
+        backgroundColor: '#34C759',
+        borderRadius: 8,
+    },
+    chartValue: {
+        width: 90,
+        textAlign: 'right',
+        fontSize: 12,
+        color: '#1C1C1E',
     },
     tabs: {
         flexDirection: 'row',
-        backgroundColor: '#FFFFFF',
-        borderBottomWidth: 1,
-        borderBottomColor: '#E5E5EA',
+        marginHorizontal: 16,
+        marginBottom: 12,
+        borderRadius: 12,
+        backgroundColor: '#E5E5EA',
     },
     tab: {
         flex: 1,
-        paddingVertical: 16,
+        paddingVertical: 12,
         alignItems: 'center',
+        borderRadius: 12,
     },
     activeTab: {
-        borderBottomWidth: 2,
-        borderBottomColor: '#007AFF',
+        backgroundColor: '#FFFFFF',
     },
     tabText: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#8E8E93',
+        fontWeight: '600',
     },
     activeTabText: {
         color: '#007AFF',
-        fontWeight: '600',
     },
     content: {
-        padding: 8,
+        padding: 16,
+        gap: 12,
+    },
+    empty: {
+        alignItems: 'center',
+        padding: 24,
+        gap: 12,
+    },
+    emptyIcon: {
+        fontSize: 32,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: '#6C6C70',
     },
     expenseItem: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 16,
     },
     expenseInfo: {
         flex: 1,
+        gap: 4,
     },
     expenseTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#000000',
-        marginBottom: 4,
+        color: '#1C1C1E',
     },
-    expenseDate: {
-        fontSize: 14,
+    expenseMeta: {
+        fontSize: 12,
         color: '#8E8E93',
+    },
+    expensePayer: {
+        fontSize: 12,
+        color: '#0A7C4A',
+        fontWeight: '600',
     },
     expenseRight: {
         alignItems: 'flex-end',
+        gap: 8,
     },
     expenseAmount: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#000000',
-        marginBottom: 4,
+        fontWeight: '700',
+        color: '#1C1C1E',
     },
     statusBadge: {
-        paddingHorizontal: 8,
+        paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 4,
+        borderRadius: 12,
     },
     statusdraft: {
         backgroundColor: '#F2F2F7',
     },
     statussubmitted: {
-        backgroundColor: '#FFD60A',
+        backgroundColor: '#FFF4E5',
     },
     statusvalidated: {
-        backgroundColor: '#34C759',
+        backgroundColor: '#E5F7ED',
     },
     statusrejected: {
-        backgroundColor: '#FF3B30',
+        backgroundColor: '#FDE8E8',
     },
     statusText: {
         fontSize: 12,
         fontWeight: '600',
-        color: '#FFFFFF',
-        textTransform: 'uppercase',
+        color: '#1C1C1E',
     },
     memberItem: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
     },
     memberInfo: {
         flex: 1,
@@ -302,30 +503,28 @@ const styles = StyleSheet.create({
     memberEmail: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#000000',
-        marginBottom: 4,
     },
     memberBadges: {
         flexDirection: 'row',
-        alignItems: 'center',
+        gap: 8,
+        marginTop: 4,
     },
     memberSplit: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#8E8E93',
-        marginRight: 8,
     },
     validatorBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 4,
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        backgroundColor: '#E5F7ED',
+        borderRadius: 12,
     },
     validatorText: {
         fontSize: 12,
-        color: '#34C759',
-        marginLeft: 2,
+        color: '#0A7C4A',
     },
     statusDot: {
         width: 12,
@@ -336,20 +535,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#34C759',
     },
     pendingStatus: {
-        backgroundColor: '#FFD60A',
-    },
-    empty: {
-        alignItems: 'center',
-        padding: 40,
-    },
-    emptyIcon: {
-        fontSize: 64,
-        marginBottom: 16,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: '#8E8E93',
-        marginBottom: 24,
+        backgroundColor: '#FFCC00',
     },
     fab: {
         position: 'absolute',
@@ -359,15 +545,12 @@ const styles = StyleSheet.create({
         height: 56,
         borderRadius: 28,
         backgroundColor: '#007AFF',
-        justifyContent: 'center',
         alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 4,
         shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 4,
-        },
-        shadowOpacity: 0.3,
+        shadowOffset: {width: 0, height: 2},
+        shadowOpacity: 0.2,
         shadowRadius: 4,
-        elevation: 8,
     },
 });
