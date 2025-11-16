@@ -171,6 +171,11 @@ public record CreateExpenseRequest(
     string? Notes,
     Guid PaidByMemberId);
 
-public record UpdateExpenseRequest(string Title, decimal Amount, DateTime ExpenseDate, string? Notes, Guid PaidByMemberId);
+public record UpdateExpenseRequest(
+    string Title,
+    decimal Amount,
+    DateTime ExpenseDate,
+    string? Notes,
+    Guid PaidByMemberId);
 
 public record ValidateExpenseRequest(bool Approved, string? Notes);
