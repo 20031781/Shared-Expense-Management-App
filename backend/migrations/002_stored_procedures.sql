@@ -102,7 +102,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER ensure_list_invite_code
-  BEFORE INSERT ON lists
-  FOR EACH ROW
-  EXECUTE FUNCTION set_list_invite_code();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'ensure_list_invite_code'
+  ) THEN
+    CREATE TRIGGER ensure_list_invite_code
+      BEFORE INSERT ON lists
+      FOR EACH ROW
+      EXECUTE FUNCTION set_list_invite_code();
+  END IF;
+END;
+$$;

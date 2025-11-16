@@ -41,19 +41,19 @@ CREATE POLICY "Users can read own profile"
   ON public.users
   FOR SELECT
   TO authenticated
-  USING (auth.uid() = id);
+  USING (public.current_user_id() = id);
 
 -- Policy: gli utenti possono aggiornare il proprio profilo
 CREATE POLICY "Users can update own profile"
   ON public.users
   FOR UPDATE
   TO authenticated
-  USING (auth.uid() = id)
-  WITH CHECK (auth.uid() = id);
+  USING (public.current_user_id() = id)
+  WITH CHECK (public.current_user_id() = id);
 
 -- Policy: solo auth trigger può inserire (tramite SECURITY DEFINER)
 CREATE POLICY "Service can insert users"
   ON public.users
   FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (public.current_user_id() = id);
