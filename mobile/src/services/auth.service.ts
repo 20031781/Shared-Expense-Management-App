@@ -1,7 +1,8 @@
 import * as WebBrowser from 'expo-web-browser';
-import {LoginResponse, User} from '@/types';
+import {AuthResponse, LoginResponse, User} from '@/types';
 import apiService from './api.service';
 import storageService from './storage.service';
+import {buildAuthTokens} from '@/lib/token-utils';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -31,16 +32,12 @@ class AuthService {
 
     async registerWithEmail(email: string, password: string): Promise<LoginResponse> {
         try {
-            const response = await apiService.post<LoginResponse>('/auth/register', {
+            const response = await apiService.post<AuthResponse>('/auth/register', {
                 email,
                 password,
             });
 
-            await storageService.saveTokens(response.tokens);
-            await storageService.saveUser(response.user);
-            this.currentUser = response.user;
-
-            return response;
+            return await this.persistAuthResponse(response);
         } catch (error) {
             console.error('Register error:', error);
             throw error;
@@ -49,16 +46,12 @@ class AuthService {
 
     async loginWithEmail(email: string, password: string): Promise<LoginResponse> {
         try {
-            const response = await apiService.post<LoginResponse>('/auth/login', {
+            const response = await apiService.post<AuthResponse>('/auth/login', {
                 email,
                 password,
             });
 
-            await storageService.saveTokens(response.tokens);
-            await storageService.saveUser(response.user);
-            this.currentUser = response.user;
-
-            return response;
+            return await this.persistAuthResponse(response);
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -67,15 +60,11 @@ class AuthService {
 
     async loginWithGoogle(idToken: string): Promise<LoginResponse> {
         try {
-            const response = await apiService.post<LoginResponse>('/auth/google', {
+            const response = await apiService.post<AuthResponse>('/auth/google', {
                 googleIdToken: idToken,
             });
 
-            await storageService.saveTokens(response.tokens);
-            await storageService.saveUser(response.user);
-            this.currentUser = response.user;
-
-            return response;
+            return await this.persistAuthResponse(response);
         } catch (error) {
             console.error('Login error:', error);
             throw error;
@@ -85,8 +74,8 @@ class AuthService {
     async logout(): Promise<void> {
         try {
             const tokens = await storageService.getTokens();
-            if (tokens) {
-                await apiService.post('/auth/logout');
+            if (tokens?.refreshToken) {
+                await apiService.post('/auth/logout', {refreshToken: tokens.refreshToken});
             }
         } catch (error) {
             console.error('Logout error:', error);
@@ -126,6 +115,18 @@ class AuthService {
             iosClientId: GOOGLE_CLIENT_ID_IOS,
             androidClientId: GOOGLE_CLIENT_ID_ANDROID,
             webClientId: GOOGLE_CLIENT_ID_WEB,
+        };
+    }
+
+    private async persistAuthResponse(response: AuthResponse): Promise<LoginResponse> {
+        const tokens = buildAuthTokens(response.accessToken, response.refreshToken);
+        await storageService.saveTokens(tokens);
+        await storageService.saveUser(response.user);
+        this.currentUser = response.user;
+
+        return {
+            user: response.user,
+            tokens,
         };
     }
 }

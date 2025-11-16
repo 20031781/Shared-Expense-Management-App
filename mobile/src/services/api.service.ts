@@ -1,6 +1,7 @@
 import axios, {AxiosError, AxiosInstance} from 'axios';
-import {ApiError, AuthTokens} from '@/types';
+import {ApiError, AuthResponse, AuthTokens} from '@/types';
 import {StorageService} from './storage.service';
+import {buildAuthTokens} from '@/lib/token-utils';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -93,10 +94,11 @@ class ApiService {
 
     private handleError(error: any): ApiError {
         if (axios.isAxiosError(error)) {
+            const responseData: any = error.response?.data;
             return {
-                message: error.response?.data?.message || error.message || 'Network error',
+                message: responseData?.message || responseData?.error || error.message || 'Network error',
                 statusCode: error.response?.status || 0,
-                details: error.response?.data,
+                details: responseData,
             };
         }
         return {
@@ -106,10 +108,10 @@ class ApiService {
     }
 
     private async refreshToken(refreshToken: string): Promise<AuthTokens> {
-        const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        const response = await axios.post<AuthResponse>(`${API_BASE_URL}/auth/refresh`, {
             refreshToken,
         });
-        return response.data;
+        return buildAuthTokens(response.data.accessToken, response.data.refreshToken);
     }
 }
 
