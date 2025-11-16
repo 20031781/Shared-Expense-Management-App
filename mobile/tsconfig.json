@@ -37,6 +37,9 @@
       "@utils/*": [
         "src/utils/*"
       ],
+      "@i18n": [
+        "src/i18n/index"
+      ],
       "@i18n/*": [
         "src/i18n/*"
       ]
