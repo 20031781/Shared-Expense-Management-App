@@ -1,7 +1,8 @@
-import React, {useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -14,29 +15,56 @@ import * as ImagePicker from 'expo-image-picker';
 import {Button, Input} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
+import {useListsStore} from '@/store/lists.store';
+import {ListMember, MemberStatus} from '@/types';
+import {useTranslation} from '@i18n';
 
 export const CreateExpenseScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const {listId} = route.params;
+    const {t} = useTranslation();
 
     const {createExpense, uploadReceipt, isLoading} = useExpensesStore();
+    const {members, fetchMembers} = useListsStore();
 
     const [title, setTitle] = useState('');
     const [amount, setAmount] = useState('');
     const [notes, setNotes] = useState('');
     const [receiptUri, setReceiptUri] = useState<string | null>(null);
-    const [errors, setErrors] = useState<any>({});
+    const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+    const [showPayerPicker, setShowPayerPicker] = useState(false);
+    const [errors, setErrors] = useState<{title?: string; amount?: string; payer?: string}>({});
+
+    useEffect(() => {
+        fetchMembers(listId);
+    }, [listId]);
+
+    useEffect(() => {
+        if (!selectedMemberId && members.length > 0) {
+            const defaultMember = members.find((m) => m.status === MemberStatus.Active) ?? members[0];
+            if (defaultMember) {
+                setSelectedMemberId(defaultMember.id);
+            }
+        }
+    }, [members, selectedMemberId]);
+
+    const selectedMember = useMemo(() => members.find((m) => m.id === selectedMemberId), [members, selectedMemberId]);
+    const hasMembers = members.length > 0;
 
     const validate = () => {
-        const newErrors: any = {};
+        const newErrors: {title?: string; amount?: string; payer?: string} = {};
 
         if (!title.trim()) {
-            newErrors.title = 'Title is required';
+            newErrors.title = t('expenses.titleRequired');
         }
 
         if (!amount || parseFloat(amount) <= 0) {
-            newErrors.amount = 'Amount must be greater than 0';
+            newErrors.amount = t('expenses.amountRequired');
+        }
+
+        if (!selectedMemberId) {
+            newErrors.payer = t('expenses.payerRequired');
         }
 
         setErrors(newErrors);
@@ -47,7 +75,7 @@ export const CreateExpenseScreen: React.FC = () => {
         const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
         if (status !== 'granted') {
-            Alert.alert('Permission Required', 'Please allow access to your photos');
+            Alert.alert(t('common.error'), 'Please allow access to your photos');
             return;
         }
 
@@ -67,7 +95,7 @@ export const CreateExpenseScreen: React.FC = () => {
         const {status} = await ImagePicker.requestCameraPermissionsAsync();
 
         if (status !== 'granted') {
-            Alert.alert('Permission Required', 'Please allow access to your camera');
+            Alert.alert(t('common.error'), 'Please allow access to your camera');
             return;
         }
 
@@ -93,21 +121,43 @@ export const CreateExpenseScreen: React.FC = () => {
                 currency: 'EUR',
                 expenseDate: new Date().toISOString(),
                 notes: notes.trim() || undefined,
+                paidByMemberId: selectedMemberId!,
             });
 
             if (receiptUri) {
                 await uploadReceipt(expense.id, receiptUri);
             }
 
-            Alert.alert('Success', 'Expense created successfully', [
+            Alert.alert(t('common.success'), t('expenses.createdSuccess'), [
                 {
-                    text: 'OK',
+                    text: t('common.ok'),
                     onPress: () => navigation.goBack(),
                 },
             ]);
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to create expense');
+            Alert.alert(t('common.error'), error.message || t('common.genericError'));
         }
+    };
+
+    const renderMemberOption = (member: ListMember) => {
+        const isSelected = member.id === selectedMemberId;
+        return (
+            <TouchableOpacity
+                key={member.id}
+                style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
+                onPress={() => {
+                    setSelectedMemberId(member.id);
+                    setShowPayerPicker(false);
+                    setErrors((prev) => ({...prev, payer: undefined}));
+                }}
+            >
+                <View>
+                    <Text style={styles.memberEmail}>{member.email}</Text>
+                    <Text style={styles.memberMeta}>{member.splitPercentage}%</Text>
+                </View>
+                {isSelected && <Ionicons name="checkmark-circle" size={20} color="#34C759"/>}
+            </TouchableOpacity>
+        );
     };
 
     return (
@@ -116,35 +166,53 @@ export const CreateExpenseScreen: React.FC = () => {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.title}>New Expense</Text>
+                <Text style={styles.title}>{t('expenses.newExpense')}</Text>
 
                 <Input
-                    label="Title"
-                    placeholder="e.g., Dinner, Gas, etc."
+                    label={t('expenses.titleLabel')}
+                    placeholder={t('expenses.titlePlaceholder')}
                     value={title}
                     onChangeText={(text) => {
                         setTitle(text);
-                        setErrors({...errors, title: undefined});
+                        setErrors((prev) => ({...prev, title: undefined}));
                     }}
                     error={errors.title}
                     autoFocus
                 />
 
                 <Input
-                    label="Amount"
+                    label={t('expenses.amountLabel')}
                     placeholder="0.00"
                     value={amount}
                     onChangeText={(text) => {
                         setAmount(text);
-                        setErrors({...errors, amount: undefined});
+                        setErrors((prev) => ({...prev, amount: undefined}));
                     }}
                     error={errors.amount}
                     keyboardType="decimal-pad"
                 />
 
+                <View style={styles.payerSection}>
+                    <Text style={styles.label}>{t('expenses.payerLabel')}</Text>
+                    <TouchableOpacity
+                        style={[styles.payerSelector, !selectedMember && styles.payerSelectorEmpty]}
+                        onPress={() => hasMembers && setShowPayerPicker(true)}
+                        disabled={!hasMembers}
+                    >
+                        <Text style={selectedMember ? styles.payerValue : styles.payerPlaceholder}>
+                            {selectedMember?.email || t('expenses.payerPlaceholder')}
+                        </Text>
+                        <Ionicons name="chevron-down" size={20} color="#8E8E93"/>
+                    </TouchableOpacity>
+                    {errors.payer && <Text style={styles.errorText}>{errors.payer}</Text>}
+                    <Text style={styles.helperText}>
+                        {hasMembers ? t('expenses.payerHelper') : t('expenses.missingMembersHelper')}
+                    </Text>
+                </View>
+
                 <Input
-                    label="Notes (Optional)"
-                    placeholder="Add any additional details..."
+                    label={t('expenses.notesLabel')}
+                    placeholder={t('expenses.notesPlaceholder')}
                     value={notes}
                     onChangeText={setNotes}
                     multiline
@@ -152,17 +220,17 @@ export const CreateExpenseScreen: React.FC = () => {
                 />
 
                 <View style={styles.receiptSection}>
-                    <Text style={styles.label}>Receipt Photo (Optional)</Text>
+                    <Text style={styles.label}>{t('expenses.receiptLabel')}</Text>
 
                     <View style={styles.receiptButtons}>
                         <TouchableOpacity style={styles.receiptButton} onPress={handleTakePhoto}>
                             <Ionicons name="camera-outline" size={24} color="#007AFF"/>
-                            <Text style={styles.receiptButtonText}>Take Photo</Text>
+                            <Text style={styles.receiptButtonText}>{t('expenses.addReceiptCamera')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.receiptButton} onPress={handlePickImage}>
                             <Ionicons name="images-outline" size={24} color="#007AFF"/>
-                            <Text style={styles.receiptButtonText}>Choose Photo</Text>
+                            <Text style={styles.receiptButtonText}>{t('expenses.addReceiptGallery')}</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -179,14 +247,14 @@ export const CreateExpenseScreen: React.FC = () => {
 
                 <View style={styles.buttons}>
                     <Button
-                        title="Create Expense"
+                        title={t('expenses.createButton')}
                         onPress={handleCreate}
                         loading={isLoading}
-                        disabled={isLoading}
+                        disabled={isLoading || !hasMembers}
                         style={styles.button}
                     />
                     <Button
-                        title="Cancel"
+                        title={t('expenses.cancelButton')}
                         onPress={() => navigation.goBack()}
                         variant="secondary"
                         disabled={isLoading}
@@ -194,6 +262,22 @@ export const CreateExpenseScreen: React.FC = () => {
                     />
                 </View>
             </ScrollView>
+
+            <Modal visible={showPayerPicker} animationType="slide" transparent>
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>{t('expenses.payerLabel')}</Text>
+                            <TouchableOpacity onPress={() => setShowPayerPicker(false)}>
+                                <Ionicons name="close" size={24} color="#1C1C1E"/>
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView>
+                            {members.map(renderMemberOption)}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </KeyboardAvoidingView>
     );
 };
@@ -201,63 +285,140 @@ export const CreateExpenseScreen: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#F2F2F7',
     },
     content: {
-        padding: 24,
+        padding: 16,
+        gap: 16,
     },
     title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#000000',
-        marginBottom: 24,
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#1C1C1E',
+    },
+    payerSection: {
+        gap: 8,
     },
     label: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: '600',
-        color: '#000000',
-        marginBottom: 8,
+        color: '#1C1C1E',
+    },
+    payerSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 12,
+        paddingVertical: 14,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#D1D1D6',
+        backgroundColor: '#FFFFFF',
+    },
+    payerSelectorEmpty: {
+        borderColor: '#FF3B30',
+    },
+    payerValue: {
+        fontSize: 16,
+        color: '#1C1C1E',
+    },
+    payerPlaceholder: {
+        fontSize: 16,
+        color: '#8E8E93',
+    },
+    helperText: {
+        fontSize: 12,
+        color: '#8E8E93',
+    },
+    errorText: {
+        fontSize: 12,
+        color: '#FF3B30',
     },
     receiptSection: {
-        marginVertical: 16,
+        gap: 12,
     },
     receiptButtons: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        gap: 12,
     },
     receiptButton: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
-        backgroundColor: '#F2F2F7',
-        borderRadius: 8,
-        marginHorizontal: 4,
+        paddingVertical: 12,
+        borderRadius: 10,
+        backgroundColor: '#E5F1FF',
+        gap: 8,
     },
     receiptButtonText: {
-        fontSize: 14,
         color: '#007AFF',
-        marginLeft: 8,
+        fontWeight: '600',
     },
     receiptPreview: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 12,
+        gap: 8,
+        backgroundColor: '#F0FBF4',
         padding: 12,
-        backgroundColor: '#E8F5E9',
-        borderRadius: 8,
+        borderRadius: 10,
     },
     receiptPreviewText: {
+        color: '#1C1C1E',
+        fontWeight: '600',
         flex: 1,
-        fontSize: 14,
-        color: '#34C759',
-        marginLeft: 8,
     },
     buttons: {
-        marginTop: 24,
+        flexDirection: 'row',
+        gap: 12,
     },
     button: {
-        marginBottom: 12,
+        flex: 1,
+    },
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        maxHeight: '60%',
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        paddingBottom: 16,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: '#E5E5EA',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+    },
+    memberOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: '#EFEFF4',
+    },
+    memberOptionSelected: {
+        backgroundColor: '#F0FBF4',
+    },
+    memberEmail: {
+        fontSize: 16,
+        color: '#1C1C1E',
+    },
+    memberMeta: {
+        fontSize: 12,
+        color: '#8E8E93',
     },
 });

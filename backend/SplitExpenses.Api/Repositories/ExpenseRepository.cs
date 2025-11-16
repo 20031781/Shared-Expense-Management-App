@@ -19,6 +19,8 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
                                              receipt_url AS "ReceiptUrl",
                                              status AS "Status",
                                              server_timestamp AS "ServerTimestamp",
+                                             paid_by_member_id AS "PaidByMemberId",
+                                             inserted_at AS "InsertedAt",
                                              created_at AS "CreatedAt",
                                              updated_at AS "UpdatedAt"
                                              """;
@@ -105,12 +107,14 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         var now = DateTime.UtcNow;
         if (expense.CreatedAt == default)
             expense.CreatedAt = now;
+        if (expense.InsertedAt == default)
+            expense.InsertedAt = now;
         expense.UpdatedAt = now;
         expense.ServerTimestamp = now;
 
         const string sql =
-            @"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, server_timestamp, created_at, updated_at)
-                VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @ServerTimestamp, @CreatedAt, @UpdatedAt)
+            @"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, server_timestamp, paid_by_member_id, inserted_at, created_at, updated_at)
+                VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @ServerTimestamp, @PaidByMemberId, @InsertedAt, @CreatedAt, @UpdatedAt)
                 RETURNING {ExpenseProjection}";
 
         var parameters = new
@@ -126,6 +130,8 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
             expense.ReceiptUrl,
             StatusText = expense.Status.ToString().ToLower(),
             expense.ServerTimestamp,
+            expense.PaidByMemberId,
+            expense.InsertedAt,
             expense.CreatedAt,
             expense.UpdatedAt
         };
@@ -149,6 +155,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
                     receipt_url = @ReceiptUrl,
                     status = @StatusText,
                     server_timestamp = @ServerTimestamp,
+                    paid_by_member_id = @PaidByMemberId,
                     updated_at = @UpdatedAt
                 WHERE id = @Id
                 RETURNING {ExpenseProjection}";
@@ -164,6 +171,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
             expense.ReceiptUrl,
             StatusText = expense.Status.ToString().ToLower(),
             expense.ServerTimestamp,
+            expense.PaidByMemberId,
             expense.UpdatedAt
         };
 
@@ -235,6 +243,8 @@ internal class ExpenseDto
     public string? ReceiptUrl { get; set; }
     public string Status { get; set; } = "draft";
     public DateTime ServerTimestamp { get; set; }
+    public Guid? PaidByMemberId { get; set; }
+    public DateTime InsertedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
@@ -258,6 +268,8 @@ internal class ExpenseDto
                 _ => ExpenseStatus.Draft
             },
             ServerTimestamp = ServerTimestamp,
+            PaidByMemberId = PaidByMemberId,
+            InsertedAt = InsertedAt,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt
         };
