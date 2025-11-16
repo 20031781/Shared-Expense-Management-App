@@ -1,4 +1,8 @@
+#region
+
 using SplitExpenses.Api.Models;
+
+#endregion
 
 namespace SplitExpenses.Api.Services;
 

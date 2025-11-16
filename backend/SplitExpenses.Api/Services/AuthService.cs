@@ -1,3 +1,5 @@
+#region
+
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -6,6 +8,8 @@ using Google.Apis.Auth;
 using Microsoft.IdentityModel.Tokens;
 using SplitExpenses.Api.Models;
 using SplitExpenses.Api.Repositories;
+
+#endregion
 
 namespace SplitExpenses.Api.Services;
 

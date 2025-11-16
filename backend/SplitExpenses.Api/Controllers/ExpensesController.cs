@@ -1,3 +1,5 @@
+#region
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -5,6 +7,8 @@ using Npgsql;
 using SplitExpenses.Api.Models;
 using SplitExpenses.Api.Repositories;
 using SplitExpenses.Api.Services;
+
+#endregion
 
 namespace SplitExpenses.Api.Controllers;
 
@@ -167,7 +171,6 @@ public class ExpensesController(
         await expenseRepository.UpdateStatusAsync(id, ExpenseStatus.Validated);
         await notificationService.SendValidationResultNotificationAsync(id, true);
         return Ok(new { message = "Validation recorded", status = nameof(ExpenseStatus.Validated).ToLower() });
-
     }
 
     [HttpGet("{id:guid}/splits")]

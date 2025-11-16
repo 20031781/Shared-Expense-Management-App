@@ -1,3 +1,5 @@
+#region
+
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -5,6 +7,8 @@ using Microsoft.IdentityModel.Tokens;
 using SplitExpenses.Api.Data;
 using SplitExpenses.Api.Repositories;
 using SplitExpenses.Api.Services;
+
+#endregion
 
 var builder = WebApplication.CreateBuilder(args);
 

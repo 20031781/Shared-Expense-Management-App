@@ -1,4 +1,8 @@
+#region
+
 using Npgsql;
+
+#endregion
 
 namespace SplitExpenses.Api.Data;
 

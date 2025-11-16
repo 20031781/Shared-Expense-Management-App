@@ -1,8 +1,12 @@
+#region
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SplitExpenses.Api.Models;
 using SplitExpenses.Api.Repositories;
+
+#endregion
 
 namespace SplitExpenses.Api.Controllers;
 
@@ -279,10 +283,7 @@ public class ListsController(IListRepository listRepository) : ControllerBase
         return userIdClaim != null && Guid.TryParse(userIdClaim.Value, out userId);
     }
 
-    private string? GetCurrentUserEmail()
-    {
-        return User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
-    }
+    private string? GetCurrentUserEmail() => User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
 
     private static string BuildDefaultDisplayName(string email)
     {
@@ -291,7 +292,8 @@ public class ListsController(IListRepository listRepository) : ControllerBase
         return parts.Length > 0 ? parts[0] : email;
     }
 
-    private static string? NormalizeDisplayName(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private static string? NormalizeDisplayName(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private bool IsAppAdmin() => User.IsInRole("Admin");
 

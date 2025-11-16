@@ -1,7 +1,11 @@
+#region
+
 using System.Security.Cryptography;
 using Dapper;
 using SplitExpenses.Api.Data;
 using SplitExpenses.Api.Models;
+
+#endregion
 
 namespace SplitExpenses.Api.Repositories;
 

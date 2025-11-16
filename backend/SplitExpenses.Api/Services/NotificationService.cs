@@ -1,7 +1,11 @@
+#region
+
 using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
 using SplitExpenses.Api.Repositories;
+
+#endregion
 
 namespace SplitExpenses.Api.Services;
 

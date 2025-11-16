@@ -1,7 +1,11 @@
+#region
+
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using SplitExpenses.Api.Repositories;
 using SplitExpenses.Api.Services;
+
+#endregion
 
 namespace SplitExpenses.Api.Controllers;
 
