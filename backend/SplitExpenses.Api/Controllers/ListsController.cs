@@ -100,6 +100,6 @@ public class ListsController(IListRepository listRepository) : ControllerBase
 
 public record CreateListRequest(string Name, List<CreateMemberRequest> Members);
 
-public abstract record CreateMemberRequest(string Email, decimal SplitPercentage, bool IsValidator);
+public record CreateMemberRequest(string Email, decimal SplitPercentage, bool IsValidator);
 
 public record AddMemberRequest(string Email, decimal SplitPercentage, bool IsValidator);

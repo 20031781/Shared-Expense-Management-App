@@ -58,6 +58,15 @@ http://localhost:5000/signin-google
 https://your-domain.com/signin-google
 ```
 
+### Errore: "Request failed with status code 400" quando creo una lista
+
+**Problema:** Il payload JSON di creazione lista non viene deserializzato perché `CreateMemberRequest` è marcato come `abstract`, quindi l'API restituisce 400 prima di raggiungere i breakpoint.
+
+**Soluzione:**
+1. Apri `backend/SplitExpenses.Api/Controllers/ListsController.cs`.
+2. Sostituisci la dichiarazione `public abstract record CreateMemberRequest(...)` con `public record CreateMemberRequest(...)`.
+3. Ricompila/rilancia l'API; la richiesta `POST /api/lists` accetta ora correttamente la collezione `Members` e i breakpoint verranno colpiti.
+
 ### Errore: "Firebase credentials not found"
 
 **Soluzione:**
