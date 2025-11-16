@@ -35,18 +35,19 @@ Dovresti vedere un container con `postgres` in esecuzione.
 
 #### Applica le migrations
 
-**⚠️ IMPORTANTE**: Le migrations in `supabase/migrations/` usano `auth.uid()` che **NON funziona** in PostgreSQL locale standalone.
+**⚠️ IMPORTANTE**: Le migrations in `supabase/migrations/` usano `auth.uid()` che **NON funziona** in PostgreSQL locale
+standalone.
 
 Usa le migrations semplificate per sviluppo locale.
 
 **Con DataGrip (consigliato):**
 
 1. Connettiti al database:
-   - Host: `localhost`
-   - Port: `5432`
-   - Database: `split_expenses`
-   - User: `postgres`
-   - Password: `postgres`
+    - Host: `localhost`
+    - Port: `5432`
+    - Database: `split_expenses`
+    - User: `postgres`
+    - Password: `postgres`
 
 2. Esegui in ordine i file SQL in `backend/migrations/`:
    - Apri `001_initial_schema.sql`
@@ -76,7 +77,10 @@ docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 005_e
 **Verifica che funzioni:**
 
 ```postgresql
-SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+ORDER BY table_name;
 ```
 
 Dovresti vedere 11 tabelle (users, lists, expenses, ecc.)
@@ -90,8 +94,10 @@ Dovresti vedere 11 tabelle (users, lists, expenses, ecc.)
 Il file `backend/SplitExpenses.Api/appsettings.json` punta già al PostgreSQL locale avviato tramite Docker:
 
 ```json
-"ConnectionStrings": {
-  "DefaultConnection": "Host=localhost;Port=5432;Database=split_expenses;Username=postgres;Password=postgres"
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Port=5432;Database=split_expenses;Username=postgres;Password=postgres"
+  }
 }
 ```
 
@@ -111,13 +117,18 @@ Il pacchetto BCrypt.Net è già nel file `.csproj`.
 #### Verifica che funzioni
 
 Apri il browser su:
+
 ```
 http://localhost:5000/health
 ```
 
 Dovresti vedere:
+
 ```json
-{"status":"Healthy","timestamp":"2025-10-26T..."}
+{
+  "status": "Healthy",
+  "timestamp": "2025-10-26T..."
+}
 ```
 
 ---
@@ -127,6 +138,7 @@ Dovresti vedere:
 #### Trova il tuo IP locale
 
 **Windows:**
+
 ```powershell
 ipconfig
 ```
@@ -200,8 +212,8 @@ Quando vuoi condividere rapidamente l'app senza passare dagli store puoi creare 
 1. Apri l'app sul telefono
 2. Clicca **"Don't have an account? Sign Up"**
 3. Inserisci:
-   - Email: `test@example.com`
-   - Password: `password123`
+    - Email: `test@example.com`
+    - Password: `password123`
 4. Clicca **"Sign Up"**
 5. Se vedi la home ✅ **FUNZIONA!**
 
@@ -224,14 +236,15 @@ I dati sono salvati in PostgreSQL tramite Docker. Per vederli:
 
 1. **File → New → Data Source → PostgreSQL**
 2. Configura:
-   - Host: `localhost`
-   - Port: `5432`
-   - Database: `split_expenses`
-   - User: `postgres`
-   - Password: `postgres`
+    - Host: `localhost`
+    - Port: `5432`
+    - Database: `split_expenses`
+    - User: `postgres`
+    - Password: `postgres`
 3. **Test Connection** → **OK**
 
 Ora puoi vedere tutte le tabelle:
+
 - `users` - Utenti registrati
 - `lists` - Liste spese
 - `list_members` - Membri delle liste
@@ -243,6 +256,7 @@ Ora puoi vedere tutte le tabelle:
 #### Con Docker Volume
 
 I dati sono persistiti nel volume Docker:
+
 ```powershell
 docker volume ls
 ```
@@ -250,11 +264,13 @@ docker volume ls
 Cerca il volume tipo `backend_postgres_data`.
 
 **Per backup:**
+
 ```powershell
 docker exec -t backend-postgres-1 pg_dump -U postgres split_expenses > backup.sql
 ```
 
 **Per restore:**
+
 ```powershell
 docker exec -i backend-postgres-1 psql -U postgres split_expenses < backup.sql
 ```
@@ -280,11 +296,13 @@ docker exec -i backend-postgres-1 psql -U postgres split_expenses < backup.sql
 ### Testa API con Swagger
 
 Quando il backend è in esecuzione, vai su:
+
 ```
 http://localhost:5000/swagger
 ```
 
 Puoi testare tutti gli endpoint:
+
 - `POST /api/auth/register` - Registrazione
 - `POST /api/auth/login` - Login
 - `GET /api/lists` - Lista liste (con token JWT)
@@ -299,6 +317,7 @@ Puoi testare tutti gli endpoint:
 **Problema:** `Network error` nell'app mobile
 
 **Soluzione:**
+
 1. Verifica IP corretto nel `.env`
 2. Backend DEVE ascoltare su `0.0.0.0:5000` (non `localhost`)
 3. Firewall Windows: consenti porta 5000
@@ -309,8 +328,10 @@ Puoi testare tutti gli endpoint:
 **Problema:** Backend dice "Cannot connect to database"
 
 **Soluzione:**
+
 1. Assicurati che il container PostgreSQL sia attivo (`docker ps`).
-2. Controlla che la connection string in `backend/SplitExpenses.Api/appsettings.json` punti a `localhost:5432` con utente/password corretti.
+2. Controlla che la connection string in `backend/SplitExpenses.Api/appsettings.json` punti a `localhost:5432` con
+   utente/password corretti.
 3. Se usi porte diverse, aggiorna sia `docker-compose.db.yml` sia `appsettings.json`.
 
 ### Migration non applicate
@@ -318,7 +339,8 @@ Puoi testare tutti gli endpoint:
 **Problema:** Errori "table does not exist" in DataGrip
 
 **Soluzione:**
-Esegui le migrations in `backend/migrations/` (NON quelle in `supabase/migrations/` che hanno RLS incompatibile con PostgreSQL locale).
+Esegui le migrations in `backend/migrations/` (NON quelle in `supabase/migrations/` che hanno RLS incompatibile con
+PostgreSQL locale).
 
 ### Errore "Cannot resolve symbol auth"
 
@@ -332,8 +354,9 @@ Usa le migrations in `backend/migrations/` create appositamente per PostgreSQL l
 **Problema:** 401 Unauthorized su tutte le chiamate
 
 **Soluzione:**
+
 1. Verifica che JWT secret sia uguale in:
-   - `backend/appsettings.json` → `Jwt:Key`
+    - `backend/appsettings.json` → `Jwt:Key`
 2. Fai logout e re-login nell'app
 
 ---
@@ -343,6 +366,7 @@ Usa le migrations in `backend/migrations/` create appositamente per PostgreSQL l
 ### Logs Backend (Rider)
 
 Nella console di Rider vedi tutti i logs:
+
 ```
 info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
       Request starting HTTP/1.1 POST http://localhost:5000/api/auth/login
@@ -351,6 +375,7 @@ info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
 ### Logs Mobile (Terminal)
 
 Nel terminale dove hai fatto `npm start`:
+
 ```
 LOG  Login error: Network Error
 ```
@@ -358,17 +383,20 @@ LOG  Login error: Network Error
 ### Database Queries (DataGrip)
 
 Puoi fare query SQL direttamente:
-```sql
+
+```postgresql
 -- Vedi tutti gli utenti
-SELECT * FROM users;
+SELECT *
+FROM users;
 
 -- Vedi tutte le liste
-SELECT * FROM lists;
+SELECT *
+FROM lists;
 
 -- Vedi spese con nome lista
 SELECT e.*, l.name as list_name
 FROM expenses e
-JOIN lists l ON e.list_id = l.id;
+         JOIN lists l ON e.list_id = l.id;
 ```
 
 ---
@@ -382,7 +410,7 @@ JOIN lists l ON e.list_id = l.id;
 5. ✅ **Login**: Accedi con le stesse credenziali
 6. ✅ **Lista**: Crea lista "Test"
 7. ✅ **Database**: Vedi lista in DataGrip:
-   ```sql
+   ```postgresql
    SELECT * FROM lists WHERE name = 'Test';
    ```
 
@@ -425,6 +453,7 @@ npm start
 ## 📝 File Importanti
 
 ### Backend
+
 - `Program.cs` - Configurazione app
 - `Controllers/AuthController.cs` - Endpoint auth
 - `Controllers/ListsController.cs` - Endpoint liste
@@ -432,6 +461,7 @@ npm start
 - `appsettings.json` - Configurazione
 
 ### Mobile
+
 - `App.tsx` - Entry point
 - `src/screens/LoginScreen.tsx` - Schermata login
 - `src/screens/ListsScreen.tsx` - Lista liste
@@ -440,6 +470,7 @@ npm start
 - `src/store/auth.store.ts` - State auth
 
 ### Database
+
 - `backend/migrations/*.sql` - Schema database PostgreSQL locale
 
 ---
@@ -449,24 +480,24 @@ npm start
 Ora che tutto funziona, puoi:
 
 1. **Aggiungere spese**:
-   - Crea endpoint in `ExpensesController.cs`
-   - Aggiungi screen in `mobile/src/screens/`
+    - Crea endpoint in `ExpensesController.cs`
+    - Aggiungi screen in `mobile/src/screens/`
 
 2. **Inviti membri**:
-   - Sistema `ListsController.AddMember`
-   - QR code / link condivisione
+    - Sistema `ListsController.AddMember`
+    - QR code / link condivisione
 
 3. **Calcolo rimborsi**:
-   - Usa stored procedure `calculate_optimized_reimbursements`
-   - Mostra chi deve a chi
+    - Usa stored procedure `calculate_optimized_reimbursements`
+    - Mostra chi deve a chi
 
 4. **Notifiche push**:
-   - Firebase Cloud Messaging
-   - Notifica nuove spese/rimborsi
+    - Firebase Cloud Messaging
+    - Notifica nuove spese/rimborsi
 
 5. **Sincronizzazione offline**:
-   - SQLite locale
-   - Sync quando torna online
+    - SQLite locale
+    - Sync quando torna online
 
 ---
 

@@ -34,8 +34,9 @@
     "scheme": "splitexpenses",
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "c7007c74-2472-41be-b3e3-9c0eadfb4f43"
       }
-    }
+    },
+    "owner": "loreappe"
   }
 }
