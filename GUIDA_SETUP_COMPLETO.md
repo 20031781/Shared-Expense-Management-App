@@ -76,9 +76,15 @@ Dovresti vedere 11 tabelle (users, lists, expenses, ecc.)
 
 #### Configura appsettings.json
 
-Il file `backend/SplitExpenses.Api/appsettings.json` è già configurato correttamente con Supabase.
+Il file `backend/SplitExpenses.Api/appsettings.json` punta già al PostgreSQL locale avviato tramite Docker:
 
-**Non serve modificarlo** perché il backend usa il database Supabase hosted (già incluso nel progetto).
+```json
+"ConnectionStrings": {
+  "DefaultConnection": "Host=localhost;Port=5432;Database=split_expenses;Username=postgres;Password=postgres"
+}
+```
+
+**Non serve modificarlo**, a meno che tu non abbia cambiato porta, database o credenziali nel `docker-compose.db.yml`.
 
 #### Restore pacchetti NuGet
 
@@ -260,9 +266,9 @@ Puoi testare tutti gli endpoint:
 **Problema:** Backend dice "Cannot connect to database"
 
 **Soluzione:**
-Il backend usa **Supabase hosted**, quindi non serve PostgreSQL locale per il backend. Il database Docker è solo per vedere i dati con DataGrip.
-
-Verifica che le credenziali Supabase in `appsettings.json` siano corrette.
+1. Assicurati che il container PostgreSQL sia attivo (`docker ps`).
+2. Controlla che la connection string in `backend/SplitExpenses.Api/appsettings.json` punti a `localhost:5432` con utente/password corretti.
+3. Se usi porte diverse, aggiorna sia `docker-compose.db.yml` sia `appsettings.json`.
 
 ### Migration non applicate
 
@@ -391,7 +397,7 @@ npm start
 - `src/store/auth.store.ts` - State auth
 
 ### Database
-- `supabase/migrations/*.sql` - Schema database
+- `backend/migrations/*.sql` - Schema database PostgreSQL locale
 
 ---
 

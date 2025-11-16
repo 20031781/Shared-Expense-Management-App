@@ -25,13 +25,13 @@ graph TB
     end
 
     subgraph "Infrastructure"
-        SUPABASE[(Supabase PostgreSQL)]
+        POSTGRES[(PostgreSQL - Docker)]
         FCM[Firebase Cloud Messaging]
         OAUTH[Google OAuth]
     end
 
     MA -->|HTTPS REST| API
-    REPO -->|Supabase Client| SUPABASE
+    REPO -->|Npgsql / EF Core| POSTGRES
     BL -->|Push Notifications| FCM
     API -->|Verify Token| OAUTH
     MA -->|Google Sign-In| OAUTH
@@ -39,7 +39,7 @@ graph TB
 
     style MA fill:#4CAF50
     style API fill:#2196F3
-    style SUPABASE fill:#FF9800
+    style POSTGRES fill:#FF9800
 ```
 
 ## Flusso Autenticazione
@@ -50,7 +50,7 @@ sequenceDiagram
     participant App as React Native App
     participant Google
     participant API as Backend API
-    participant DB as Supabase
+    participant DB as PostgreSQL
 
     User->>App: Tap "Accedi con Google"
     App->>Google: Request OAuth
@@ -131,9 +131,9 @@ sequenceDiagram
     participant LocalDB as SQLite
     participant SyncQueue
     participant API
-    participant Supabase
+    participant Postgres
 
-    Note over User,Supabase: Scenario: Utente offline
+    Note over User,Postgres: Scenario: Utente offline
 
     User->>App: Crea Spesa
     App->>LocalDB: Save Expense (local_id)
@@ -145,8 +145,8 @@ sequenceDiagram
     App->>API: POST /sync/batch
     Note right of API: Batch di operazioni
     loop Per ogni operazione
-        API->>Supabase: Execute Operation
-        Supabase->>API: Result
+        API->>Postgres: Execute Operation
+        Postgres->>API: Result
         alt Success
             API->>API: Mark as synced
         else Conflict
@@ -257,7 +257,7 @@ React Native + Expo + TypeScript
 ├── services/
 │   ├── api.service (Axios HTTP)
 │   ├── auth.service
-│   ├── supabase.client (Direct DB)
+│   ├── lists/expenses/reimbursements services (REST)
 │   └── storage.service
 ├── components/ (Reusable UI)
 └── types/ (TypeScript)
@@ -265,9 +265,9 @@ React Native + Expo + TypeScript
 
 ### Database
 ```
-Supabase (PostgreSQL)
+PostgreSQL (Docker Compose)
 ├── Tables (11)
-├── RLS Policies (Security)
+├── Schemi pubblici + viste materializzate
 ├── Stored Procedures
 │   ├── calculate_expense_splits
 │   ├── calculate_optimized_reimbursements
@@ -288,12 +288,12 @@ Supabase (PostgreSQL)
 - **Component-Based**: React functional components
 - **State Management**: Zustand stores
 - **Hooks Pattern**: React hooks for logic
-- **Service Layer**: Direct Supabase + HTTP API
+- **Service Layer**: REST API centralizzata tramite Axios
 
 ### Security
 - **Authentication**: Google OAuth + JWT
 - **Authorization**: Claims-based con policy
-- **Data Security**: RLS su database
+- **Data Security**: Permessi PostgreSQL + validazioni server-side
 - **Token Security**: Refresh token con rotazione
 
 ## Deployment Architecture
@@ -309,9 +309,9 @@ graph LR
     end
 
     subgraph "Data Layer"
-        SUPABASE[(Supabase Cloud)]
-        API1 --> SUPABASE
-        API2 --> SUPABASE
+        POSTGRES[(PostgreSQL Cluster/PgBouncer)]
+        API1 --> POSTGRES
+        API2 --> POSTGRES
     end
 
     subgraph "Services"
@@ -319,6 +319,8 @@ graph LR
         GOOGLE[Google OAuth]
         API1 --> FCM
         API1 --> GOOGLE
+        API2 --> FCM
+        API2 --> GOOGLE
     end
 
     subgraph "Clients"
@@ -335,7 +337,7 @@ graph LR
 ### Horizontal Scaling
 - API stateless: può essere replicata
 - Load balancer distribuisce carico
-- Supabase gestisce connection pooling
+- Connection pooling gestito da PostgreSQL/PgBouncer
 
 ### Vertical Scaling
 - Aumenta risorse Docker container
