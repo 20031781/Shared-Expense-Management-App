@@ -37,7 +37,7 @@ export default function App() {
         <SafeAreaProvider>
           <NavigationContainer>
             {/*{isAuthenticated ? <MainNavigator /> : <AuthNavigator />}*/}
-              <MainNavigator/>
+            <MainNavigator />
           </NavigationContainer>
           <StatusBar style="auto" />
         </SafeAreaProvider>
