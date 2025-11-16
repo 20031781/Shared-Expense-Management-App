@@ -18,7 +18,7 @@ public class UserRepository(IDbConnectionFactory connectionFactory) : IUserRepos
                                           default_currency AS "DefaultCurrency",
                                           COALESCE(notification_preferences::text, '{}') AS "NotificationPreferencesJson",
                                           created_at AS "CreatedAt",
-                                          updated_at AS "UpdatedAt";
+                                          updated_at AS "UpdatedAt"
                                           """;
 
     public async Task<User?> GetByIdAsync(Guid id)
