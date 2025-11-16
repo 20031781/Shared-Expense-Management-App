@@ -29,16 +29,20 @@ ports:
   - "5001:80"  # Usa 5001 invece di 5000
 ```
 
-### Errore: "Unable to connect to Supabase"
+### Errore: "Unable to connect to PostgreSQL"
 
 **Verifica:**
-1. URL e Key corretti in `.env`
-2. Connessione internet attiva
-3. Firewall non blocca connessioni
+1. Il container `splitexpenses-postgres` è in esecuzione (`docker ps`).
+2. La porta `5432` non è occupata da altri servizi.
+3. La connection string in `appsettings.json` punta al database corretto (`split_expenses`).
+4. Username/password coincidono con quelli definiti in `docker-compose.db.yml`.
 
 **Test connessione:**
 ```bash
-curl https://your-project.supabase.co/rest/v1/
+docker exec -it splitexpenses-postgres pg_isready -U postgres -d split_expenses
+
+# oppure dalla tua macchina locale
+psql "postgresql://postgres:postgres@localhost:5432/split_expenses"
 ```
 
 ### Errore: "Invalid Google OAuth token"
@@ -115,51 +119,48 @@ docker-compose build --no-cache
 docker-compose up -d
 ```
 
-## Database Supabase
+## Database PostgreSQL
 
-### Errore: "Row level security policy violation"
+### Errore: "permission denied for table"
 
-**Problema:** RLS blocca accesso non autorizzato
+**Problema:** L'utente PostgreSQL non ha i permessi corretti.
 
-**Verifica:**
-1. Token JWT valido nell'header
-2. User ID corrisponde a auth.uid()
-3. Policy RLS configurate correttamente
-
-**Test policy:**
-```sql
--- In Supabase SQL Editor
-SELECT * FROM users WHERE id = auth.uid();
-```
+**Soluzione:**
+1. Connettiti con l'utente `postgres`.
+2. Esegui i GRANT necessari:
+   ```sql
+   GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+   ```
+3. Se hai creato un utente custom, ricordati di concedere i permessi anche sulle SEQUENCES:
+   ```sql
+   GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+   ```
 
 ### Query lenta
 
 **Soluzione:**
-1. Aggiungi indici su colonne filtrate
-2. Usa EXPLAIN per analizzare query
-3. Limita risultati con pagination
+1. Abilita `auto_explain` o usa `EXPLAIN ANALYZE` da psql/DataGrip.
+2. Aggiungi indici sulle colonne usate nei filtri (`list_id`, `member_id`, ...).
+3. Limita i risultati con pagination (`LIMIT/OFFSET`).
 
 ```sql
--- Verifica piano esecuzione
 EXPLAIN ANALYZE
 SELECT * FROM expenses WHERE list_id = 'uuid';
 
--- Aggiungi indice se necessario
-CREATE INDEX idx_expenses_list_id ON expenses(list_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_list_id ON expenses(list_id);
 ```
 
 ### Stored procedure fallisce
 
 **Diagnosi:**
 ```sql
--- Test manuale stored procedure
 SELECT * FROM calculate_optimized_reimbursements('list-uuid');
 ```
 
 **Verifica:**
-- Dati di input validi
-- Constraint soddisfatti
-- Nessun deadlock
+- Parametri passati correttamente (UUID esistente).
+- Constraint e foreign key soddisfatti.
+- Nessun lock persistente (`SELECT * FROM pg_locks;`).
 
 ## Mobile App (.NET MAUI)
 
@@ -299,10 +300,10 @@ builder.Services.AddHttpClient("api", client =>
 
 ### Database lento
 
-**Supabase Dashboard → Database → Performance:**
-1. Identifica query lente
-2. Aggiungi indici mancanti
-3. Ottimizza RLS policies
+**Verifica:**
+1. Controlla l'utilizzo CPU/RAM del container (`docker stats splitexpenses-postgres`).
+2. Consulta i log PostgreSQL (`docker logs splitexpenses-postgres`).
+3. Usa `EXPLAIN (ANALYZE, BUFFERS)` per individuare query lente.
 
 ## Deployment Issues
 
@@ -422,13 +423,14 @@ if (user == null)
 ### "Forbidden 403"
 
 **Cause:**
-- RLS policy nega accesso
-- Utente non autorizzato per risorsa
+- Claim/ruoli utente non sufficienti
+- Risorsa appartiene ad un altro utente
+- Policy di autorizzazione lato backend non soddisfatta
 
 **Fix:**
-1. Verifica policy RLS
-2. Controlla ownership risorsa
-3. Verifica ruoli utente
+1. Verifica che il JWT contenga i claim attesi.
+2. Controlla l'ownership della risorsa nel database.
+3. Aggiorna i requisiti `[Authorize]` nel controller se necessario.
 
 ## Debug Tips
 
@@ -462,8 +464,11 @@ if (userId == specificUserId)
 ### SQL Debug
 
 ```sql
--- Abilita logging query in Supabase Dashboard
--- Settings → Database → Connection Pooling → Logging Level: debug
+-- Abilita logging delle query in PostgreSQL (postgresql.conf)
+log_min_duration_statement = 0
+
+-- Oppure usa temporary logging per sessione
+SET log_min_duration_statement = 0;
 ```
 
 ## Contatti e Supporto
@@ -471,11 +476,11 @@ if (userId == specificUserId)
 ### Risorse Utili
 - [ASP.NET Core Docs](https://docs.microsoft.com/aspnet/core)
 - [.NET MAUI Docs](https://docs.microsoft.com/dotnet/maui)
-- [Supabase Docs](https://supabase.com/docs)
+- [PostgreSQL Docs](https://www.postgresql.org/docs/)
 - [Docker Docs](https://docs.docker.com)
 
 ### Community
-- Stack Overflow: Tag `asp.net-core`, `maui`, `supabase`
+- Stack Overflow: Tag `asp.net-core`, `maui`, `postgresql`
 - GitHub Issues (se repository pubblico)
 - Discord/Slack community (se disponibile)
 

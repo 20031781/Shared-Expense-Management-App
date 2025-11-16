@@ -14,10 +14,10 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🏗️ Stack Tecnologico
 
-**Backend:** ASP.NET Core 8.0 + PostgreSQL (Supabase) + Docker
+**Backend:** ASP.NET Core 8.0 + PostgreSQL (Docker)
 **Mobile:** React Native + Expo + TypeScript
 **Auth:** Google OAuth + JWT
-**Database:** PostgreSQL con Row Level Security
+**Database:** PostgreSQL self-hosted tramite Docker Compose
 
 ## ✨ Funzionalità
 
@@ -51,10 +51,11 @@ npm start
 ```
 project/
 ├── backend/              # ASP.NET Core API + Docker
-│   └── SplitExpenses.Api/
+│   ├── SplitExpenses.Api/
+│   └── migrations/       # SQL per PostgreSQL locale
 ├── mobile/               # React Native + Expo
 │   └── src/
-├── supabase/            # Database migrations
+├── docs/                # Guide e approfondimenti
 └── SETUP_LOCALE.md      # ← INIZIA QUI
 ```
 
