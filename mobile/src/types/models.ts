@@ -13,6 +13,7 @@ export interface User {
 
 export interface NotificationPreferences {
     newExpense: boolean;
+    expenseDeleted: boolean;
     memberAdded: boolean;
     validationRequest: boolean;
     validationResult: boolean;

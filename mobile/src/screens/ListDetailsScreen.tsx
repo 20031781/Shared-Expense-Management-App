@@ -43,20 +43,22 @@ export const ListDetailsScreen: React.FC = () => {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
-    useEffect(() => loadData(), [listId]);
-
-    const loadData = async () =>
+    const loadData = useCallback(async () =>
         await Promise.all([
             fetchListById(listId),
             fetchMembers(listId),
             fetchListExpenses(listId),
-        ]);
+        ]), [fetchListById, fetchMembers, fetchListExpenses, listId]);
 
-    const onRefresh = async () => {
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadData();
         setRefreshing(false);
-    };
+    }, [loadData]);
 
     const handleAddExpense = () => navigation.navigate('CreateExpense', {listId});
 
@@ -96,17 +98,27 @@ export const ListDetailsScreen: React.FC = () => {
     }, [members]);
 
     const perMemberBreakdown = useMemo(() => {
-        const accumulator = new Map<string, number>();
+        const totals = new Map<string, number>();
+        const fallbackLabels = new Map<string, string>();
         filteredExpenses.forEach(expense => {
-            if (!expense.paidByMemberId) return;
-            accumulator.set(expense.paidByMemberId, (accumulator.get(expense.paidByMemberId) ?? 0) + expense.amount);
+            const payerKey = expense.paidByMemberId
+                || expense.paidByMember?.id
+                || expense.paidByMember?.userId
+                || expense.authorId;
+            if (!payerKey) return;
+            totals.set(payerKey, (totals.get(payerKey) ?? 0) + expense.amount);
+            if (!fallbackLabels.has(payerKey) && expense.paidByMember) {
+                fallbackLabels.set(payerKey, getMemberLabel(expense.paidByMember));
+            }
         });
-        return Array.from(accumulator.entries()).map(([memberId, amount]) => ({
-            member: memberMap.get(memberId),
-            amount,
-            memberId,
-        })).sort((a, b) => b.amount - a.amount);
-    }, [filteredExpenses, memberMap]);
+        return Array.from(totals.entries()).map(([memberId, amount]) => {
+            const member = memberMap.get(memberId);
+            const label = member
+                ? getMemberLabel(member)
+                : fallbackLabels.get(memberId) ?? t('members.unknown');
+            return {memberId, amount, label};
+        }).sort((a, b) => b.amount - a.amount);
+    }, [filteredExpenses, getMemberLabel, memberMap, t]);
 
     const chartMax = perMemberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
 
@@ -346,7 +358,7 @@ export const ListDetailsScreen: React.FC = () => {
                 <View style={styles.chartContainer}>
                     {perMemberBreakdown.length === 0 ? <Text
                         style={styles.chartEmpty}>{t('lists.chartEmpty')}</Text> : perMemberBreakdown.map(item => {
-                        const memberLabel = getMemberLabel(item.member);
+                        const memberLabel = item.label;
                         return <View key={item.memberId} style={styles.chartRow}>
                             <Text style={styles.chartLabel}>{memberLabel}</Text>
                             <View style={styles.chartBarWrapper}>
@@ -629,10 +641,13 @@ const createStyles = (colors: AppColors) =>
             paddingVertical: 4,
             borderRadius: 10,
             backgroundColor: colors.surfaceSecondary,
+            flexShrink: 1,
+            minWidth: 0,
         },
         expenseTagText: {
             fontSize: 12,
             color: colors.secondaryText,
+            flexShrink: 1,
         },
         expensePayer: {
             fontSize: 12,

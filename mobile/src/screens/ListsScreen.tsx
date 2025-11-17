@@ -20,15 +20,19 @@ export const ListsScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    useEffect(() => loadLists(), []);
+    const loadLists = useCallback(async () => {
+        await fetchLists();
+    }, [fetchLists]);
 
-    const loadLists = async () => await fetchLists();
+    useEffect(() => {
+        loadLists();
+    }, [loadLists]);
 
-    const onRefresh = async () => {
+    const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadLists();
         setRefreshing(false);
-    };
+    }, [loadLists]);
 
     const handleCreateList = useCallback(() => navigation.navigate('CreateList'), [navigation]);
 

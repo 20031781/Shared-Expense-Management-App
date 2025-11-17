@@ -15,6 +15,7 @@ const themeOptions: { value: ThemePreference; icon: string; labelKey: string }[]
 
 const defaultNotificationPreferences: NotificationPreferences = {
     newExpense: true,
+    expenseDeleted: true,
     memberAdded: true,
     validationRequest: true,
     validationResult: true,
@@ -45,6 +46,12 @@ export const SettingsScreen: React.FC = () => {
             icon: 'wallet-outline',
             titleKey: 'settings.notifyNewExpense',
             descriptionKey: 'settings.notifyNewExpenseDescription'
+        },
+        {
+            key: 'expenseDeleted',
+            icon: 'trash-outline',
+            titleKey: 'settings.notifyExpenseDeleted',
+            descriptionKey: 'settings.notifyExpenseDeletedDescription'
         },
         {
             key: 'memberAdded',

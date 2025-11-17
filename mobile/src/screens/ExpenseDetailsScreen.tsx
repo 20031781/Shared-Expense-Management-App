@@ -61,14 +61,17 @@ export const ExpenseDetailsScreen: React.FC = () => {
         );
     };
 
+    const isListAdmin = useMemo(() => {
+        if (!currentExpense) {
+            return false;
+        }
+        const targetList = lists.find(list => list.id === currentExpense.listId);
+        return targetList?.adminId === user?.id;
+    }, [lists, currentExpense?.listId, user?.id]);
+
     if (!currentExpense || isLoading) {
         return <Loading/>;
     }
-
-    const isListAdmin = useMemo(() => {
-        const targetList = lists.find(list => list.id === currentExpense.listId);
-        return targetList?.adminId === user?.id;
-    }, [lists, currentExpense.listId, user?.id]);
 
     const statusKey = (currentExpense.status as string).toLowerCase();
     const statusLabel = t(`expenses.status.${statusKey}`);
