@@ -15,6 +15,7 @@ import {useListsStore} from '@store/lists.store';
 import {Loading} from '@/components';
 import {LanguageProvider, useTranslation} from '@i18n';
 import {ThemeProvider, useAppTheme} from '@theme';
+import {LanguageSelectionScreen} from '@/screens/LanguageSelectionScreen';
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -121,11 +122,23 @@ const AppContent = () => {
     );
 };
 
+const LanguageGate: React.FC<{children: React.ReactNode}> = ({children}) => {
+    const {hasSelectedLanguage} = useTranslation();
+
+    if (!hasSelectedLanguage) {
+        return <LanguageSelectionScreen/>;
+    }
+
+    return <>{children}</>;
+};
+
 export default function App() {
     return (
         <ThemeProvider>
             <LanguageProvider>
-                <AppContent/>
+                <LanguageGate>
+                    <AppContent/>
+                </LanguageGate>
             </LanguageProvider>
         </ThemeProvider>
     );

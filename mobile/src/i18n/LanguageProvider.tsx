@@ -8,27 +8,37 @@ interface LanguageContextValue {
     setLanguage: (language: Language) => Promise<void>;
     t: (key: string, params?: Record<string, any>) => string;
     isReady: boolean;
+    hasSelectedLanguage: boolean;
 }
 
 const STORAGE_KEY = 'app_language';
+const SELECTION_KEY = 'app_language_selected';
 
 const LanguageContext = createContext<LanguageContextValue>({
     language: 'en',
     setLanguage: async () => undefined,
     t: (key: string) => key,
     isReady: false,
+    hasSelectedLanguage: false,
 });
 
 export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
     const [language, setLanguage] = useState<Language>('en');
     const [isReady, setIsReady] = useState(false);
+    const [hasSelectedLanguage, setHasSelectedLanguage] = useState(false);
 
     useEffect(() => {
         const bootstrap = async () => {
             try {
-                const storedLanguage = await AsyncStorage.getItem(STORAGE_KEY);
+                const [storedLanguage, storedSelection] = await Promise.all([
+                    AsyncStorage.getItem(STORAGE_KEY),
+                    AsyncStorage.getItem(SELECTION_KEY)
+                ]);
                 if (storedLanguage === 'en' || storedLanguage === 'it') {
                     setLanguage(storedLanguage);
+                }
+                if (storedSelection === 'true' || storedLanguage === 'en' || storedLanguage === 'it') {
+                    setHasSelectedLanguage(true);
                 }
             } finally {
                 setIsReady(true);
@@ -40,7 +50,11 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({childre
 
     const handleChange = useCallback(async (nextLanguage: Language) => {
         setLanguage(nextLanguage);
-        await AsyncStorage.setItem(STORAGE_KEY, nextLanguage);
+        setHasSelectedLanguage(true);
+        await AsyncStorage.multiSet([
+            [STORAGE_KEY, nextLanguage],
+            [SELECTION_KEY, 'true']
+        ]);
     }, []);
 
     const value = useMemo<LanguageContextValue>(() => ({
@@ -48,7 +62,8 @@ export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({childre
         setLanguage: handleChange,
         t: (key: string, params?: Record<string, any>) => translate(language, key, params),
         isReady,
-    }), [handleChange, language, isReady]);
+        hasSelectedLanguage,
+    }), [handleChange, language, isReady, hasSelectedLanguage]);
 
     if (!isReady) {
         return <Loading/>;
@@ -66,5 +81,6 @@ export const useTranslation = () => {
         language: context.language,
         setLanguage: context.setLanguage,
         isReady: context.isReady,
+        hasSelectedLanguage: context.hasSelectedLanguage,
     };
 };

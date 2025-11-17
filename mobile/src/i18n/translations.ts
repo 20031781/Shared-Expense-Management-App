@@ -161,6 +161,13 @@ export const translations = {
             signUpSuccess: 'Account created successfully!',
             terms: 'By continuing, you agree to our Terms of Service and Privacy Policy',
         },
+        languageSelection: {
+            title: 'Choose your language',
+            subtitle: 'Pick the language you prefer before continuing.',
+            englishDescription: 'Menus and content will be displayed in English.',
+            italianDescription: 'Interfaccia e contenuti verranno mostrati in italiano.',
+            footer: 'You can change this later from Settings.',
+        },
     },
     it: {
         common: {
@@ -321,6 +328,13 @@ export const translations = {
             missingFields: 'Inserisci email e password',
             signUpSuccess: 'Account creato con successo!',
             terms: "Continuando accetti i Termini di servizio e l'Informativa sulla privacy",
+        },
+        languageSelection: {
+            title: 'Seleziona la lingua',
+            subtitle: 'Scegli la lingua che preferisci prima di iniziare.',
+            englishDescription: 'Menu e contenuti verranno mostrati in inglese.',
+            italianDescription: 'L\'interfaccia sarà tradotta completamente in italiano.',
+            footer: 'Potrai cambiarla in qualsiasi momento dalle Impostazioni.',
         },
     },
 };

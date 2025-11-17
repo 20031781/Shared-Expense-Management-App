@@ -61,10 +61,13 @@ class ListsService {
 
     async generateWhatsAppInvite(listId: string, listName: string): Promise<string> {
         const list = await this.getListById(listId);
+        const universalLink = `https://splitexpenses.app/accept/${list.inviteCode}`;
+        const deepLink = `splitexpenses://accept/${list.inviteCode}`;
         const message = encodeURIComponent(
             `Ciao! Ti invito ad unirti alla lista "${listName}" su Split Expenses.\n\n` +
-            `Codice invito: ${list.inviteCode}\n\n` +
-            `Per accettare apri questo link dal telefono con l'app installata: splitexpenses://accept/${list.inviteCode}`
+            `Codice invito: ${list.inviteCode}\n` +
+            `Apri direttamente il link: ${universalLink}\n\n` +
+            `Se hai già l'app installata puoi usare anche questo collegamento diretto: ${deepLink}`
         );
         return `whatsapp://send?text=${message}`;
     }

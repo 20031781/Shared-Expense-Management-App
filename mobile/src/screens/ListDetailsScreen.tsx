@@ -150,7 +150,10 @@ export const ListDetailsScreen: React.FC = () => {
     };
 
     const renderMember = (member: ListMember) => {
-        const isActive = member.status === MemberStatus.Active;
+        const normalizedStatus = (typeof member.status === 'string'
+            ? member.status.toLowerCase()
+            : MemberStatus.Pending) as MemberStatus;
+        const isActive = normalizedStatus === MemberStatus.Active;
         const label = getMemberLabel(member);
         return (
             <Card key={member.id} style={styles.memberCard}>
@@ -172,15 +175,11 @@ export const ListDetailsScreen: React.FC = () => {
                     <View style={styles.memberActions}>
                         <View style={styles.memberStatusBlock}>
                             <View style={styles.memberStatusWrapper}>
-                                <View
-                                    style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
+                                <View style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
                                 <Text style={styles.memberStatusText}>
                                     {isActive ? t('members.statusActiveShort') : t('members.statusPendingShort')}
                                 </Text>
                             </View>
-                            {!isActive && (
-                                <Text style={styles.memberPendingHint}>{t('members.pendingExplanation')}</Text>
-                            )}
                         </View>
                         {isAdmin && (
                             <TouchableOpacity
@@ -567,7 +566,7 @@ const createStyles = (colors: AppColors) =>
         },
         memberItem: {
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             justifyContent: 'space-between',
             gap: 16,
         },
@@ -609,13 +608,11 @@ const createStyles = (colors: AppColors) =>
         },
         memberActions: {
             flexDirection: 'row',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: 12,
         },
         memberStatusBlock: {
-            flex: 1,
             alignItems: 'flex-end',
-            gap: 4,
         },
         memberStatusWrapper: {
             flexDirection: 'row',
@@ -626,11 +623,6 @@ const createStyles = (colors: AppColors) =>
             fontSize: 12,
             fontWeight: '600',
             color: colors.secondaryText,
-        },
-        memberPendingHint: {
-            fontSize: 11,
-            color: colors.warning,
-            textAlign: 'right',
         },
         memberActionButton: {
             padding: 4,

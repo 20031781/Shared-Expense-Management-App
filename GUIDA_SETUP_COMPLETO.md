@@ -173,8 +173,8 @@ Vedrai un QR code nel terminale.
 
 #### Condividere l'invito via WhatsApp
 
-- Nella schermata **Dettaglio lista** tocca l'icona di condivisione (in alto a destra) per generare il messaggio WhatsApp con il link `splitexpenses://accept/<CODICE>`. Funziona sia su Android installato via Expo Go sia con l'APK creato via `npm run build:android-apk`.
-- Chi riceve il messaggio deve avere l'app installata e, aprendo il link, accetta automaticamente l'invito (se era già stato aggiunto) oppure si unisce alla lista con il codice.
+- Nella schermata **Dettaglio lista** tocca l'icona di condivisione (in alto a destra) per generare un messaggio WhatsApp con un link cliccabile `https://splitexpenses.app/accept/<CODICE>` e con il deep-link `splitexpenses://accept/<CODICE>` per l'apertura diretta dell'app.
+- Chi riceve il messaggio può toccare il link HTTPS per aprire l'app (o il browser, se l'app non è installata) e accettare l'invito automaticamente; in alternativa può copiare il codice dal testo.
 - Fino a quando un membro non accetta l'invito rimarrà con il **pallino giallo** in elenco: significa che è ancora in stato "In attesa".
 
 ---
@@ -183,25 +183,31 @@ Vedrai un QR code nel terminale.
 
 Quando vuoi condividere rapidamente l'app senza passare dagli store puoi creare un `.apk` firmato tramite **EAS Build**.
 
-1. Installa le dipendenze ed effettua il login su Expo/EAS:
+1. Vai nella cartella del progetto mobile: `cd "Shared Expense Management App/mobile"`.
+2. Installa l'ultima versione della CLI ed effettua il login:
 
-   ```powershell
-   cd mobile
-   npm install
-   npx expo login
+   ```bash
+   npm install -g eas-cli
+   eas login
    ```
 
-2. Avvia la build usando il profilo `preview` definito in `mobile/eas.json` (produce direttamente un APK installabile):
+3. In `app.json` assicurati che in `extra.eas.projectId` ci sia il valore valido `c7007c74-2472-41be-b3e3-9c0eadfb4f43`.
+4. Se necessario inizializza il progetto Expo con `eas init`.
+5. Crea (o aggiorna) `eas.json` con il profilo che forza la generazione dell'APK:
 
-   ```powershell
-   npm run build:android-apk
+   ```json
+   {
+     "build": {
+       "production": {
+         "android": { "buildType": "apk" }
+       }
+     }
+   }
    ```
 
-3. Alla fine EAS fornisce un link per scaricare il file `.apk`. Se preferisci una build locale (senza cloud) aggiungi `-- --local` al comando precedente; il file verrà salvato nella cartella `mobile/dist/`.
-
-4. Copia l'APK sui dispositivi di test (WhatsApp, e-mail o USB) e installalo manualmente abilitando l'origine sconosciuta.
-
-> ℹ️ Il profilo `preview` imposta automaticamente il tipo `apk` e non richiede Google Play; è pensato per la validazione rapida delle nuove build.
+6. Avvia la build cloud: `eas build -p android --profile production`.
+7. Quando richiesto rispondi **yes** alla domanda "Generate a new Android Keystore?" (EAS la conserverà per le build successive).
+8. Al termine della build, EAS mostra l'URL per scaricare l'APK (`https://expo.dev/artifacts/eas/XXXXX.apk`). Condividilo con i tester e installa manualmente abilitando le origini sconosciute.
 
 ---
 

@@ -117,7 +117,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         expense.ServerTimestamp = now;
 
         const string sql =
-            @"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, server_timestamp, paid_by_member_id, inserted_at, created_at, updated_at)
+            $@"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, server_timestamp, paid_by_member_id, inserted_at, created_at, updated_at)
                 VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @ServerTimestamp, @PaidByMemberId, @InsertedAt, @CreatedAt, @UpdatedAt)
                 RETURNING {ExpenseProjection}";
 
@@ -150,7 +150,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         expense.UpdatedAt = DateTime.UtcNow;
         expense.ServerTimestamp = expense.UpdatedAt;
 
-        const string sql = @"UPDATE expenses SET
+        const string sql = $@"UPDATE expenses SET
                     title = @Title,
                     amount = @Amount,
                     currency = @Currency,
