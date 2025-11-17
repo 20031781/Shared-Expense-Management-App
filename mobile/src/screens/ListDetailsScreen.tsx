@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Alert, Linking, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {ActivityIndicator, Alert, Linking, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Button, Card, Loading} from '@/components';
 import {useListsStore} from '@/store/lists.store';
@@ -10,6 +10,7 @@ import {Expense, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import listsService from '@/services/lists.service';
+import {Swipeable} from 'react-native-gesture-handler';
 
 type SummaryFilter = '7' | '30' | '90' | 'all';
 
@@ -23,11 +24,13 @@ export const ListDetailsScreen: React.FC = () => {
 
     const {user} = useAuthStore();
     const {currentList, members, fetchListById, fetchMembers} = useListsStore();
-    const {expenses, fetchListExpenses} = useExpensesStore();
+    const {expenses, fetchListExpenses, deleteExpense} = useExpensesStore();
 
     const [refreshing, setRefreshing] = useState(false);
     const [activeTab, setActiveTab] = useState<'expenses' | 'members'>('expenses');
     const [summaryRange, setSummaryRange] = useState<SummaryFilter>('30');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
     useEffect(() => {
         loadData();
@@ -80,6 +83,7 @@ export const ListDetailsScreen: React.FC = () => {
     }, [expenses, summaryRange]);
 
     const totalAmount = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
+    const listTotalAmount = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
 
     const memberMap = useMemo(() => {
         const map = new Map<string, ListMember>();
@@ -109,43 +113,106 @@ export const ListDetailsScreen: React.FC = () => {
     const isAdmin = currentList.adminId === user?.id || !!user?.isAdmin;
     const currency = expenses[0]?.currency ?? 'EUR';
 
+    const closeSwipe = (id: string) => {
+        const ref = swipeableRefs.current[id];
+        if (ref) {
+            ref.close();
+        }
+    };
+
+    const performDelete = async (expense: Expense) => {
+        try {
+            setDeletingId(expense.id);
+            await deleteExpense(expense.id);
+            Alert.alert(t('common.success'), t('expenses.deleteSuccess'));
+        } catch (error: any) {
+            Alert.alert(t('common.error'), error?.message || t('expenses.deleteError'));
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleDeleteExpense = (expense: Expense) => {
+        closeSwipe(expense.id);
+        Alert.alert(
+            t('expenses.deleteTitle'),
+            t('expenses.deleteBody', {title: expense.title}),
+            [
+                {text: t('common.cancel'), style: 'cancel'},
+                {
+                    text: t('expenses.deleteConfirm'),
+                    style: 'destructive',
+                    onPress: () => performDelete(expense),
+                },
+            ]
+        );
+    };
+
     const renderExpense = (expense: Expense) => {
         const payer = expense.paidByMemberId ? memberMap.get(expense.paidByMemberId) : undefined;
         const statusKey = (expense.status as string).toLowerCase();
         const statusLabel = t(`expenses.status.${statusKey}`);
         const awaitingValidation = statusKey === 'submitted';
         return (
-            <Card
-                key={expense.id}
-                onPress={() => handleExpensePress(expense)}
-                style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
-            >
-                <View style={styles.expenseItem}>
-                    <View style={styles.expenseInfo}>
-                        <Text style={styles.expenseTitle}>{expense.title}</Text>
-                        <Text style={styles.expenseMeta}>
-                            {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
-                        </Text>
-                        <Text style={styles.expenseMeta}>
-                            {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
-                        </Text>
-                        {payer && (
-                            <Text style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>
-                        )}
-                    </View>
-                    <View style={styles.expenseRight}>
-                        <Text style={styles.expenseAmount}>
-                            {currency} {expense.amount.toFixed(2)}
-                        </Text>
-                        <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
-                            <Text style={styles.statusText}>{statusLabel}</Text>
+            <View key={expense.id} style={styles.expenseSwipeWrapper}>
+                <Swipeable
+                    ref={(ref) => {
+                        if (ref) {
+                            swipeableRefs.current[expense.id] = ref;
+                        } else {
+                            delete swipeableRefs.current[expense.id];
+                        }
+                    }}
+                    renderRightActions={() => (
+                        <TouchableOpacity
+                            style={styles.deleteAction}
+                            onPress={() => handleDeleteExpense(expense)}
+                            disabled={deletingId === expense.id}
+                        >
+                            {deletingId === expense.id ? (
+                                <ActivityIndicator color={colors.accentText}/>
+                            ) : (
+                                <>
+                                    <Ionicons name="trash" size={20} color={colors.accentText}/>
+                                    <Text style={styles.deleteActionText}>{t('expenses.deleteAction')}</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    )}
+                    overshootRight={false}
+                >
+                    <Card
+                        onPress={() => handleExpensePress(expense)}
+                        style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
+                    >
+                        <View style={styles.expenseItem}>
+                            <View style={styles.expenseInfo}>
+                                <Text style={styles.expenseTitle}>{expense.title}</Text>
+                                <Text style={styles.expenseMeta}>
+                                    {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
+                                </Text>
+                                <Text style={styles.expenseMeta}>
+                                    {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
+                                </Text>
+                                {payer && (
+                                    <Text style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>
+                                )}
+                            </View>
+                            <View style={styles.expenseRight}>
+                                <Text style={styles.expenseAmount}>
+                                    {currency} {expense.amount.toFixed(2)}
+                                </Text>
+                                <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
+                                    <Text style={styles.statusText}>{statusLabel}</Text>
+                                </View>
+                                {awaitingValidation && (
+                                    <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>
+                                )}
+                            </View>
                         </View>
-                        {awaitingValidation && (
-                            <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>
-                        )}
-                    </View>
-                </View>
-            </Card>
+                    </Card>
+                </Swipeable>
+            </View>
         );
     };
 
@@ -213,6 +280,50 @@ export const ListDetailsScreen: React.FC = () => {
         }
     };
 
+    const splitSummary = useMemo(() => {
+        if (expenses.length === 0 || listTotalAmount <= 0) {
+            return {rows: [], settlements: [], reason: 'no-expenses' as const};
+        }
+        const membersWithSplit = members.filter((member) => (member.splitPercentage ?? 0) > 0);
+        if (membersWithSplit.length === 0) {
+            return {rows: [], settlements: [], reason: 'no-members' as const};
+        }
+        const totalSplit = membersWithSplit.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
+        if (totalSplit <= 0) {
+            return {rows: [], settlements: [], reason: 'no-split' as const};
+        }
+        const paidMap = new Map<string, number>();
+        expenses.forEach((expense) => {
+            if (!expense.paidByMemberId) return;
+            paidMap.set(expense.paidByMemberId, (paidMap.get(expense.paidByMemberId) ?? 0) + expense.amount);
+        });
+        const rows = membersWithSplit.map((member) => {
+            const percentage = member.splitPercentage ?? 0;
+            const share = listTotalAmount * (percentage / totalSplit);
+            const paid = paidMap.get(member.id) ?? 0;
+            const net = paid - share;
+            return {member, share, paid, net, percentage};
+        }).sort((a, b) => b.net - a.net);
+
+        const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
+        const debtors = rows.filter((row) => row.net < 0).map((row) => ({member: row.member, amount: Math.abs(row.net)}));
+        const settlements: {from: ListMember; to: ListMember; amount: number}[] = [];
+        let creditorIndex = 0;
+        let debtorIndex = 0;
+        while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+            const creditor = creditors[creditorIndex];
+            const debtor = debtors[debtorIndex];
+            const amount = Math.min(creditor.amount, debtor.amount);
+            settlements.push({from: debtor.member, to: creditor.member, amount});
+            creditor.amount -= amount;
+            debtor.amount -= amount;
+            if (creditor.amount < 0.01) creditorIndex++;
+            if (debtor.amount < 0.01) debtorIndex++;
+        }
+
+        return {rows, settlements, reason: null as const};
+    }, [expenses, members, listTotalAmount, getMemberLabel]);
+
     return (
         <View style={styles.container}>
             <ScrollView
@@ -275,6 +386,64 @@ export const ListDetailsScreen: React.FC = () => {
                             })
                         )}
                     </View>
+                </View>
+
+                <View style={styles.splitCard}>
+                    <Text style={styles.summaryTitle}>{t('lists.splitSectionTitle')}</Text>
+                    <Text style={styles.splitHelper}>{t('lists.splitOptimizedHint')}</Text>
+                    {splitSummary.reason === 'no-expenses' && (
+                        <Text style={styles.chartEmpty}>{t('lists.splitSectionEmpty')}</Text>
+                    )}
+                    {splitSummary.reason === 'no-members' && (
+                        <Text style={styles.chartEmpty}>{t('lists.splitSectionNeedMembers')}</Text>
+                    )}
+                    {splitSummary.reason === 'no-split' && (
+                        <Text style={styles.chartEmpty}>{t('lists.splitSectionNeedPercentages')}</Text>
+                    )}
+                    {splitSummary.reason === null && (
+                        <>
+                            {splitSummary.rows.map((row) => (
+                                <View key={row.member.id} style={styles.splitRow}>
+                                    <View style={styles.splitMemberInfo}>
+                                        <Text style={styles.splitMemberName}>{getMemberLabel(row.member)}</Text>
+                                        <Text style={styles.splitMemberShare}>{t('lists.splitShareLabel', {value: row.percentage})}</Text>
+                                    </View>
+                                    <View style={styles.splitAmountBlock}>
+                                        <Text
+                                            style={[
+                                                styles.splitAmount,
+                                                row.net < 0 ? styles.splitOwes : styles.splitReceives,
+                                            ]}
+                                        >
+                                            {currency} {Math.abs(row.net).toFixed(2)}
+                                        </Text>
+                                        <Text style={styles.splitHint}>
+                                            {row.net < 0 ? t('lists.splitNetGive') : t('lists.splitNetReceive')}
+                                        </Text>
+                                    </View>
+                                </View>
+                            ))}
+                            <View style={styles.settlementsWrapper}>
+                                <Text style={styles.settlementsTitle}>{t('lists.splitSettlementsTitle')}</Text>
+                                {splitSummary.settlements.length === 0 ? (
+                                    <Text style={styles.chartEmpty}>{t('lists.splitSettlementsEmpty')}</Text>
+                                ) : (
+                                    splitSummary.settlements.map((settlement, index) => (
+                                        <Text
+                                            key={`${settlement.from.id}-${settlement.to.id}-${index}`}
+                                            style={styles.settlementText}
+                                        >
+                                            {t('lists.splitSettlement', {
+                                                from: getMemberLabel(settlement.from),
+                                                to: getMemberLabel(settlement.to),
+                                                amount: `${currency} ${settlement.amount.toFixed(2)}`,
+                                            })}
+                                        </Text>
+                                    ))
+                                )}
+                            </View>
+                        </>
+                    )}
                 </View>
 
                 <View style={styles.tabs}>
@@ -498,6 +667,9 @@ const createStyles = (colors: AppColors) =>
         expenseCard: {
             marginHorizontal: 0,
         },
+        expenseSwipeWrapper: {
+            marginHorizontal: 16,
+        },
         pendingExpenseCard: {
             backgroundColor: colors.pendingSurface,
         },
@@ -655,5 +827,82 @@ const createStyles = (colors: AppColors) =>
             shadowOffset: {width: 0, height: 2},
             shadowOpacity: 0.2,
             shadowRadius: 4,
+        },
+        splitCard: {
+            marginHorizontal: 16,
+            marginBottom: 16,
+            padding: 16,
+            borderRadius: 16,
+            backgroundColor: colors.surface,
+            gap: 12,
+        },
+        splitHelper: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        splitRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingVertical: 8,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.surfaceSecondary,
+        },
+        splitMemberInfo: {
+            flex: 1,
+            gap: 4,
+        },
+        splitMemberName: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        splitMemberShare: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        splitAmountBlock: {
+            alignItems: 'flex-end',
+        },
+        splitAmount: {
+            fontSize: 16,
+            fontWeight: '700',
+        },
+        splitOwes: {
+            color: colors.danger,
+        },
+        splitReceives: {
+            color: colors.success,
+        },
+        splitHint: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        settlementsWrapper: {
+            gap: 6,
+        },
+        settlementsTitle: {
+            fontSize: 14,
+            fontWeight: '700',
+            color: colors.text,
+        },
+        settlementText: {
+            fontSize: 13,
+            color: colors.text,
+        },
+        deleteAction: {
+            width: 90,
+            marginVertical: 8,
+            backgroundColor: colors.danger,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 12,
+            flexDirection: 'column',
+            gap: 4,
+        },
+        deleteActionText: {
+            color: colors.accentText,
+            fontSize: 12,
+            fontWeight: '600',
         },
     });

@@ -1,8 +1,10 @@
-import React, {useMemo} from 'react';
-import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useMemo, useState} from 'react';
+import {Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {availableLanguages, useTranslation} from '@i18n';
 import {AppColors, ThemePreference, useAppTheme} from '@theme';
+import {Button} from '@/components';
+import {useAuthStore} from '@/store/auth.store';
 
 const themeOptions: {value: ThemePreference; icon: string; labelKey: string}[] = [
     {value: 'light', icon: 'sunny-outline', labelKey: 'settings.themeLight'},
@@ -13,7 +15,33 @@ const themeOptions: {value: ThemePreference; icon: string; labelKey: string}[] =
 export const SettingsScreen: React.FC = () => {
     const {language, setLanguage, t} = useTranslation();
     const {colors, preference, setPreference} = useAppTheme();
+    const {logout} = useAuthStore();
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const styles = useMemo(() => createStyles(colors), [colors]);
+
+    const handleLogout = () => {
+        Alert.alert(
+            t('settings.logoutTitle'),
+            t('settings.logoutDescription'),
+            [
+                {text: t('common.cancel'), style: 'cancel'},
+                {
+                    text: t('settings.logoutConfirm'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            setIsLoggingOut(true);
+                            await logout();
+                        } catch (error: any) {
+                            Alert.alert(t('common.error'), error?.message || t('common.genericError'));
+                        } finally {
+                            setIsLoggingOut(false);
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -65,6 +93,24 @@ export const SettingsScreen: React.FC = () => {
                             </TouchableOpacity>
                         );
                     })}
+                </View>
+            </View>
+
+            <View style={styles.sectionWrapper}>
+                <Text style={styles.header}>{t('settings.accountTitle')}</Text>
+                <Text style={styles.description}>{t('settings.logoutDescription')}</Text>
+                <View style={styles.logoutButtons}>
+                    <Button
+                        title={t('settings.logoutButton')}
+                        onPress={handleLogout}
+                        variant="danger"
+                        loading={isLoggingOut}
+                        style={styles.logoutPrimary}
+                    />
+                    <TouchableOpacity style={styles.logoutSecondary} onPress={handleLogout} disabled={isLoggingOut}>
+                        <Ionicons name="log-out-outline" size={18} color={colors.accent}/>
+                        <Text style={styles.logoutSecondaryText}>{t('settings.logoutSecondary')}</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </View>
@@ -120,5 +166,26 @@ const createStyles = (colors: AppColors) =>
             flexDirection: 'row',
             alignItems: 'center',
             gap: 8,
+        },
+        logoutButtons: {
+            gap: 12,
+            marginTop: 8,
+        },
+        logoutPrimary: {
+            width: '100%',
+        },
+        logoutSecondary: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            justifyContent: 'center',
+            paddingVertical: 12,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.accent,
+        },
+        logoutSecondaryText: {
+            color: colors.accent,
+            fontWeight: '600',
         },
     });

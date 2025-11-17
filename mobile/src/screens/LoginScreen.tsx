@@ -126,6 +126,7 @@ const createStyles = (colors: AppColors) =>
             flex: 1,
             justifyContent: 'space-between',
             padding: 24,
+            paddingTop: 56,
         },
         languageToggle: {
             flexDirection: 'row',
