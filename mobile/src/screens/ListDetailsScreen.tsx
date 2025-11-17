@@ -16,7 +16,7 @@ import {useListsStore} from '@/store/lists.store';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useAuthStore} from '@/store/auth.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {Expense, ExpensePaymentMethod, ExpenseStatus, ListMember, MemberStatus} from '@/types';
+import {Expense, ExpensePaymentMethod, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import listsService from '@/services/lists.service';

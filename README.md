@@ -33,7 +33,8 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Modifica spese con data reale, metodo di pagamento e destinatari personalizzati
 - ✅ Calcolo rimborsi ottimizzati
 - ✅ Ripartizione spese integrata negli Insights con suggerimenti sui rimborsi
-- ✅ Swipe-to-edit/delete, schermata di dettaglio spesa con metodo di pagamento/beneficiari e logout rapido dalle Impostazioni
+- ✅ Swipe-to-edit/delete, schermata di dettaglio spesa con metodo di pagamento/beneficiari e logout rapido dalle
+  Impostazioni
 - ✅ Ruoli Admin/Validatore con approvazione delle spese prima della conferma
 - ✅ Percentuali di ripartizione modificabili dagli amministratori in ogni momento con bilanciamento automatico del resto
 - ✅ Notifiche push
