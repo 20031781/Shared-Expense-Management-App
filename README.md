@@ -29,6 +29,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Riepilogo spese con filtri temporali e grafici
 - ✅ Tab Insights con selezione lista, filtri temporali e grafici per lista e membro
 - ✅ Menù a tendina negli Insights per scegliere velocemente le liste e riepilogo paganti migliorato
+- ✅ Grafici dinamici (barre, torta, trend) per confrontare rapidamente i membri
 - ✅ Selezione del pagatore e tracciamento della data di inserimento
 - ✅ Modifica spese con data reale, metodo di pagamento e destinatari personalizzati
 - ✅ Calcolo rimborsi ottimizzati
@@ -44,6 +45,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Impostazioni multilingua (Italiano/Inglese)
 - ✅ Tema chiaro/scuro/sistema configurabile dall'app mobile
 - ✅ Onboarding guidato con checklist interattiva
+- ✅ Avvisi in-app se Expo Go non può registrare notifiche push, con guida rapida per creare una development build
 
 ## 🚀 Quick Start
 
@@ -60,6 +62,12 @@ npm install
 npm start
 # Scansiona QR con Expo Go
 ```
+
+### ⚠️ Notifiche push & Expo Go
+
+Con SDK 53+ Expo Go non invia più notifiche remote. Se vuoi testarle devi creare una **development build** o usare un
+dev client personalizzato (`eas build --profile development`). L'app mostra un banner in Impostazioni → Notifiche con
+il link diretto alla guida aggiornata (**[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md)**).
 
 ## 🧹 Pulizia delle dipendenze (`node_modules`)
 

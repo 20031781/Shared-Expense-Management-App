@@ -19,6 +19,8 @@ import {LanguageProvider, useTranslation} from '@i18n';
 import {ThemeProvider, useAppTheme} from '@theme';
 import {LanguageSelectionScreen} from '@/screens/LanguageSelectionScreen';
 import authService from '@/services/auth.service';
+import {getPushCapability, PushLimitation} from '@/lib/pushNotifications';
+import {useEnvironmentStore} from '@/store/environment.store';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -47,17 +49,37 @@ const AppContent = () => {
     const {t} = useTranslation();
     const [pendingInvite, setPendingInvite] = useState<PendingInviteAction | null>(null);
     const hasRegisteredPushToken = useRef(false);
+    const setPushLimitation = useEnvironmentStore(state => state.setPushLimitation);
+    const limitationWarningRef = useRef<PushLimitation | null>(null);
 
     useEffect(() => initialize(), []);
 
     useEffect(() => {
         if (!isAuthenticated) {
             hasRegisteredPushToken.current = false;
+            setPushLimitation(null);
+            limitationWarningRef.current = null;
             return;
         }
-        if (Platform.OS === 'web' || hasRegisteredPushToken.current) {
+
+        const capability = getPushCapability();
+        if (!capability.supported) {
+            setPushLimitation(capability.limitation);
+            if (limitationWarningRef.current !== capability.limitation) {
+                Alert.alert(
+                    t('notifications.unsupportedTitle'),
+                    t(`notifications.unsupported.${capability.limitation}` as const)
+                );
+                limitationWarningRef.current = capability.limitation;
+            }
             return;
         }
+
+        setPushLimitation(null);
+        if (hasRegisteredPushToken.current) {
+            return;
+        }
+
         let cancelled = false;
 
         const registerPushToken = async () => {
@@ -90,7 +112,7 @@ const AppContent = () => {
         return () => {
             cancelled = true;
         };
-    }, [isAuthenticated]);
+    }, [isAuthenticated, setPushLimitation, t]);
 
     useEffect(() => {
         const handleUrl = (url: string | null) => {
