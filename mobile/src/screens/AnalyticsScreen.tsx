@@ -1,5 +1,15 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import {
+    ActivityIndicator,
+    Modal,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View,
+} from 'react-native';
 
 import {Button, Card, Input, Loading} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
@@ -88,6 +98,7 @@ export const AnalyticsScreen: React.FC = () => {
     });
     const [currentRange, setCurrentRange] = useState<ResolvedRange>(DEFAULT_RANGE);
     const [selectedListId, setSelectedListId] = useState<string>(ALL_LISTS_OPTION);
+    const [isListDropdownVisible, setIsListDropdownVisible] = useState(false);
     const [listInsights, setListInsights] = useState<{expenses: Expense[]; members: ListMember[]}>({
         expenses: [],
         members: [],
@@ -109,14 +120,14 @@ export const AnalyticsScreen: React.FC = () => {
         'custom': t('analytics.filterCustom'),
     }), [t]);
 
-    const listOptions = useMemo(() => [
-        {id: ALL_LISTS_OPTION, name: t('analytics.listPickerAll')},
-        ...lists.map((list) => ({id: list.id, name: list.name})),
-    ], [lists, t]);
-
     const selectedList = useMemo(() => (
         lists.find((list) => list.id === selectedListId)
     ), [lists, selectedListId]);
+
+    const handleSelectListId = useCallback((listId: string) => {
+        setSelectedListId((current) => (current === listId ? current : listId));
+        setIsListDropdownVisible(false);
+    }, []);
 
     const loadExpenses = useCallback(async (target: Timeframe, custom?: DateRangeInput | null): Promise<ResolvedRange> => {
         const range = resolveRange(target, custom || undefined);
@@ -262,13 +273,23 @@ export const AnalyticsScreen: React.FC = () => {
         return Array.from(map.entries()).map(([label, amount]) => ({label, amount})).sort((a, b) => b.amount - a.amount);
     }, []);
 
-    const payerBreakdown = useMemo(() => groupBy(visibleExpenses, (expense) => (
-        expense.paidByMember?.displayName
-        || expense.paidByMember?.user?.fullName
-        || expense.paidByMember?.email
-        || expense.author?.fullName
-        || t('members.unknown')
-    )), [visibleExpenses, groupBy, t]);
+    const resolvePayerLabel = useCallback((expense: Expense) => {
+        if (expense.paidByMemberId) {
+            const fromMap = memberMap.get(expense.paidByMemberId);
+            if (fromMap) {
+                return getMemberLabel(fromMap);
+            }
+        }
+        if (expense.paidByMember) {
+            return getMemberLabel(expense.paidByMember);
+        }
+        if (expense.author?.fullName) {
+            return expense.author.fullName;
+        }
+        return t('members.unknown');
+    }, [getMemberLabel, memberMap, t]);
+
+    const payerBreakdown = useMemo(() => groupBy(visibleExpenses, resolvePayerLabel), [visibleExpenses, groupBy, resolvePayerLabel]);
 
     const listBreakdown = useMemo(() => groupBy(userExpenses, (expense) => (
         listMap.get(expense.listId) || t('lists.details')
@@ -400,7 +421,40 @@ export const AnalyticsScreen: React.FC = () => {
     };
 
     return (
-        <ScrollView
+        <>
+            <Modal
+                visible={isListDropdownVisible}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setIsListDropdownVisible(false)}
+            >
+                <TouchableWithoutFeedback onPress={() => setIsListDropdownVisible(false)}>
+                    <View style={styles.dropdownBackdrop}>
+                        <TouchableWithoutFeedback>
+                            <View style={styles.dropdownCard}>
+                                <ScrollView>
+                                    {lists.length === 0 ? (
+                                        <Text style={styles.dropdownEmptyText}>
+                                            {t('analytics.listPickerDropdownEmpty')}
+                                        </Text>
+                                    ) : (
+                                        lists.map((list) => (
+                                            <TouchableOpacity
+                                                key={list.id}
+                                                style={styles.dropdownOption}
+                                                onPress={() => handleSelectListId(list.id)}
+                                            >
+                                                <Text style={styles.dropdownOptionText}>{list.name}</Text>
+                                            </TouchableOpacity>
+                                        ))
+                                    )}
+                                </ScrollView>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+            <ScrollView
             contentContainerStyle={styles.container}
             refreshControl={(
                 <RefreshControl refreshing={userExpensesLoading && userExpenses.length > 0} onRefresh={handleRefresh}/>
@@ -456,21 +510,27 @@ export const AnalyticsScreen: React.FC = () => {
 
             <Card style={styles.card}>
                 <Text style={styles.sectionTitle}>{t('analytics.listPickerLabel')}</Text>
-                <View style={styles.listPickerChips}>
-                    {listOptions.map((option) => {
-                        const isActive = option.id === selectedListId;
-                        return (
-                            <TouchableOpacity
-                                key={option.id}
-                                style={[styles.listChip, isActive && styles.listChipActive]}
-                                onPress={() => setSelectedListId(option.id)}
-                            >
-                                <Text style={[styles.listChipText, isActive && styles.listChipTextActive]}>
-                                    {option.name}
-                                </Text>
-                            </TouchableOpacity>
-                        );
-                    })}
+                <View style={styles.listPickerRow}>
+                    <TouchableOpacity
+                        style={[styles.listChip, selectedListId === ALL_LISTS_OPTION && styles.listChipActive]}
+                        onPress={() => handleSelectListId(ALL_LISTS_OPTION)}
+                    >
+                        <Text style={[styles.listChipText, selectedListId === ALL_LISTS_OPTION && styles.listChipTextActive]}>
+                            {t('analytics.listPickerAll')}
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.dropdownTrigger}
+                        onPress={() => setIsListDropdownVisible(true)}
+                        disabled={lists.length === 0}
+                    >
+                        <Text style={styles.dropdownTriggerText} numberOfLines={1}>
+                            {selectedListId === ALL_LISTS_OPTION
+                                ? t('analytics.listPickerDropdownPlaceholder')
+                                : selectedList?.name || t('analytics.listPickerFallback')}
+                        </Text>
+                        <Text style={styles.dropdownTriggerIcon}>⌄</Text>
+                    </TouchableOpacity>
                 </View>
                 <Text style={styles.listPickerHint}>
                     {selectedListId === ALL_LISTS_OPTION
@@ -618,6 +678,7 @@ export const AnalyticsScreen: React.FC = () => {
                 </>
             )}
         </ScrollView>
+        </>
     );
 };
 
@@ -645,10 +706,10 @@ const createStyles = (colors: AppColors) =>
             gap: 8,
             marginTop: 16,
         },
-        listPickerChips: {
+        listPickerRow: {
             flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 8,
+            alignItems: 'center',
+            gap: 12,
         },
         filterChip: {
             paddingHorizontal: 12,
@@ -667,6 +728,28 @@ const createStyles = (colors: AppColors) =>
         },
         listChipActive: {
             backgroundColor: colors.accent,
+        },
+        dropdownTrigger: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderRadius: 12,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.surfaceSecondary,
+            backgroundColor: colors.surface,
+        },
+        dropdownTriggerText: {
+            flex: 1,
+            fontSize: 14,
+            color: colors.text,
+            marginRight: 8,
+        },
+        dropdownTriggerIcon: {
+            fontSize: 16,
+            color: colors.secondaryText,
         },
         filterChipText: {
             fontWeight: '600',
@@ -751,6 +834,32 @@ const createStyles = (colors: AppColors) =>
             marginTop: 8,
             fontSize: 12,
             color: colors.secondaryText,
+        },
+        dropdownBackdrop: {
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'center',
+            padding: 24,
+        },
+        dropdownCard: {
+            borderRadius: 16,
+            backgroundColor: colors.surface,
+            maxHeight: '70%',
+            padding: 12,
+        },
+        dropdownOption: {
+            paddingVertical: 12,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.surfaceSecondary,
+        },
+        dropdownOptionText: {
+            fontSize: 16,
+            color: colors.text,
+        },
+        dropdownEmptyText: {
+            fontSize: 14,
+            color: colors.secondaryText,
+            paddingVertical: 16,
         },
         topDay: {
             marginTop: 12,

@@ -27,6 +27,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Divisione automatica spese tra membri
 - ✅ Riepilogo spese con filtri temporali e grafici
 - ✅ Tab Insights con selezione lista, filtri temporali e grafici per pagatore e membro
+- ✅ Menù a tendina negli Insights per scegliere velocemente le liste e riepilogo paganti migliorato
 - ✅ Selezione del pagatore e tracciamento della data di inserimento
 - ✅ Calcolo rimborsi ottimizzati
 - ✅ Ripartizione spese integrata negli Insights con suggerimenti sui rimborsi
