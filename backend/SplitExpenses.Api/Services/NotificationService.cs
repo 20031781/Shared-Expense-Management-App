@@ -54,7 +54,7 @@ public class NotificationService : INotificationService
         var list = await _listRepository.GetByIdAsync(expense.ListId);
         var members = await _listRepository.GetListMembersAsync(expense.ListId);
         var recipients = members
-            .Where(m => m.Status == MemberStatus.Active && m.UserId.HasValue && m.UserId != expense.AuthorId)
+            .Where(m => m is { Status: MemberStatus.Active, UserId: not null } && m.UserId != expense.AuthorId)
             .Select(m => m.UserId!.Value)
             .Append(list?.AdminId ?? Guid.Empty)
             .Where(id => id != Guid.Empty)
@@ -83,7 +83,7 @@ public class NotificationService : INotificationService
 
         var members = await _listRepository.GetListMembersAsync(listId);
         var recipients = members
-            .Where(m => m.Status == MemberStatus.Active && m.UserId.HasValue)
+            .Where(m => m is { Status: MemberStatus.Active, UserId: not null })
             .Select(m => m.UserId!.Value)
             .Append(list.AdminId)
             .Distinct()

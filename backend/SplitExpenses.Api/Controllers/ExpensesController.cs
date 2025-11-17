@@ -1,7 +1,5 @@
 #region
 
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,7 +53,8 @@ public class ExpensesController(
         var members = (await listRepository.GetListMembersAsync(request.ListId)).ToList();
         if (members.All(m => m.Id != request.PaidByMemberId))
             return BadRequest("PaidByMemberId does not belong to the list");
-        var normalizedBeneficiaries = NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
+        var normalizedBeneficiaries =
+            NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
 
         var expense = new Expense
         {
@@ -91,7 +90,8 @@ public class ExpensesController(
         var members = (await listRepository.GetListMembersAsync(expense.ListId)).ToList();
         if (members.All(m => m.Id != request.PaidByMemberId))
             return BadRequest("PaidByMemberId does not belong to the list");
-        var normalizedBeneficiaries = NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
+        var normalizedBeneficiaries =
+            NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
 
         expense.Title = request.Title;
         expense.Amount = request.Amount;
@@ -230,7 +230,7 @@ public class ExpensesController(
             return sanitized;
 
         var weighted = members
-            .Where(m => m.Status == MemberStatus.Active && m.SplitPercentage > 0)
+            .Where(m => m is { Status: MemberStatus.Active, SplitPercentage: > 0 })
             .Select(m => m.Id)
             .ToList();
 

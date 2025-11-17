@@ -122,12 +122,10 @@ export const AnalyticsScreen: React.FC = () => {
         'custom': t('analytics.filterCustom'),
     }), [t]);
 
-    const selectedList = useMemo(() => (
-        lists.find((list) => list.id === selectedListId)
-    ), [lists, selectedListId]);
+    const selectedList = useMemo(() => lists.find(list => list.id === selectedListId), [lists, selectedListId]);
 
     const handleSelectListId = useCallback((listId: string) => {
-        setSelectedListId((current) => (current === listId ? current : listId));
+        setSelectedListId(current => current === listId ? current : listId);
         setIsListDropdownVisible(false);
     }, []);
 
@@ -146,7 +144,7 @@ export const AnalyticsScreen: React.FC = () => {
     }, [lists.length, fetchLists]);
 
     useEffect(() => {
-        if (selectedListId !== ALL_LISTS_OPTION && !lists.some((list) => list.id === selectedListId)) {
+        if (selectedListId !== ALL_LISTS_OPTION && !lists.some(list => list.id === selectedListId)) {
             setSelectedListId(ALL_LISTS_OPTION);
         }
     }, [lists, selectedListId]);
@@ -231,19 +229,17 @@ export const AnalyticsScreen: React.FC = () => {
         fetchListInsights(selectedListId, currentRange).catch(() => undefined);
     };
 
-    const visibleExpenses = useMemo(() => (
-        selectedListId === ALL_LISTS_OPTION ? userExpenses : listInsights.expenses
-    ), [selectedListId, userExpenses, listInsights.expenses]);
+    const visibleExpenses = useMemo(() => selectedListId === ALL_LISTS_OPTION ? userExpenses : listInsights.expenses, [selectedListId, userExpenses, listInsights.expenses]);
 
     const memberMap = useMemo(() => {
         const map = new Map<string, ListMember>();
-        listInsights.members.forEach((member) => map.set(member.id, member));
+        listInsights.members.forEach(member => map.set(member.id, member));
         return map;
     }, [listInsights.members]);
 
     const getMemberLabel = useCallback((member?: ListMember) => {
         if (!member) return t('members.unknown');
-        return (member.displayName && member.displayName.trim())
+        return member.displayName && member.displayName.trim()
             || member.user?.fullName
             || member.email
             || t('members.unknown');
@@ -261,7 +257,7 @@ export const AnalyticsScreen: React.FC = () => {
             return totalSpent / days;
         }
         if (visibleExpenses.length === 0) return 0;
-        const timestamps = visibleExpenses.map((expense) => new Date(expense.expenseDate).getTime());
+        const timestamps = visibleExpenses.map(expense => new Date(expense.expenseDate).getTime());
         const min = Math.min(...timestamps);
         const max = Math.max(...timestamps);
         const diffDays = Math.max(1, Math.round((max - min) / MS_PER_DAY) + 1);
@@ -270,13 +266,13 @@ export const AnalyticsScreen: React.FC = () => {
 
     const listMap = useMemo(() => {
         const map = new Map<string, string>();
-        lists.forEach((list) => map.set(list.id, list.name));
+        lists.forEach(list => map.set(list.id, list.name));
         return map;
     }, [lists]);
 
     const groupBy = useCallback((items: Expense[], keyGetter: (item: Expense) => string) => {
         const map = new Map<string, number>();
-        items.forEach((expense) => {
+        items.forEach(expense => {
             const key = keyGetter(expense);
             if (!key) return;
             map.set(key, (map.get(key) ?? 0) + expense.amount);
@@ -305,14 +301,12 @@ export const AnalyticsScreen: React.FC = () => {
 
     const payerBreakdown = useMemo(() => groupBy(visibleExpenses, resolvePayerLabel), [visibleExpenses, groupBy, resolvePayerLabel]);
 
-    const listBreakdown = useMemo(() => groupBy(userExpenses, (expense) => (
-        listMap.get(expense.listId) || t('lists.details')
-    )), [userExpenses, groupBy, listMap, t]);
+    const listBreakdown = useMemo(() => groupBy(userExpenses, expense => listMap.get(expense.listId) || t('lists.details')), [userExpenses, groupBy, listMap, t]);
 
     const memberBreakdown = useMemo(() => {
         if (selectedListId === ALL_LISTS_OPTION) return [];
         const accumulator = new Map<string, number>();
-        listInsights.expenses.forEach((expense) => {
+        listInsights.expenses.forEach(expense => {
             if (!expense.paidByMemberId) return;
             accumulator.set(expense.paidByMemberId, (accumulator.get(expense.paidByMemberId) ?? 0) + expense.amount);
         });
@@ -331,7 +325,7 @@ export const AnalyticsScreen: React.FC = () => {
 
     const dailyTotals = useMemo(() => {
         const map = new Map<string, number>();
-        visibleExpenses.forEach((expense) => {
+        visibleExpenses.forEach(expense => {
             const dateKey = new Date(expense.expenseDate).toLocaleDateString();
             map.set(dateKey, (map.get(dateKey) ?? 0) + expense.amount);
         });
@@ -356,28 +350,22 @@ export const AnalyticsScreen: React.FC = () => {
 
     const renderBreakdown = (title: string, data: { label: string; amount: number }[]) => {
         const localMax = data.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
-        return (
-            <Card style={styles.card}>
-                <Text style={styles.sectionTitle}>{title}</Text>
-                {data.length === 0 ? (
-                    <Text style={styles.emptyText}>{t('analytics.empty')}</Text>
-                ) : (
-                    data.map((item, index) => (
-                        <View key={`${title}-${item.label}-${index}`} style={styles.chartRow}>
-                            <View style={styles.chartLabelWrapper}>
-                                <Text style={styles.chartLabel}>{item.label}</Text>
-                                <Text style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
-                            </View>
-                            <View style={styles.chartBarWrapper}>
-                                <View
-                                    style={[styles.chartBar, {width: `${Math.max((item.amount / localMax) * 100, 5)}%`}]}
-                                />
-                            </View>
-                        </View>
-                    ))
-                )}
-            </Card>
-        );
+        return <Card style={styles.card}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            {data.length === 0 ?
+                <Text style={styles.emptyText}>{t('analytics.empty')}</Text> : data.map((item, index) => <View
+                    key={`${title}-${item.label}-${index}`} style={styles.chartRow}>
+                    <View style={styles.chartLabelWrapper}>
+                        <Text style={styles.chartLabel}>{item.label}</Text>
+                        <Text style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.chartBarWrapper}>
+                        <View
+                            style={[styles.chartBar, {width: `${Math.max((item.amount / localMax) * 100, 5)}%`}]}
+                        />
+                    </View>
+                </View>)}
+        </Card>;
     };
 
     const renderRangeLabel = () => {
@@ -392,285 +380,241 @@ export const AnalyticsScreen: React.FC = () => {
         return from || to || t('analytics.rangeAll');
     };
 
-    return (
-        <>
-            <Modal
-                visible={isListDropdownVisible}
-                transparent
-                animationType="fade"
-                onRequestClose={() => setIsListDropdownVisible(false)}
-            >
-                <TouchableWithoutFeedback onPress={() => setIsListDropdownVisible(false)}>
-                    <View style={styles.dropdownBackdrop}>
-                        <TouchableWithoutFeedback>
-                            <View style={styles.dropdownCard}>
-                                <ScrollView>
-                                    {lists.length === 0 ? (
-                                        <Text style={styles.dropdownEmptyText}>
-                                            {t('analytics.listPickerDropdownEmpty')}
-                                        </Text>
-                                    ) : (
-                                        lists.map((list) => (
-                                            <TouchableOpacity
-                                                key={list.id}
-                                                style={styles.dropdownOption}
-                                                onPress={() => handleSelectListId(list.id)}
-                                            >
-                                                <Text style={styles.dropdownOptionText}>{list.name}</Text>
-                                            </TouchableOpacity>
-                                        ))
-                                    )}
-                                </ScrollView>
-                            </View>
-                        </TouchableWithoutFeedback>
-                    </View>
-                </TouchableWithoutFeedback>
-            </Modal>
-            <ScrollView
-                contentContainerStyle={styles.container}
-                refreshControl={(
-                    <RefreshControl refreshing={userExpensesLoading && userExpenses.length > 0}
-                                    onRefresh={handleRefresh}/>
-                )}
-            >
-                <View style={styles.header}>
-                    <Text style={styles.title}>{t('analytics.title')}</Text>
-                    <Text style={styles.subtitle}>{t('analytics.subtitle')}</Text>
+    return <>
+        <Modal
+            visible={isListDropdownVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setIsListDropdownVisible(false)}
+        >
+            <TouchableWithoutFeedback onPress={() => setIsListDropdownVisible(false)}>
+                <View style={styles.dropdownBackdrop}>
+                    <TouchableWithoutFeedback>
+                        <View style={styles.dropdownCard}>
+                            <ScrollView>
+                                {lists.length === 0 ? <Text style={styles.dropdownEmptyText}>
+                                    {t('analytics.listPickerDropdownEmpty')}
+                                </Text> : lists.map(list => <TouchableOpacity
+                                    key={list.id}
+                                    style={styles.dropdownOption}
+                                    onPress={() => handleSelectListId(list.id)}
+                                >
+                                    <Text style={styles.dropdownOptionText}>{list.name}</Text>
+                                </TouchableOpacity>)}
+                            </ScrollView>
+                        </View>
+                    </TouchableWithoutFeedback>
                 </View>
+            </TouchableWithoutFeedback>
+        </Modal>
+        <ScrollView
+            contentContainerStyle={styles.container}
+            refreshControl={<RefreshControl refreshing={userExpensesLoading && userExpenses.length > 0}
+                                            onRefresh={handleRefresh}/>}
+        >
+            <View style={styles.header}>
+                <Text style={styles.title}>{t('analytics.title')}</Text>
+                <Text style={styles.subtitle}>{t('analytics.subtitle')}</Text>
+            </View>
 
-                <View style={styles.filters}>
-                    {TIMEFRAME_OPTIONS.map((option) => (
-                        <TouchableOpacity
-                            key={option}
-                            style={[styles.filterChip, timeframe === option && styles.filterChipActive]}
-                            onPress={() => setTimeframe(option)}
-                        >
-                            <Text style={[styles.filterChipText, timeframe === option && styles.filterChipTextActive]}>
-                                {chipLabels[option]}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-
-                {timeframe === 'custom' && (
-                    <Card style={styles.card}>
-                        <Text style={styles.sectionTitle}>{t('analytics.customTitle')}</Text>
-                        <Input
-                            label={t('analytics.customFrom')}
-                            placeholder="YYYY-MM-DD"
-                            value={customRange.from}
-                            onChangeText={(text) => setCustomRange((prev) => ({...prev, from: text}))}
-                            autoCapitalize="none"
-                            keyboardType="numbers-and-punctuation"
-                        />
-                        <Input
-                            label={t('analytics.customTo')}
-                            placeholder="YYYY-MM-DD"
-                            value={customRange.to}
-                            onChangeText={(text) => setCustomRange((prev) => ({...prev, to: text}))}
-                            autoCapitalize="none"
-                            keyboardType="numbers-and-punctuation"
-                        />
-                        {customError && <Text style={styles.error}>{customError}</Text>}
-                        <Button
-                            title={t('analytics.customApply')}
-                            onPress={handleApplyCustom}
-                            style={styles.customButton}
-                            disabled={!customRange.from || !customRange.to}
-                        />
-                    </Card>
-                )}
-
-                <Card style={styles.card}>
-                    <Text style={styles.sectionTitle}>{t('analytics.listPickerLabel')}</Text>
-                    <View style={styles.listPickerRow}>
-                        <TouchableOpacity
-                            style={[styles.listChip, selectedListId === ALL_LISTS_OPTION && styles.listChipActive]}
-                            onPress={() => handleSelectListId(ALL_LISTS_OPTION)}
-                        >
-                            <Text
-                                style={[styles.listChipText, selectedListId === ALL_LISTS_OPTION && styles.listChipTextActive]}>
-                                {t('analytics.listPickerAll')}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.dropdownTrigger, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerActive]}
-                            onPress={() => setIsListDropdownVisible(true)}
-                            disabled={lists.length === 0}
-                        >
-                            <Text
-                                style={[styles.dropdownTriggerText, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerTextActive]}
-                                numberOfLines={1}
-                            >
-                                {selectedListId === ALL_LISTS_OPTION
-                                    ? t('analytics.listPickerDropdownPlaceholder')
-                                    : selectedList?.name || t('analytics.listPickerFallback')}
-                            </Text>
-                            <Text
-                                style={[styles.dropdownTriggerIcon, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerIconActive]}
-                            >
-                                ⌄
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={styles.listPickerHint}>
-                        {selectedListId === ALL_LISTS_OPTION
-                            ? t('analytics.listPickerHelper')
-                            : t('analytics.listPickerSelected', {name: selectedList?.name || t('analytics.listPickerFallback')})}
+            <View style={styles.filters}>
+                {TIMEFRAME_OPTIONS.map(option => <TouchableOpacity
+                    key={option}
+                    style={[styles.filterChip, timeframe === option && styles.filterChipActive]}
+                    onPress={() => setTimeframe(option)}
+                >
+                    <Text style={[styles.filterChipText, timeframe === option && styles.filterChipTextActive]}>
+                        {chipLabels[option]}
                     </Text>
-                </Card>
+                </TouchableOpacity>)}
+            </View>
 
-                <Card style={styles.card}>
-                    <Text style={styles.sectionTitle}>{t('analytics.summaryTitle')}</Text>
-                    <Text style={styles.rangeLabel}>{renderRangeLabel()}</Text>
-                    <View style={styles.summaryRow}>
-                        <View style={styles.summaryItem}>
-                            <Text style={styles.summaryLabel}>{t('analytics.total')}</Text>
-                            <Text style={styles.summaryValue}>{currency} {totalSpent.toFixed(2)}</Text>
-                        </View>
-                        <View style={styles.summaryItem}>
-                            <Text style={styles.summaryLabel}>{t('analytics.averageDaily')}</Text>
-                            <Text style={styles.summaryValue}>{currency} {averageDaily.toFixed(2)}</Text>
-                        </View>
+            {timeframe === 'custom' && <Card style={styles.card}>
+                <Text style={styles.sectionTitle}>{t('analytics.customTitle')}</Text>
+                <Input
+                    label={t('analytics.customFrom')}
+                    placeholder="YYYY-MM-DD"
+                    value={customRange.from}
+                    onChangeText={text => setCustomRange(prev => ({...prev, from: text}))}
+                    autoCapitalize="none"
+                    keyboardType="numbers-and-punctuation"
+                />
+                <Input
+                    label={t('analytics.customTo')}
+                    placeholder="YYYY-MM-DD"
+                    value={customRange.to}
+                    onChangeText={text => setCustomRange(prev => ({...prev, to: text}))}
+                    autoCapitalize="none"
+                    keyboardType="numbers-and-punctuation"
+                />
+                {customError && <Text style={styles.error}>{customError}</Text>}
+                <Button
+                    title={t('analytics.customApply')}
+                    onPress={handleApplyCustom}
+                    style={styles.customButton}
+                    disabled={!customRange.from || !customRange.to}
+                />
+            </Card>}
+
+            <Card style={styles.card}>
+                <Text style={styles.sectionTitle}>{t('analytics.listPickerLabel')}</Text>
+                <View style={styles.listPickerRow}>
+                    <TouchableOpacity
+                        style={[styles.listChip, selectedListId === ALL_LISTS_OPTION && styles.listChipActive]}
+                        onPress={() => handleSelectListId(ALL_LISTS_OPTION)}
+                    >
+                        <Text
+                            style={[styles.listChipText, selectedListId === ALL_LISTS_OPTION && styles.listChipTextActive]}>
+                            {t('analytics.listPickerAll')}
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.dropdownTrigger, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerActive]}
+                        onPress={() => setIsListDropdownVisible(true)}
+                        disabled={lists.length === 0}
+                    >
+                        <Text
+                            style={[styles.dropdownTriggerText, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerTextActive]}
+                            numberOfLines={1}
+                        >
+                            {selectedListId === ALL_LISTS_OPTION
+                                ? t('analytics.listPickerDropdownPlaceholder')
+                                : selectedList?.name || t('analytics.listPickerFallback')}
+                        </Text>
+                        <Text
+                            style={[styles.dropdownTriggerIcon, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerIconActive]}
+                        >
+                            ⌄
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={styles.listPickerHint}>
+                    {selectedListId === ALL_LISTS_OPTION
+                        ? t('analytics.listPickerHelper')
+                        : t('analytics.listPickerSelected', {name: selectedList?.name || t('analytics.listPickerFallback')})}
+                </Text>
+            </Card>
+
+            <Card style={styles.card}>
+                <Text style={styles.sectionTitle}>{t('analytics.summaryTitle')}</Text>
+                <Text style={styles.rangeLabel}>{renderRangeLabel()}</Text>
+                <View style={styles.summaryRow}>
+                    <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>{t('analytics.total')}</Text>
+                        <Text style={styles.summaryValue}>{currency} {totalSpent.toFixed(2)}</Text>
                     </View>
-                    {topDay && (
-                        <Text style={styles.topDay}>{t('analytics.topDay', {
-                            date: topDay.date,
-                            amount: `${currency} ${topDay.amount.toFixed(2)}`
-                        })}</Text>
-                    )}
-                </Card>
+                    <View style={styles.summaryItem}>
+                        <Text style={styles.summaryLabel}>{t('analytics.averageDaily')}</Text>
+                        <Text style={styles.summaryValue}>{currency} {averageDaily.toFixed(2)}</Text>
+                    </View>
+                </View>
+                {topDay && <Text style={styles.topDay}>{t('analytics.topDay', {
+                    date: topDay.date,
+                    amount: `${currency} ${topDay.amount.toFixed(2)}`
+                })}</Text>}
+            </Card>
 
-                {renderBreakdown(t('analytics.byPayer'), payerBreakdown)}
-                {selectedListId === ALL_LISTS_OPTION && renderBreakdown(t('analytics.byList'), listBreakdown)}
+            {renderBreakdown(t('analytics.byPayer'), payerBreakdown)}
+            {selectedListId === ALL_LISTS_OPTION && renderBreakdown(t('analytics.byList'), listBreakdown)}
 
-                {selectedListId === ALL_LISTS_OPTION && (
+            {selectedListId === ALL_LISTS_OPTION && <Card style={styles.card}>
+                <Text style={styles.sectionTitle}>{t('analytics.listInsightsPlaceholderTitle')}</Text>
+                <Text style={styles.emptyText}>{t('analytics.listPickerHelper')}</Text>
+            </Card>}
+
+            {selectedListId !== ALL_LISTS_OPTION && <>
+                {isCustomRangeMissing && <Card style={styles.card}>
+                    <Text
+                        style={styles.sectionTitle}>{selectedList?.name || t('analytics.listPickerFallback')}</Text>
+                    <Text style={styles.emptyText}>{t('analytics.listPickerApplyCustom')}</Text>
+                </Card>}
+
+                {!isCustomRangeMissing && listInsightsLoading && <Card style={styles.card}>
+                    <View style={styles.loadingRow}>
+                        <ActivityIndicator color={colors.accent}/>
+                        <Text style={styles.loadingText}>{t('analytics.listInsightsLoading')}</Text>
+                    </View>
+                </Card>}
+
+                {!isCustomRangeMissing && !listInsightsLoading && listInsightsError && <Card style={styles.card}>
+                    <Text style={styles.error}>{listInsightsError}</Text>
+                    <Button
+                        title={t('common.retry')}
+                        onPress={handleRetryListInsights}
+                        style={styles.retryButton}
+                    />
+                </Card>}
+
+                {!isCustomRangeMissing && !listInsightsLoading && !listInsightsError && <>
                     <Card style={styles.card}>
-                        <Text style={styles.sectionTitle}>{t('analytics.listInsightsPlaceholderTitle')}</Text>
-                        <Text style={styles.emptyText}>{t('analytics.listPickerHelper')}</Text>
-                    </Card>
-                )}
-
-                {selectedListId !== ALL_LISTS_OPTION && (
-                    <>
-                        {isCustomRangeMissing && (
-                            <Card style={styles.card}>
-                                <Text
-                                    style={styles.sectionTitle}>{selectedList?.name || t('analytics.listPickerFallback')}</Text>
-                                <Text style={styles.emptyText}>{t('analytics.listPickerApplyCustom')}</Text>
-                            </Card>
-                        )}
-
-                        {!isCustomRangeMissing && listInsightsLoading && (
-                            <Card style={styles.card}>
-                                <View style={styles.loadingRow}>
-                                    <ActivityIndicator color={colors.accent}/>
-                                    <Text style={styles.loadingText}>{t('analytics.listInsightsLoading')}</Text>
+                        <Text style={styles.sectionTitle}>{t('analytics.memberBreakdownTitle')}</Text>
+                        {memberBreakdown.length === 0 ? <Text
+                            style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : memberBreakdown.map(item =>
+                            <View key={item.memberId} style={styles.chartRow}>
+                                <View style={styles.chartLabelWrapper}>
+                                    <Text
+                                        style={styles.chartLabel}>{getMemberLabel(memberMap.get(item.memberId))}</Text>
+                                    <Text
+                                        style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
                                 </View>
-                            </Card>
-                        )}
+                                <View style={styles.chartBarWrapper}>
+                                    <View
+                                        style={[styles.chartBar, {width: `${Math.max((item.amount / memberChartMax) * 100, 5)}%`}]}
+                                    />
+                                </View>
+                            </View>)}
+                    </Card>
 
-                        {!isCustomRangeMissing && !listInsightsLoading && listInsightsError && (
-                            <Card style={styles.card}>
-                                <Text style={styles.error}>{listInsightsError}</Text>
-                                <Button
-                                    title={t('common.retry')}
-                                    onPress={handleRetryListInsights}
-                                    style={styles.retryButton}
-                                />
-                            </Card>
-                        )}
-
-                        {!isCustomRangeMissing && !listInsightsLoading && !listInsightsError && (
-                            <>
-                                <Card style={styles.card}>
-                                    <Text style={styles.sectionTitle}>{t('analytics.memberBreakdownTitle')}</Text>
-                                    {memberBreakdown.length === 0 ? (
-                                        <Text style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text>
-                                    ) : (
-                                        memberBreakdown.map((item) => (
-                                            <View key={item.memberId} style={styles.chartRow}>
-                                                <View style={styles.chartLabelWrapper}>
-                                                    <Text
-                                                        style={styles.chartLabel}>{getMemberLabel(memberMap.get(item.memberId))}</Text>
-                                                    <Text
-                                                        style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
-                                                </View>
-                                                <View style={styles.chartBarWrapper}>
-                                                    <View
-                                                        style={[styles.chartBar, {width: `${Math.max((item.amount / memberChartMax) * 100, 5)}%`}]}
-                                                    />
-                                                </View>
-                                            </View>
-                                        ))
-                                    )}
-                                </Card>
-
-                                <Card style={styles.card}>
-                                    <Text style={styles.sectionTitle}>{t('lists.splitSectionTitle')}</Text>
-                                    <Text style={styles.splitHelper}>{t('lists.splitOptimizedHint')}</Text>
-                                    {splitSummary.reason === 'no-expenses' && (
-                                        <Text style={styles.emptyText}>{t('lists.splitSectionEmpty')}</Text>
-                                    )}
-                                    {splitSummary.reason === 'no-members' && (
-                                        <Text style={styles.emptyText}>{t('lists.splitSectionNeedMembers')}</Text>
-                                    )}
-                                    {splitSummary.reason === 'no-split' && (
-                                        <Text style={styles.emptyText}>{t('lists.splitSectionNeedPercentages')}</Text>
-                                    )}
-                                    {splitSummary.reason === null && (
-                                        <>
-                                            {splitSummary.rows.map((row) => (
-                                                <View key={row.member.id} style={styles.splitRow}>
-                                                    <View style={styles.splitMemberInfo}>
-                                                        <Text
-                                                            style={styles.splitMemberName}>{getMemberLabel(row.member)}</Text>
-                                                        <Text
-                                                            style={styles.splitMemberShare}>{t('lists.splitShareLabel', {value: row.percentage})}</Text>
-                                                    </View>
-                                                    <View style={styles.splitAmountBlock}>
-                                                        <Text
-                                                            style={[styles.splitAmount, row.net < 0 ? styles.splitOwes : styles.splitReceives]}
-                                                        >
-                                                            {currency} {Math.abs(row.net).toFixed(2)}
-                                                        </Text>
-                                                        <Text style={styles.splitHint}>
-                                                            {row.net < 0 ? t('lists.splitNetGive') : t('lists.splitNetReceive')}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-                                            ))}
-                                            <View style={styles.settlementsWrapper}>
-                                                <Text
-                                                    style={styles.settlementsTitle}>{t('lists.splitSettlementsTitle')}</Text>
-                                                {splitSummary.settlements.length === 0 ? (
-                                                    <Text
-                                                        style={styles.emptyText}>{t('lists.splitSettlementsEmpty')}</Text>
-                                                ) : (
-                                                    splitSummary.settlements.map((settlement, index) => (
-                                                        <Text
-                                                            key={`${settlement.from.id}-${settlement.to.id}-${index}`}
-                                                            style={styles.settlementText}
-                                                        >
-                                                            {t('lists.splitSettlement', {
-                                                                from: getMemberLabel(settlement.from),
-                                                                to: getMemberLabel(settlement.to),
-                                                                amount: `${currency} ${settlement.amount.toFixed(2)}`,
-                                                            })}
-                                                        </Text>
-                                                    ))
-                                                )}
-                                            </View>
-                                        </>
-                                    )}
-                                </Card>
-                            </>
-                        )}
-                    </>
-                )}
-            </ScrollView>
-        </>
-    );
+                    <Card style={styles.card}>
+                        <Text style={styles.sectionTitle}>{t('lists.splitSectionTitle')}</Text>
+                        <Text style={styles.splitHelper}>{t('lists.splitOptimizedHint')}</Text>
+                        {splitSummary.reason === 'no-expenses' &&
+                            <Text style={styles.emptyText}>{t('lists.splitSectionEmpty')}</Text>}
+                        {splitSummary.reason === 'no-members' &&
+                            <Text style={styles.emptyText}>{t('lists.splitSectionNeedMembers')}</Text>}
+                        {splitSummary.reason === 'no-split' &&
+                            <Text style={styles.emptyText}>{t('lists.splitSectionNeedPercentages')}</Text>}
+                        {splitSummary.reason === null && <>
+                            {splitSummary.rows.map(row => <View key={row.member.id} style={styles.splitRow}>
+                                <View style={styles.splitMemberInfo}>
+                                    <Text
+                                        style={styles.splitMemberName}>{getMemberLabel(row.member)}</Text>
+                                    <Text
+                                        style={styles.splitMemberShare}>{t('lists.splitShareLabel', {value: row.percentage})}</Text>
+                                </View>
+                                <View style={styles.splitAmountBlock}>
+                                    <Text
+                                        style={[styles.splitAmount, row.net < 0 ? styles.splitOwes : styles.splitReceives]}
+                                    >
+                                        {currency} {Math.abs(row.net).toFixed(2)}
+                                    </Text>
+                                    <Text style={styles.splitHint}>
+                                        {row.net < 0 ? t('lists.splitNetGive') : t('lists.splitNetReceive')}
+                                    </Text>
+                                </View>
+                            </View>)}
+                            <View style={styles.settlementsWrapper}>
+                                <Text
+                                    style={styles.settlementsTitle}>{t('lists.splitSettlementsTitle')}</Text>
+                                {splitSummary.settlements.length === 0 ? <Text
+                                    style={styles.emptyText}>{t('lists.splitSettlementsEmpty')}</Text> : splitSummary.settlements.map((settlement, index) =>
+                                    <Text
+                                        key={`${settlement.from.id}-${settlement.to.id}-${index}`}
+                                        style={styles.settlementText}
+                                    >
+                                        {t('lists.splitSettlement', {
+                                            from: getMemberLabel(settlement.from),
+                                            to: getMemberLabel(settlement.to),
+                                            amount: `${currency} ${settlement.amount.toFixed(2)}`,
+                                        })}
+                                    </Text>)}
+                            </View>
+                        </>}
+                    </Card>
+                </>}
+            </>}
+        </ScrollView>
+    </>;
 };
 
 const createStyles = (colors: AppColors) =>

@@ -33,14 +33,13 @@ export const SettingsScreen: React.FC = () => {
     const [savingPreference, setSavingPreference] = useState<keyof NotificationPreferences | null>(null);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    useEffect(() => {
+    useEffect(() =>
         setNotificationPrefs({
             ...defaultNotificationPreferences,
             ...(user?.notificationPreferences ?? {}),
-        });
-    }, [user?.notificationPreferences]);
+        }), [user?.notificationPreferences]);
 
-    const preferenceOptions = useMemo(() => ([
+    const preferenceOptions = useMemo(() => [
         {
             key: 'newExpense',
             icon: 'wallet-outline',
@@ -71,7 +70,7 @@ export const SettingsScreen: React.FC = () => {
             titleKey: 'settings.notifyReimbursement',
             descriptionKey: 'settings.notifyReimbursementDescription'
         },
-    ] satisfies { key: keyof NotificationPreferences; icon: string; titleKey: string; descriptionKey: string }[]), [t]);
+    ] satisfies { key: keyof NotificationPreferences; icon: string; titleKey: string; descriptionKey: string }[], [t]);
 
     const performLogout = async () => {
         try {
@@ -84,7 +83,7 @@ export const SettingsScreen: React.FC = () => {
         }
     };
 
-    const handleLogout = () => {
+    const handleLogout = () =>
         Alert.alert(
             t('settings.logoutTitle'),
             t('settings.logoutDescription'),
@@ -97,7 +96,6 @@ export const SettingsScreen: React.FC = () => {
                 },
             ]
         );
-    };
 
     const handleTogglePreference = async (key: keyof NotificationPreferences) => {
         const current = notificationPrefs;
@@ -115,108 +113,96 @@ export const SettingsScreen: React.FC = () => {
         }
     };
 
-    return (
-        <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
-            <View style={styles.sectionWrapper}>
-                <Text style={styles.header}>{t('settings.languageLabel')}</Text>
-                <Text style={styles.description}>{t('settings.languageDescription')}</Text>
-                <View style={styles.section}>
-                    {availableLanguages.map(({code, labelKey}) => {
-                        const isActive = language === code;
-                        return (
-                            <TouchableOpacity
-                                key={code}
-                                style={[styles.option, isActive && styles.optionActive]}
-                                onPress={() => setLanguage(code)}
-                            >
-                                <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
-                                    {t(labelKey)}
-                                </Text>
-                                {isActive && (
-                                    <Ionicons name="checkmark-circle" size={20} color={colors.success}/>
-                                )}
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
+    return <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
+        <View style={styles.sectionWrapper}>
+            <Text style={styles.header}>{t('settings.languageLabel')}</Text>
+            <Text style={styles.description}>{t('settings.languageDescription')}</Text>
+            <View style={styles.section}>
+                {availableLanguages.map(({code, labelKey}) => {
+                    const isActive = language === code;
+                    return <TouchableOpacity
+                        key={code}
+                        style={[styles.option, isActive && styles.optionActive]}
+                        onPress={() => setLanguage(code)}
+                    >
+                        <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
+                            {t(labelKey)}
+                        </Text>
+                        {isActive && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
+                    </TouchableOpacity>;
+                })}
             </View>
+        </View>
 
-            <View style={styles.sectionWrapper}>
-                <Text style={styles.header}>{t('settings.themeLabel')}</Text>
-                <Text style={styles.description}>{t('settings.themeDescription')}</Text>
-                <View style={styles.section}>
-                    {themeOptions.map(({value, icon, labelKey}) => {
-                        const isActive = preference === value;
-                        return (
-                            <TouchableOpacity
-                                key={value}
-                                style={[styles.option, isActive && styles.optionActive]}
-                                onPress={() => setPreference(value)}
-                            >
-                                <View style={styles.themeOptionContent}>
-                                    <Ionicons name={icon as any} size={20} color={colors.accent}/>
-                                    <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
-                                        {t(labelKey)}
-                                    </Text>
-                                </View>
-                                {isActive && (
-                                    <Ionicons name="checkmark-circle" size={20} color={colors.success}/>
-                                )}
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
+        <View style={styles.sectionWrapper}>
+            <Text style={styles.header}>{t('settings.themeLabel')}</Text>
+            <Text style={styles.description}>{t('settings.themeDescription')}</Text>
+            <View style={styles.section}>
+                {themeOptions.map(({value, icon, labelKey}) => {
+                    const isActive = preference === value;
+                    return <TouchableOpacity
+                        key={value}
+                        style={[styles.option, isActive && styles.optionActive]}
+                        onPress={() => setPreference(value)}
+                    >
+                        <View style={styles.themeOptionContent}>
+                            <Ionicons name={icon as any} size={20} color={colors.accent}/>
+                            <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
+                                {t(labelKey)}
+                            </Text>
+                        </View>
+                        {isActive && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
+                    </TouchableOpacity>;
+                })}
             </View>
+        </View>
 
-            <View style={styles.sectionWrapper}>
-                <Text style={styles.header}>{t('settings.notificationsTitle')}</Text>
-                <Text style={styles.description}>{t('settings.notificationsDescription')}</Text>
-                <View style={styles.section}>
-                    {preferenceOptions.map(({key, icon, titleKey, descriptionKey}, index) => {
-                        const value = notificationPrefs[key];
-                        const isLast = index === preferenceOptions.length - 1;
-                        return (
-                            <View
-                                key={key}
-                                style={[styles.preferenceRow, isLast && styles.preferenceRowLast]}
-                            >
-                                <View style={styles.preferenceInfo}>
-                                    <View style={styles.preferenceIcon}>
-                                        <Ionicons name={icon as any} size={18} color={colors.accent}/>
-                                    </View>
-                                    <View style={styles.preferenceCopy}>
-                                        <Text style={styles.preferenceTitle}>{t(titleKey)}</Text>
-                                        <Text style={styles.preferenceDescription}>{t(descriptionKey)}</Text>
-                                    </View>
-                                </View>
-                                <Switch
-                                    value={value}
-                                    onValueChange={() => handleTogglePreference(key)}
-                                    trackColor={{false: colors.surfaceSecondary, true: colors.accentSoft}}
-                                    thumbColor={value ? colors.accent : colors.surface}
-                                    disabled={savingPreference === key || isLoggingOut}
-                                />
+        <View style={styles.sectionWrapper}>
+            <Text style={styles.header}>{t('settings.notificationsTitle')}</Text>
+            <Text style={styles.description}>{t('settings.notificationsDescription')}</Text>
+            <View style={styles.section}>
+                {preferenceOptions.map(({key, icon, titleKey, descriptionKey}, index) => {
+                    const value = notificationPrefs[key];
+                    const isLast = index === preferenceOptions.length - 1;
+                    return <View
+                        key={key}
+                        style={[styles.preferenceRow, isLast && styles.preferenceRowLast]}
+                    >
+                        <View style={styles.preferenceInfo}>
+                            <View style={styles.preferenceIcon}>
+                                <Ionicons name={icon as any} size={18} color={colors.accent}/>
                             </View>
-                        );
-                    })}
-                </View>
+                            <View style={styles.preferenceCopy}>
+                                <Text style={styles.preferenceTitle}>{t(titleKey)}</Text>
+                                <Text style={styles.preferenceDescription}>{t(descriptionKey)}</Text>
+                            </View>
+                        </View>
+                        <Switch
+                            value={value}
+                            onValueChange={() => handleTogglePreference(key)}
+                            trackColor={{false: colors.surfaceSecondary, true: colors.accentSoft}}
+                            thumbColor={value ? colors.accent : colors.surface}
+                            disabled={savingPreference === key || isLoggingOut}
+                        />
+                    </View>;
+                })}
             </View>
+        </View>
 
-            <View style={styles.sectionWrapper}>
-                <Text style={styles.header}>{t('settings.accountTitle')}</Text>
-                <Text style={styles.description}>{t('settings.logoutDescription')}</Text>
-                <View style={styles.logoutButtons}>
-                    <Button
-                        title={t('settings.logoutButton')}
-                        onPress={handleLogout}
-                        variant="danger"
-                        loading={isLoggingOut}
-                        style={styles.logoutPrimary}
-                    />
-                </View>
+        <View style={styles.sectionWrapper}>
+            <Text style={styles.header}>{t('settings.accountTitle')}</Text>
+            <Text style={styles.description}>{t('settings.logoutDescription')}</Text>
+            <View style={styles.logoutButtons}>
+                <Button
+                    title={t('settings.logoutButton')}
+                    onPress={handleLogout}
+                    variant="danger"
+                    loading={isLoggingOut}
+                    style={styles.logoutPrimary}
+                />
             </View>
-        </ScrollView>
-    );
+        </View>
+    </ScrollView>;
 };
 
 const createStyles = (colors: AppColors) =>

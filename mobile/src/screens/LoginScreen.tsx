@@ -52,75 +52,71 @@ export const LoginScreen: React.FC = () => {
         }
     };
 
-    return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <View style={styles.content}>
-                    <View style={styles.languageToggle}>
-                        <Text style={styles.languageLabel}>{t('common.language')}</Text>
-                        <View style={styles.languageOptions}>
-                            {(['it', 'en'] as Language[]).map((option) => (
-                                <TouchableOpacity
-                                    key={option}
-                                    style={[styles.languageChip, language === option && styles.languageChipActive]}
-                                    onPress={() => handleLanguageChange(option)}
-                                >
-                                    <Text
-                                        style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>
-                                        {option.toUpperCase()}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+    return <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+            <View style={styles.content}>
+                <View style={styles.languageToggle}>
+                    <Text style={styles.languageLabel}>{t('common.language')}</Text>
+                    <View style={styles.languageOptions}>
+                        {(['it', 'en'] as Language[]).map(option => <TouchableOpacity
+                            key={option}
+                            style={[styles.languageChip, language === option && styles.languageChipActive]}
+                            onPress={() => handleLanguageChange(option)}
+                        >
+                            <Text
+                                style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>
+                                {option.toUpperCase()}
+                            </Text>
+                        </TouchableOpacity>)}
                     </View>
-                    <View style={styles.logoContainer}>
-                        <Text style={styles.logo}>💰</Text>
-                        <Text style={styles.title}>{t('auth.title')}</Text>
-                        <Text style={styles.subtitle}>{t('auth.subtitle')}</Text>
-                    </View>
-
-                    <View style={styles.formContainer}>
-                        <Input
-                            placeholder={t('auth.emailPlaceholder')}
-                            value={email}
-                            onChangeText={setEmail}
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            autoCorrect={false}
-                        />
-
-                        <Input
-                            placeholder={t('auth.passwordPlaceholder')}
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry
-                            autoCapitalize="none"
-                        />
-
-                        <Button
-                            title={isSignUp ? t('auth.signUp') : t('auth.signIn')}
-                            onPress={handleSubmit}
-                            disabled={isLoading}
-                            loading={isLoading}
-                            style={styles.submitButton}
-                        />
-
-                        <Button
-                            title={isSignUp ? t('auth.toggleToSignIn') : t('auth.toggleToSignUp')}
-                            onPress={() => setIsSignUp(!isSignUp)}
-                            variant="outline"
-                            style={styles.switchButton}
-                        />
-                    </View>
-
-                    <Text style={styles.terms}>{t('auth.terms')}</Text>
                 </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
-    );
+                <View style={styles.logoContainer}>
+                    <Text style={styles.logo}>💰</Text>
+                    <Text style={styles.title}>{t('auth.title')}</Text>
+                    <Text style={styles.subtitle}>{t('auth.subtitle')}</Text>
+                </View>
+
+                <View style={styles.formContainer}>
+                    <Input
+                        placeholder={t('auth.emailPlaceholder')}
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                    />
+
+                    <Input
+                        placeholder={t('auth.passwordPlaceholder')}
+                        value={password}
+                        onChangeText={setPassword}
+                        secureTextEntry
+                        autoCapitalize="none"
+                    />
+
+                    <Button
+                        title={isSignUp ? t('auth.signUp') : t('auth.signIn')}
+                        onPress={handleSubmit}
+                        disabled={isLoading}
+                        loading={isLoading}
+                        style={styles.submitButton}
+                    />
+
+                    <Button
+                        title={isSignUp ? t('auth.toggleToSignIn') : t('auth.toggleToSignUp')}
+                        onPress={() => setIsSignUp(!isSignUp)}
+                        variant="outline"
+                        style={styles.switchButton}
+                    />
+                </View>
+
+                <Text style={styles.terms}>{t('auth.terms')}</Text>
+            </View>
+        </ScrollView>
+    </KeyboardAvoidingView>;
 };
 
 const createStyles = (colors: AppColors) =>

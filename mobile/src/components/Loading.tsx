@@ -9,11 +9,9 @@ interface LoadingProps {
 
 export const Loading: React.FC<LoadingProps> = ({size = 'large', color}) => {
     const {colors} = useAppTheme();
-    return (
-        <View style={[styles.container, {backgroundColor: colors.background}]}>
-            <ActivityIndicator size={size} color={color ?? colors.accent}/>
-        </View>
-    );
+    return <View style={[styles.container, {backgroundColor: colors.background}]}>
+        <ActivityIndicator size={size} color={color ?? colors.accent}/>
+    </View>;
 };
 
 const styles = StyleSheet.create({

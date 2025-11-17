@@ -24,16 +24,16 @@ export const buildSplitSummary = (expenses: Expense[], members: ListMember[]): S
     if (expenses.length === 0) {
         return {rows: [], settlements: [], reason: 'no-expenses'};
     }
-    const membersWithSplit = members.filter((member) => (member.splitPercentage ?? 0) > 0);
+    const membersWithSplit = members.filter(member => (member.splitPercentage ?? 0) > 0);
     if (membersWithSplit.length === 0) {
         return {rows: [], settlements: [], reason: 'no-members'};
     }
 
-    const memberLookup = new Map(membersWithSplit.map((member) => [member.id, member] as const));
+    const memberLookup = new Map(membersWithSplit.map(member => [member.id, member] as const));
     const paidMap = new Map<string, number>();
     const shareMap = new Map<string, number>();
 
-    expenses.forEach((expense) => {
+    expenses.forEach(expense => {
         if (expense.paidByMemberId) {
             paidMap.set(
                 expense.paidByMemberId,
@@ -43,14 +43,14 @@ export const buildSplitSummary = (expenses: Expense[], members: ListMember[]): S
 
         const beneficiaries = (expense.beneficiaryMemberIds?.length
             ? expense.beneficiaryMemberIds
-            : membersWithSplit.map((member) => member.id))
-            .map((id) => memberLookup.get(id))
+            : membersWithSplit.map(member => member.id))
+            .map(id => memberLookup.get(id))
             .filter((member): member is ListMember => !!member);
 
         const scopedBeneficiaries = beneficiaries.length > 0 ? beneficiaries : membersWithSplit;
         const totalWeight = scopedBeneficiaries.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
 
-        scopedBeneficiaries.forEach((member) => {
+        scopedBeneficiaries.forEach(member => {
             const weight = totalWeight > 0
                 ? (member.splitPercentage ?? 0) / totalWeight
                 : 1 / scopedBeneficiaries.length;
@@ -58,13 +58,13 @@ export const buildSplitSummary = (expenses: Expense[], members: ListMember[]): S
         });
     });
 
-    const hasShare = Array.from(shareMap.values()).some((value) => value > 0);
+    const hasShare = Array.from(shareMap.values()).some(value => value > 0);
     if (!hasShare) {
         return {rows: [], settlements: [], reason: 'no-split'};
     }
 
     const rows: SplitRow[] = membersWithSplit
-        .map((member) => {
+        .map(member => {
             const percentage = member.splitPercentage ?? 0;
             const share = shareMap.get(member.id) ?? 0;
             const paid = paidMap.get(member.id) ?? 0;
@@ -73,8 +73,8 @@ export const buildSplitSummary = (expenses: Expense[], members: ListMember[]): S
         })
         .sort((a, b) => b.net - a.net);
 
-    const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
-    const debtors = rows.filter((row) => row.net < 0).map((row) => ({member: row.member, amount: Math.abs(row.net)}));
+    const creditors = rows.filter(row => row.net > 0).map(row => ({member: row.member, amount: row.net}));
+    const debtors = rows.filter(row => row.net < 0).map(row => ({member: row.member, amount: Math.abs(row.net)}));
     const settlements: SplitSettlement[] = [];
 
     let creditorIndex = 0;

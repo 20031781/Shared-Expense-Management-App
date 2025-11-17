@@ -111,9 +111,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({children
     }, []);
 
     useEffect(() => {
-        const listener = Appearance.addChangeListener(({colorScheme}) => {
-            setSystemScheme(colorScheme);
-        });
+        const listener = Appearance.addChangeListener(({colorScheme}) => setSystemScheme(colorScheme));
 
         return () => listener.remove();
     }, []);

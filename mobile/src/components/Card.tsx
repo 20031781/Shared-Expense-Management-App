@@ -13,15 +13,13 @@ export const Card: React.FC<CardProps> = ({children, onPress, style}) => {
     const styles = useMemo(() => createStyles(colors), [colors]);
     const Container = onPress ? TouchableOpacity : View;
 
-    return (
-        <Container
-            style={[styles.card, style]}
-            onPress={onPress}
-            activeOpacity={onPress ? 0.7 : 1}
-        >
-            {children}
-        </Container>
-    );
+    return <Container
+        style={[styles.card, style]}
+        onPress={onPress}
+        activeOpacity={onPress ? 0.7 : 1}
+    >
+        {children}
+    </Container>;
 };
 
 const createStyles = (colors: AppColors) =>

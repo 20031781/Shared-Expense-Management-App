@@ -30,9 +30,7 @@ export const CreateExpenseScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    useEffect(() => {
-        navigation.setOptions({title: t(isEditing ? 'expenses.editTitle' : 'expenses.newExpense')});
-    }, [navigation, t, isEditing]);
+    useEffect(() => navigation.setOptions({title: t(isEditing ? 'expenses.editTitle' : 'expenses.newExpense')}), [navigation, t, isEditing]);
 
     const {
         createExpense,
@@ -50,7 +48,13 @@ export const CreateExpenseScreen: React.FC = () => {
     const [receiptUri, setReceiptUri] = useState<string | null>(null);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [showPayerPicker, setShowPayerPicker] = useState(false);
-    const [errors, setErrors] = useState<{ title?: string; amount?: string; payer?: string; beneficiaries?: string; date?: string }>({});
+    const [errors, setErrors] = useState<{
+        title?: string;
+        amount?: string;
+        payer?: string;
+        beneficiaries?: string;
+        date?: string
+    }>({});
     const [paymentMethod, setPaymentMethod] = useState<ExpensePaymentMethod>(ExpensePaymentMethod.Card);
     const [expenseDate, setExpenseDate] = useState(new Date());
     const [dateInput, setDateInput] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -59,9 +63,7 @@ export const CreateExpenseScreen: React.FC = () => {
     const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
     const [prefillReady, setPrefillReady] = useState(!isEditing);
 
-    useEffect(() => {
-        fetchMembers(listId);
-    }, [listId]);
+    useEffect(() => fetchMembers(listId), [listId]);
 
     useEffect(() => {
         if (expenseId) {
@@ -71,7 +73,7 @@ export const CreateExpenseScreen: React.FC = () => {
 
     useEffect(() => {
         if (!selectedMemberId && members.length > 0) {
-            const defaultMember = members.find((m) => m.status === MemberStatus.Active) ?? members[0];
+            const defaultMember = members.find(m => m.status === MemberStatus.Active) ?? members[0];
             if (defaultMember) {
                 setSelectedMemberId(defaultMember.id);
             }
@@ -80,20 +82,24 @@ export const CreateExpenseScreen: React.FC = () => {
 
     useEffect(() => {
         if (beneficiaryIds.length === 0 && members.length > 0 && !isEditing) {
-            const activeMembers = members.filter((member) => member.status === MemberStatus.Active);
+            const activeMembers = members.filter(member => member.status === MemberStatus.Active);
             const source = activeMembers.length > 0 ? activeMembers : members;
-            setBeneficiaryIds(source.map((member) => member.id));
+            setBeneficiaryIds(source.map(member => member.id));
         }
     }, [beneficiaryIds.length, members, isEditing]);
 
-    const selectedMember = useMemo(() => members.find((m) => m.id === selectedMemberId), [members, selectedMemberId]);
+    const selectedMember = useMemo(() => members.find(m => m.id === selectedMemberId), [members, selectedMemberId]);
     const hasMembers = members.length > 0;
-    const paymentOptions = useMemo(() => ([
+    const paymentOptions = useMemo(() => [
         {key: ExpensePaymentMethod.Card, icon: 'card-outline', label: t('expenses.paymentMethods.card')},
         {key: ExpensePaymentMethod.Cash, icon: 'cash-outline', label: t('expenses.paymentMethods.cash')},
-        {key: ExpensePaymentMethod.Transfer, icon: 'swap-horizontal-outline', label: t('expenses.paymentMethods.transfer')},
+        {
+            key: ExpensePaymentMethod.Transfer,
+            icon: 'swap-horizontal-outline',
+            label: t('expenses.paymentMethods.transfer')
+        },
         {key: ExpensePaymentMethod.Other, icon: 'ellipsis-horizontal', label: t('expenses.paymentMethods.other')},
-    ]), [t]);
+    ], [t]);
 
     const beneficiarySummary = useMemo(() => {
         if (beneficiaryIds.length === 0) {
@@ -103,9 +109,9 @@ export const CreateExpenseScreen: React.FC = () => {
             return t('expenses.beneficiariesAll');
         }
         const labels = beneficiaryIds
-            .map((id) => members.find((member) => member.id === id))
+            .map(id => members.find(member => member.id === id))
             .filter((member): member is ListMember => !!member)
-            .map((member) => getMemberLabel(member));
+            .map(member => getMemberLabel(member));
         if (labels.length <= 2) {
             return labels.join(', ');
         }
@@ -113,7 +119,7 @@ export const CreateExpenseScreen: React.FC = () => {
     }, [beneficiaryIds, members, t, getMemberLabel]);
     const getMemberLabel = useCallback((member?: ListMember) => {
         if (!member) return t('members.unknown');
-        return (member.displayName && member.displayName.trim())
+        return member.displayName && member.displayName.trim()
             || member.user?.fullName
             || member.email
             || t('members.unknown');
@@ -124,9 +130,9 @@ export const CreateExpenseScreen: React.FC = () => {
         const parsed = parse(value, 'yyyy-MM-dd', new Date());
         if (isValid(parsed)) {
             setExpenseDate(parsed);
-            setErrors((prev) => ({...prev, date: undefined}));
+            setErrors(prev => ({...prev, date: undefined}));
         } else {
-            setErrors((prev) => ({...prev, date: t('expenses.invalidDate')}));
+            setErrors(prev => ({...prev, date: t('expenses.invalidDate')}));
         }
     };
 
@@ -135,19 +141,19 @@ export const CreateExpenseScreen: React.FC = () => {
         nextDate.setDate(nextDate.getDate() - offsetDays);
         setExpenseDate(nextDate);
         setDateInput(format(nextDate, 'yyyy-MM-dd'));
-        setErrors((prev) => ({...prev, date: undefined}));
+        setErrors(prev => ({...prev, date: undefined}));
     };
 
     const toggleBeneficiary = (memberId: string) => {
-        setBeneficiaryIds((prev) => prev.includes(memberId)
-            ? prev.filter((id) => id !== memberId)
+        setBeneficiaryIds(prev => prev.includes(memberId)
+            ? prev.filter(id => id !== memberId)
             : [...prev, memberId]);
-        setErrors((prev) => ({...prev, beneficiaries: undefined}));
+        setErrors(prev => ({...prev, beneficiaries: undefined}));
     };
 
     const handleSelectAllBeneficiaries = () => {
-        setBeneficiaryIds(members.map((member) => member.id));
-        setErrors((prev) => ({...prev, beneficiaries: undefined}));
+        setBeneficiaryIds(members.map(member => member.id));
+        setErrors(prev => ({...prev, beneficiaries: undefined}));
     };
 
     useEffect(() => {
@@ -162,13 +168,19 @@ export const CreateExpenseScreen: React.FC = () => {
         setPaymentMethod(currentExpense.paymentMethod ?? ExpensePaymentMethod.Card);
         setBeneficiaryIds(currentExpense.beneficiaryMemberIds?.length
             ? currentExpense.beneficiaryMemberIds
-            : members.map((member) => member.id));
+            : members.map(member => member.id));
         setExistingReceiptUrl(currentExpense.receiptUrl ?? null);
         setPrefillReady(true);
     }, [isEditing, expenseId, currentExpense, members]);
 
     const validate = () => {
-        const newErrors: { title?: string; amount?: string; payer?: string; beneficiaries?: string; date?: string } = {};
+        const newErrors: {
+            title?: string;
+            amount?: string;
+            payer?: string;
+            beneficiaries?: string;
+            date?: string
+        } = {};
 
         if (!title.trim()) {
             newErrors.title = t('expenses.titleRequired');
@@ -281,44 +293,40 @@ export const CreateExpenseScreen: React.FC = () => {
 
     const renderMemberOption = (member: ListMember) => {
         const isSelected = member.id === selectedMemberId;
-        return (
-            <TouchableOpacity
-                key={member.id}
-                style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
-                onPress={() => {
-                    setSelectedMemberId(member.id);
-                    setShowPayerPicker(false);
-                    setErrors((prev) => ({...prev, payer: undefined}));
-                }}
-            >
-                <View>
-                    <Text style={styles.memberEmail}>{getMemberLabel(member)}</Text>
-                    <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
-                </View>
-                {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
-            </TouchableOpacity>
-        );
+        return <TouchableOpacity
+            key={member.id}
+            style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
+            onPress={() => {
+                setSelectedMemberId(member.id);
+                setShowPayerPicker(false);
+                setErrors(prev => ({...prev, payer: undefined}));
+            }}
+        >
+            <View>
+                <Text style={styles.memberEmail}>{getMemberLabel(member)}</Text>
+                <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
+            </View>
+            {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
+        </TouchableOpacity>;
     };
 
     const renderBeneficiaryOption = (member: ListMember) => {
         const isSelected = beneficiaryIds.includes(member.id);
-        return (
-            <TouchableOpacity
-                key={`beneficiary-${member.id}`}
-                style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
-                onPress={() => toggleBeneficiary(member.id)}
-            >
-                <View>
-                    <Text style={styles.memberEmail}>{getMemberLabel(member)}</Text>
-                    <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
-                </View>
-                <Ionicons
-                    name={isSelected ? 'checkbox' : 'square-outline'}
-                    size={20}
-                    color={isSelected ? colors.accent : colors.secondaryText}
-                />
-            </TouchableOpacity>
-        );
+        return <TouchableOpacity
+            key={`beneficiary-${member.id}`}
+            style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
+            onPress={() => toggleBeneficiary(member.id)}
+        >
+            <View>
+                <Text style={styles.memberEmail}>{getMemberLabel(member)}</Text>
+                <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
+            </View>
+            <Ionicons
+                name={isSelected ? 'checkbox' : 'square-outline'}
+                size={20}
+                color={isSelected ? colors.accent : colors.secondaryText}
+            />
+        </TouchableOpacity>;
     };
 
     if (!prefillReady) {
@@ -327,208 +335,201 @@ export const CreateExpenseScreen: React.FC = () => {
 
     const hasReceipt = !!receiptUri || !!existingReceiptUrl;
 
-    return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.title}>{t('expenses.newExpense')}</Text>
+    return <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+        <ScrollView contentContainerStyle={styles.content}>
+            <Text style={styles.title}>{t('expenses.newExpense')}</Text>
 
-                <Input
-                    label={t('expenses.titleLabel')}
-                    placeholder={t('expenses.titlePlaceholder')}
-                    value={title}
-                    onChangeText={(text) => {
-                        setTitle(text);
-                        setErrors((prev) => ({...prev, title: undefined}));
-                    }}
-                    error={errors.title}
-                    autoFocus
-                />
+            <Input
+                label={t('expenses.titleLabel')}
+                placeholder={t('expenses.titlePlaceholder')}
+                value={title}
+                onChangeText={text => {
+                    setTitle(text);
+                    setErrors(prev => ({...prev, title: undefined}));
+                }}
+                error={errors.title}
+                autoFocus
+            />
 
-                <Input
-                    label={t('expenses.amountLabel')}
-                    placeholder="0.00"
-                    value={amount}
-                    onChangeText={(text) => {
-                        setAmount(text);
-                        setErrors((prev) => ({...prev, amount: undefined}));
-                    }}
-                    error={errors.amount}
-                    keyboardType="decimal-pad"
-                />
+            <Input
+                label={t('expenses.amountLabel')}
+                placeholder="0.00"
+                value={amount}
+                onChangeText={text => {
+                    setAmount(text);
+                    setErrors(prev => ({...prev, amount: undefined}));
+                }}
+                error={errors.amount}
+                keyboardType="decimal-pad"
+            />
 
-                <Input
-                    label={t('expenses.dateLabel')}
-                    placeholder="YYYY-MM-DD"
-                    value={dateInput}
-                    onChangeText={handleDateInputChange}
-                    autoCapitalize="none"
-                    keyboardType="numbers-and-punctuation"
-                    error={errors.date}
-                />
-                <View style={styles.dateQuickActions}>
-                    <TouchableOpacity style={[styles.dateChip, styles.dateChipPrimary]} onPress={() => handleQuickDate(0)}>
-                        <Text style={[styles.dateChipText, styles.dateChipPrimaryText]}>{t('expenses.dateToday')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dateChip} onPress={() => handleQuickDate(1)}>
-                        <Text style={styles.dateChipText}>{t('expenses.dateYesterday')}</Text>
-                    </TouchableOpacity>
-                </View>
-                <Text style={styles.helperText}>{t('expenses.dateHelper')}</Text>
+            <Input
+                label={t('expenses.dateLabel')}
+                placeholder="YYYY-MM-DD"
+                value={dateInput}
+                onChangeText={handleDateInputChange}
+                autoCapitalize="none"
+                keyboardType="numbers-and-punctuation"
+                error={errors.date}
+            />
+            <View style={styles.dateQuickActions}>
+                <TouchableOpacity style={[styles.dateChip, styles.dateChipPrimary]} onPress={() => handleQuickDate(0)}>
+                    <Text style={[styles.dateChipText, styles.dateChipPrimaryText]}>{t('expenses.dateToday')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.dateChip} onPress={() => handleQuickDate(1)}>
+                    <Text style={styles.dateChipText}>{t('expenses.dateYesterday')}</Text>
+                </TouchableOpacity>
+            </View>
+            <Text style={styles.helperText}>{t('expenses.dateHelper')}</Text>
 
-                <View style={styles.paymentSection}>
-                    <Text style={styles.label}>{t('expenses.paymentMethodLabel')}</Text>
-                    <Text style={styles.helperText}>{t('expenses.paymentMethodHelper')}</Text>
-                    <View style={styles.paymentOptions}>
-                        {paymentOptions.map(({key, icon, label}) => {
-                            const isActive = paymentMethod === key;
-                            return (
-                                <TouchableOpacity
-                                    key={key}
-                                    style={[styles.paymentOption, isActive && styles.paymentOptionActive]}
-                                    onPress={() => setPaymentMethod(key)}
-                                >
-                                    <Ionicons name={icon as any} size={16} color={isActive ? colors.accentText : colors.accent}/>
-                                    <Text style={[styles.paymentOptionLabel, isActive && styles.paymentOptionLabelActive]}>
-                                        {label}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                </View>
-
-                <View style={styles.payerSection}>
-                    <Text style={styles.label}>{t('expenses.payerLabel')}</Text>
-                    <TouchableOpacity
-                        style={[styles.payerSelector, !selectedMember && styles.payerSelectorEmpty]}
-                        onPress={() => hasMembers && setShowPayerPicker(true)}
-                        disabled={!hasMembers}
-                    >
-                        <Text style={selectedMember ? styles.payerValue : styles.payerPlaceholder}>
-                            {selectedMember ? getMemberLabel(selectedMember) : t('expenses.payerPlaceholder')}
-                        </Text>
-                        <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
-                    </TouchableOpacity>
-                    {errors.payer && <Text style={styles.errorText}>{errors.payer}</Text>}
-                    <Text style={styles.helperText}>
-                        {hasMembers ? t('expenses.payerHelper') : t('expenses.missingMembersHelper')}
-                    </Text>
-                </View>
-
-                <View style={styles.payerSection}>
-                    <Text style={styles.label}>{t('expenses.beneficiariesLabel')}</Text>
-                    <TouchableOpacity
-                        style={[styles.payerSelector, beneficiaryIds.length === 0 && styles.payerSelectorEmpty]}
-                        onPress={() => hasMembers && setShowBeneficiaryPicker(true)}
-                        disabled={!hasMembers}
-                    >
-                        <Text style={beneficiaryIds.length > 0 ? styles.payerValue : styles.payerPlaceholder}>
-                            {beneficiaryIds.length > 0 ? beneficiarySummary : t('expenses.beneficiariesPlaceholder')}
-                        </Text>
-                        <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
-                    </TouchableOpacity>
-                    {errors.beneficiaries && <Text style={styles.errorText}>{errors.beneficiaries}</Text>}
-                    <Text style={styles.helperText}>{t('expenses.beneficiariesHelper')}</Text>
-                </View>
-
-                <Input
-                    label={t('expenses.notesLabel')}
-                    placeholder={t('expenses.notesPlaceholder')}
-                    value={notes}
-                    onChangeText={setNotes}
-                    multiline
-                    numberOfLines={3}
-                />
-
-                <View style={styles.receiptSection}>
-                    <Text style={styles.label}>{t('expenses.receiptLabel')}</Text>
-
-                    <View style={styles.receiptButtons}>
-                        <TouchableOpacity style={styles.receiptButton} onPress={handleTakePhoto}>
-                            <Ionicons name="camera-outline" size={24} color={colors.accent}/>
-                            <Text style={styles.receiptButtonText}>{t('expenses.addReceiptCamera')}</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.receiptButton} onPress={handlePickImage}>
-                            <Ionicons name="images-outline" size={24} color={colors.accent}/>
-                            <Text style={styles.receiptButtonText}>{t('expenses.addReceiptGallery')}</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {hasReceipt && (
-                        <View style={styles.receiptPreview}>
-                            <Ionicons name="checkmark-circle" size={24} color={colors.success}/>
-                            <Text style={styles.receiptPreviewText}>
-                                {receiptUri ? t('expenses.receiptAdded') : t('expenses.receiptOnFile')}
+            <View style={styles.paymentSection}>
+                <Text style={styles.label}>{t('expenses.paymentMethodLabel')}</Text>
+                <Text style={styles.helperText}>{t('expenses.paymentMethodHelper')}</Text>
+                <View style={styles.paymentOptions}>
+                    {paymentOptions.map(({key, icon, label}) => {
+                        const isActive = paymentMethod === key;
+                        return <TouchableOpacity
+                            key={key}
+                            style={[styles.paymentOption, isActive && styles.paymentOptionActive]}
+                            onPress={() => setPaymentMethod(key)}
+                        >
+                            <Ionicons name={icon as any} size={16}
+                                      color={isActive ? colors.accentText : colors.accent}/>
+                            <Text style={[styles.paymentOptionLabel, isActive && styles.paymentOptionLabelActive]}>
+                                {label}
                             </Text>
-                            {receiptUri && (
-                                <TouchableOpacity onPress={() => setReceiptUri(null)}>
-                                    <Ionicons name="close-circle" size={24} color={colors.danger}/>
-                                </TouchableOpacity>
-                            )}
-                        </View>
-                    )}
+                        </TouchableOpacity>;
+                    })}
+                </View>
+            </View>
+
+            <View style={styles.payerSection}>
+                <Text style={styles.label}>{t('expenses.payerLabel')}</Text>
+                <TouchableOpacity
+                    style={[styles.payerSelector, !selectedMember && styles.payerSelectorEmpty]}
+                    onPress={() => hasMembers && setShowPayerPicker(true)}
+                    disabled={!hasMembers}
+                >
+                    <Text style={selectedMember ? styles.payerValue : styles.payerPlaceholder}>
+                        {selectedMember ? getMemberLabel(selectedMember) : t('expenses.payerPlaceholder')}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
+                </TouchableOpacity>
+                {errors.payer && <Text style={styles.errorText}>{errors.payer}</Text>}
+                <Text style={styles.helperText}>
+                    {hasMembers ? t('expenses.payerHelper') : t('expenses.missingMembersHelper')}
+                </Text>
+            </View>
+
+            <View style={styles.payerSection}>
+                <Text style={styles.label}>{t('expenses.beneficiariesLabel')}</Text>
+                <TouchableOpacity
+                    style={[styles.payerSelector, beneficiaryIds.length === 0 && styles.payerSelectorEmpty]}
+                    onPress={() => hasMembers && setShowBeneficiaryPicker(true)}
+                    disabled={!hasMembers}
+                >
+                    <Text style={beneficiaryIds.length > 0 ? styles.payerValue : styles.payerPlaceholder}>
+                        {beneficiaryIds.length > 0 ? beneficiarySummary : t('expenses.beneficiariesPlaceholder')}
+                    </Text>
+                    <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
+                </TouchableOpacity>
+                {errors.beneficiaries && <Text style={styles.errorText}>{errors.beneficiaries}</Text>}
+                <Text style={styles.helperText}>{t('expenses.beneficiariesHelper')}</Text>
+            </View>
+
+            <Input
+                label={t('expenses.notesLabel')}
+                placeholder={t('expenses.notesPlaceholder')}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+                numberOfLines={3}
+            />
+
+            <View style={styles.receiptSection}>
+                <Text style={styles.label}>{t('expenses.receiptLabel')}</Text>
+
+                <View style={styles.receiptButtons}>
+                    <TouchableOpacity style={styles.receiptButton} onPress={handleTakePhoto}>
+                        <Ionicons name="camera-outline" size={24} color={colors.accent}/>
+                        <Text style={styles.receiptButtonText}>{t('expenses.addReceiptCamera')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.receiptButton} onPress={handlePickImage}>
+                        <Ionicons name="images-outline" size={24} color={colors.accent}/>
+                        <Text style={styles.receiptButtonText}>{t('expenses.addReceiptGallery')}</Text>
+                    </TouchableOpacity>
                 </View>
 
-                <View style={styles.buttons}>
-                    <Button
-                        title={isEditing ? t('expenses.saveChanges') : t('expenses.createButton')}
-                        onPress={handleSubmit}
-                        loading={isLoading}
-                        disabled={isLoading || !hasMembers || beneficiaryIds.length === 0}
-                        style={styles.button}
-                    />
-                    <Button
-                        title={t('expenses.cancelButton')}
-                        onPress={() => navigation.goBack()}
-                        variant="secondary"
-                        disabled={isLoading}
-                        style={styles.button}
-                    />
-                </View>
-            </ScrollView>
+                {hasReceipt && <View style={styles.receiptPreview}>
+                    <Ionicons name="checkmark-circle" size={24} color={colors.success}/>
+                    <Text style={styles.receiptPreviewText}>
+                        {receiptUri ? t('expenses.receiptAdded') : t('expenses.receiptOnFile')}
+                    </Text>
+                    {receiptUri && <TouchableOpacity onPress={() => setReceiptUri(null)}>
+                        <Ionicons name="close-circle" size={24} color={colors.danger}/>
+                    </TouchableOpacity>}
+                </View>}
+            </View>
 
-            <Modal visible={showPayerPicker} animationType="slide" transparent>
-                <View style={styles.modalBackdrop}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{t('expenses.payerLabel')}</Text>
-                            <TouchableOpacity onPress={() => setShowPayerPicker(false)}>
-                                <Ionicons name="close" size={24} color={colors.text}/>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView>
-                            {members.map(renderMemberOption)}
-                        </ScrollView>
+            <View style={styles.buttons}>
+                <Button
+                    title={isEditing ? t('expenses.saveChanges') : t('expenses.createButton')}
+                    onPress={handleSubmit}
+                    loading={isLoading}
+                    disabled={isLoading || !hasMembers || beneficiaryIds.length === 0}
+                    style={styles.button}
+                />
+                <Button
+                    title={t('expenses.cancelButton')}
+                    onPress={() => navigation.goBack()}
+                    variant="secondary"
+                    disabled={isLoading}
+                    style={styles.button}
+                />
+            </View>
+        </ScrollView>
+
+        <Modal visible={showPayerPicker} animationType="slide" transparent>
+            <View style={styles.modalBackdrop}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{t('expenses.payerLabel')}</Text>
+                        <TouchableOpacity onPress={() => setShowPayerPicker(false)}>
+                            <Ionicons name="close" size={24} color={colors.text}/>
+                        </TouchableOpacity>
                     </View>
+                    <ScrollView>
+                        {members.map(renderMemberOption)}
+                    </ScrollView>
                 </View>
-            </Modal>
+            </View>
+        </Modal>
 
-            <Modal visible={showBeneficiaryPicker} animationType="slide" transparent>
-                <View style={styles.modalBackdrop}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{t('expenses.beneficiariesLabel')}</Text>
-                            <TouchableOpacity onPress={() => setShowBeneficiaryPicker(false)}>
-                                <Ionicons name="close" size={24} color={colors.text}/>
-                            </TouchableOpacity>
-                        </View>
-                        <View style={styles.beneficiaryActions}>
-                            <TouchableOpacity onPress={handleSelectAllBeneficiaries}>
-                                <Text style={styles.beneficiaryActionText}>{t('expenses.selectAll')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                        <ScrollView>
-                            {members.map(renderBeneficiaryOption)}
-                        </ScrollView>
+        <Modal visible={showBeneficiaryPicker} animationType="slide" transparent>
+            <View style={styles.modalBackdrop}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{t('expenses.beneficiariesLabel')}</Text>
+                        <TouchableOpacity onPress={() => setShowBeneficiaryPicker(false)}>
+                            <Ionicons name="close" size={24} color={colors.text}/>
+                        </TouchableOpacity>
                     </View>
+                    <View style={styles.beneficiaryActions}>
+                        <TouchableOpacity onPress={handleSelectAllBeneficiaries}>
+                            <Text style={styles.beneficiaryActionText}>{t('expenses.selectAll')}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView>
+                        {members.map(renderBeneficiaryOption)}
+                    </ScrollView>
                 </View>
-            </Modal>
-        </KeyboardAvoidingView>
-    );
+            </View>
+        </Modal>
+    </KeyboardAvoidingView>;
 };
 
 const createStyles = (colors: AppColors) =>

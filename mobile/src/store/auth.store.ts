@@ -18,14 +18,14 @@ interface AuthState {
     clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>(set => ({
     user: null,
     isAuthenticated: false,
     isLoading: false,
     isInitializing: true,
     error: null,
 
-    setUser: (user) => set({
+    setUser: user => set({
         user,
         isAuthenticated: !!user,
         error: null

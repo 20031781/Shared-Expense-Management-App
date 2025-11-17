@@ -39,7 +39,7 @@ public class ListsController(IListRepository listRepository, INotificationServic
         if (string.IsNullOrWhiteSpace(request.Name)) return BadRequest("List name is required");
         var list = new List
         {
-            Name = request.Name?.Trim() ?? string.Empty,
+            Name = request.Name.Trim(),
             AdminId = userId
         };
 
@@ -163,7 +163,7 @@ public class ListsController(IListRepository listRepository, INotificationServic
         else if (request.DisplayName is not null)
             member.DisplayName = NormalizeDisplayName(request.DisplayName);
 
-        if (member.Status == MemberStatus.Active && member.JoinedAt == null)
+        if (member is { Status: MemberStatus.Active, JoinedAt: null })
             member.JoinedAt = DateTime.UtcNow;
 
         var updated = await listRepository.UpdateMemberAsync(member);
@@ -239,8 +239,8 @@ public class ListsController(IListRepository listRepository, INotificationServic
     [HttpGet("invite/{code}")]
     public async Task<IActionResult> GetListByInviteCode(string code)
     {
-        var normalized = code?.Trim().ToUpperInvariant();
-        var list = await listRepository.GetByInviteCodeAsync(normalized ?? code);
+        var normalized = code.Trim().ToUpperInvariant();
+        var list = await listRepository.GetByInviteCodeAsync(normalized);
         if (list == null) return NotFound();
         return Ok(list);
     }

@@ -6,14 +6,11 @@ using Npgsql;
 
 namespace SplitExpenses.Api.Data;
 
-public class NpgsqlConnectionFactory : IDbConnectionFactory
+public class NpgsqlConnectionFactory(IConfiguration configuration) : IDbConnectionFactory
 {
-    private readonly string _connectionString;
-
-    public NpgsqlConnectionFactory(IConfiguration configuration) =>
-        _connectionString = configuration.GetConnectionString("DefaultConnection")
-                            ?? throw new InvalidOperationException(
-                                "Connection string 'DefaultConnection' not configured");
+    private readonly string _connectionString = configuration.GetConnectionString("DefaultConnection")
+                                                ?? throw new InvalidOperationException(
+                                                    "Connection string 'DefaultConnection' not configured");
 
     public async Task<NpgsqlConnection> CreateConnectionAsync()
     {

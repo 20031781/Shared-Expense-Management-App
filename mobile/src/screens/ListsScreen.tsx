@@ -20,13 +20,9 @@ export const ListsScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    useEffect(() => {
-        loadLists();
-    }, []);
+    useEffect(() => loadLists(), []);
 
-    const loadLists = async () => {
-        await fetchLists();
-    };
+    const loadLists = async () => await fetchLists();
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -34,13 +30,9 @@ export const ListsScreen: React.FC = () => {
         setRefreshing(false);
     };
 
-    const handleCreateList = useCallback(() => {
-        navigation.navigate('CreateList');
-    }, [navigation]);
+    const handleCreateList = useCallback(() => navigation.navigate('CreateList'), [navigation]);
 
-    const handleListPress = useCallback((list: List) => {
-        navigation.navigate('ListDetails', {listId: list.id});
-    }, [navigation]);
+    const handleListPress = useCallback((list: List) => navigation.navigate('ListDetails', {listId: list.id}), [navigation]);
 
     const handleJoinList = () => {
         setJoinError(undefined);
@@ -73,7 +65,7 @@ export const ListsScreen: React.FC = () => {
         }
     };
 
-    const handleDeleteList = (list: List) => {
+    const handleDeleteList = (list: List) =>
         Alert.alert(
             t('lists.deleteTitle'),
             t('lists.deleteBody', {name: list.name}),
@@ -93,26 +85,23 @@ export const ListsScreen: React.FC = () => {
                 },
             ]
         );
-    };
 
-    const renderList = ({item}: { item: List }) => (
-        <Card onPress={() => handleListPress(item)}>
-            <View style={styles.listItem}>
-                <View style={styles.listInfo}>
-                    <Text style={styles.listName}>{item.name}</Text>
-                    <Text style={styles.listDate}>
-                        {new Date(item.createdAt).toLocaleDateString()}
-                    </Text>
-                </View>
-                <TouchableOpacity
-                    onPress={() => handleDeleteList(item)}
-                    style={styles.deleteButton}
-                >
-                    <Ionicons name="trash-outline" size={20} color={colors.danger}/>
-                </TouchableOpacity>
+    const renderList = ({item}: { item: List }) => <Card onPress={() => handleListPress(item)}>
+        <View style={styles.listItem}>
+            <View style={styles.listInfo}>
+                <Text style={styles.listName}>{item.name}</Text>
+                <Text style={styles.listDate}>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                </Text>
             </View>
-        </Card>
-    );
+            <TouchableOpacity
+                onPress={() => handleDeleteList(item)}
+                style={styles.deleteButton}
+            >
+                <Ionicons name="trash-outline" size={20} color={colors.danger}/>
+            </TouchableOpacity>
+        </View>
+    </Card>;
 
     const firstListId = lists[0]?.id;
 
@@ -128,7 +117,7 @@ export const ListsScreen: React.FC = () => {
         }
     }, [firstListId, navigation]);
 
-    const onboardingSteps = useMemo(() => ([
+    const onboardingSteps = useMemo(() => [
         {
             id: 'create',
             title: t('lists.onboardingStepCreateTitle'),
@@ -155,101 +144,97 @@ export const ListsScreen: React.FC = () => {
             disabled: !firstListId,
             hint: t('lists.onboardingStepExpenseHint'),
         },
-    ]), [firstListId, goToFirstExpense, goToFirstListDetails, handleCreateList, lists.length, t]);
+    ], [firstListId, goToFirstExpense, goToFirstListDetails, handleCreateList, lists.length, t]);
 
-    const renderEmpty = () => (
-        <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📋</Text>
-            <Text style={styles.emptyTitle}>{t('lists.emptyTitle')}</Text>
-            <Text style={styles.emptyText}>{t('lists.emptySubtitle')}</Text>
-            <View style={styles.onboardingWrapper}>
-                <OnboardingChecklist
-                    title={t('lists.onboardingTitle')}
-                    subtitle={t('lists.onboardingSubtitle')}
-                    helper={t('lists.onboardingHelper')}
-                    steps={onboardingSteps}
-                />
-            </View>
-            <Button
-                title={t('lists.createList')}
-                onPress={handleCreateList}
-                style={styles.emptyButton}
+    const renderEmpty = () => <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>📋</Text>
+        <Text style={styles.emptyTitle}>{t('lists.emptyTitle')}</Text>
+        <Text style={styles.emptyText}>{t('lists.emptySubtitle')}</Text>
+        <View style={styles.onboardingWrapper}>
+            <OnboardingChecklist
+                title={t('lists.onboardingTitle')}
+                subtitle={t('lists.onboardingSubtitle')}
+                helper={t('lists.onboardingHelper')}
+                steps={onboardingSteps}
             />
         </View>
-    );
+        <Button
+            title={t('lists.createList')}
+            onPress={handleCreateList}
+            style={styles.emptyButton}
+        />
+    </View>;
 
     if (isLoading && lists.length === 0) {
         return <Loading/>;
     }
 
-    return (
-        <View style={styles.container}>
-            <FlatList
-                data={lists}
-                renderItem={renderList}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={styles.listContainer}
-                refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>
-                }
-                ListEmptyComponent={renderEmpty}
-            />
-            <View style={styles.fab}>
-                <TouchableOpacity
-                    style={styles.fabButton}
-                    onPress={handleCreateList}
-                >
-                    <Ionicons name="add" size={32} color={colors.accentText}/>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.fabButton, styles.fabSecondary]}
-                    onPress={handleJoinList}
-                >
-                    <Ionicons name="enter-outline" size={24} color={colors.accent}/>
-                </TouchableOpacity>
-            </View>
+    return <View style={styles.container}>
+        <FlatList
+            data={lists}
+            renderItem={renderList}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.listContainer}
+            refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>
+            }
+            ListEmptyComponent={renderEmpty}
+        />
+        <View style={styles.fab}>
+            <TouchableOpacity
+                style={styles.fabButton}
+                onPress={handleCreateList}
+            >
+                <Ionicons name="add" size={32} color={colors.accentText}/>
+            </TouchableOpacity>
+            <TouchableOpacity
+                style={[styles.fabButton, styles.fabSecondary]}
+                onPress={handleJoinList}
+            >
+                <Ionicons name="enter-outline" size={24} color={colors.accent}/>
+            </TouchableOpacity>
+        </View>
 
-            <Modal visible={isJoinModalVisible} transparent animationType="fade">
-                <View style={styles.joinModalBackdrop}>
-                    <View style={styles.joinModalContent}>
-                        <View style={styles.joinModalHeader}>
-                            <Text style={styles.joinModalTitle}>{t('lists.joinTitle')}</Text>
-                            <TouchableOpacity onPress={closeJoinModal}>
-                                <Ionicons name="close" size={22} color={colors.text}/>
-                            </TouchableOpacity>
-                        </View>
-                        <Text style={styles.joinModalDescription}>{t('lists.joinDescription')}</Text>
-                        <Input
-                            label={t('lists.joinPlaceholder')}
-                            placeholder="ABC123"
-                            autoCapitalize="characters"
-                            value={inviteCode}
-                            onChangeText={(value) => {
-                                setInviteCode(value);
-                                setJoinError(undefined);
-                            }}
-                            error={joinError}
+        <Modal visible={isJoinModalVisible} transparent animationType="fade">
+            <View style={styles.joinModalBackdrop}>
+                <View style={styles.joinModalContent}>
+                    <View style={styles.joinModalHeader}>
+                        <Text style={styles.joinModalTitle}>{t('lists.joinTitle')}</Text>
+                        <TouchableOpacity onPress={closeJoinModal}>
+                            <Ionicons name="close" size={22} color={colors.text}/>
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.joinModalDescription}>{t('lists.joinDescription')}</Text>
+                    <Input
+                        label={t('lists.joinPlaceholder')}
+                        placeholder="ABC123"
+                        autoCapitalize="characters"
+                        value={inviteCode}
+                        onChangeText={value => {
+                            setInviteCode(value);
+                            setJoinError(undefined);
+                        }}
+                        error={joinError}
+                    />
+                    <Text style={styles.joinHelper}>{t('lists.joinHelper')}</Text>
+                    <View style={styles.joinButtons}>
+                        <Button
+                            title={t('lists.joinSubmit')}
+                            onPress={handleConfirmJoin}
+                            loading={joining}
+                            disabled={joining}
                         />
-                        <Text style={styles.joinHelper}>{t('lists.joinHelper')}</Text>
-                        <View style={styles.joinButtons}>
-                            <Button
-                                title={t('lists.joinSubmit')}
-                                onPress={handleConfirmJoin}
-                                loading={joining}
-                                disabled={joining}
-                            />
-                            <Button
-                                title={t('common.cancel')}
-                                onPress={closeJoinModal}
-                                variant="secondary"
-                                disabled={joining}
-                            />
-                        </View>
+                        <Button
+                            title={t('common.cancel')}
+                            onPress={closeJoinModal}
+                            variant="secondary"
+                            disabled={joining}
+                        />
                     </View>
                 </View>
-            </Modal>
-        </View>
-    );
+            </View>
+        </Modal>
+    </View>;
 };
 
 const createStyles = (colors: AppColors) =>

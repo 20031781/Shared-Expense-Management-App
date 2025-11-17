@@ -42,52 +42,50 @@ export const AddMemberScreen: React.FC = () => {
         }
     };
 
-    return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>{t('members.title')}</Text>
-            <Text style={styles.description}>{t('members.splitInfo')}</Text>
-            <Input
-                label={t('members.displayNameLabel')}
-                placeholder={t('members.displayNamePlaceholder')}
-                value={displayName}
-                onChangeText={setDisplayName}
-                autoCapitalize="words"
-            />
-            <Text style={styles.hint}>{t('members.displayNameHint')}</Text>
-            <Input
-                label={t('members.emailLabel')}
-                placeholder="john@example.com"
-                value={email}
-                onChangeText={(value) => {
-                    setEmail(value);
-                    setErrors((prev) => ({...prev, email: undefined}));
-                }}
-                error={errors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-            />
-            <View style={styles.switchCard}>
-                <View style={styles.switchTextWrapper}>
-                    <Text style={styles.switchLabel}>{t('members.validatorLabel')}</Text>
-                    <Text style={styles.switchHint}>{t('members.validatorHint')}</Text>
-                </View>
-                <Switch
-                    value={isValidator}
-                    onValueChange={setIsValidator}
-                    trackColor={{false: colors.surfaceSecondary, true: colors.accent}}
-                    thumbColor={isValidator ? colors.accentText : colors.surface}
-                />
+    return <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>{t('members.title')}</Text>
+        <Text style={styles.description}>{t('members.splitInfo')}</Text>
+        <Input
+            label={t('members.displayNameLabel')}
+            placeholder={t('members.displayNamePlaceholder')}
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCapitalize="words"
+        />
+        <Text style={styles.hint}>{t('members.displayNameHint')}</Text>
+        <Input
+            label={t('members.emailLabel')}
+            placeholder="john@example.com"
+            value={email}
+            onChangeText={value => {
+                setEmail(value);
+                setErrors(prev => ({...prev, email: undefined}));
+            }}
+            error={errors.email}
+            keyboardType="email-address"
+            autoCapitalize="none"
+        />
+        <View style={styles.switchCard}>
+            <View style={styles.switchTextWrapper}>
+                <Text style={styles.switchLabel}>{t('members.validatorLabel')}</Text>
+                <Text style={styles.switchHint}>{t('members.validatorHint')}</Text>
             </View>
-            <Button title={t('members.submit')} onPress={handleSubmit} loading={isLoading} disabled={isLoading}/>
-            <Button
-                title={t('common.cancel')}
-                onPress={() => navigation.goBack()}
-                variant="secondary"
-                style={styles.cancelButton}
-                disabled={isLoading}
+            <Switch
+                value={isValidator}
+                onValueChange={setIsValidator}
+                trackColor={{false: colors.surfaceSecondary, true: colors.accent}}
+                thumbColor={isValidator ? colors.accentText : colors.surface}
             />
-        </ScrollView>
-    );
+        </View>
+        <Button title={t('members.submit')} onPress={handleSubmit} loading={isLoading} disabled={isLoading}/>
+        <Button
+            title={t('common.cancel')}
+            onPress={() => navigation.goBack()}
+            variant="secondary"
+            style={styles.cancelButton}
+            disabled={isLoading}
+        />
+    </ScrollView>;
 };
 
 const createStyles = (colors: AppColors) =>

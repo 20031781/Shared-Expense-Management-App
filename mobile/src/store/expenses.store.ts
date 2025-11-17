@@ -23,7 +23,7 @@ interface ExpensesState {
     clearError: () => void;
 }
 
-export const useExpensesStore = create<ExpensesState>((set) => ({
+export const useExpensesStore = create<ExpensesState>(set => ({
     expenses: [],
     userExpenses: [],
     currentExpense: null,

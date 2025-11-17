@@ -18,9 +18,9 @@ export const EditMemberScreen: React.FC = () => {
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const {members, fetchMembers, updateMember, removeMember, isLoading} = useListsStore();
-    const member = members.find((m) => m.id === memberId);
+    const member = members.find(m => m.id === memberId);
     const formatSplit = (value?: number) => (value ?? 0).toFixed(2);
-    const otherMembers = useMemo(() => members.filter((m) => m.id !== memberId), [members, memberId]);
+    const otherMembers = useMemo(() => members.filter(m => m.id !== memberId), [members, memberId]);
 
     const [displayName, setDisplayName] = useState(member?.displayName ?? '');
     const [split, setSplit] = useState(formatSplit(member?.splitPercentage));
@@ -134,83 +134,77 @@ export const EditMemberScreen: React.FC = () => {
         return <Loading/>;
     }
 
-    return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.title}>{t('members.editTitle')}</Text>
-            <Text style={styles.subtitle}>{member.email}</Text>
+    return <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.title}>{t('members.editTitle')}</Text>
+        <Text style={styles.subtitle}>{member.email}</Text>
 
-            <Input
-                label={t('members.displayNameLabel')}
-                placeholder={t('members.displayNamePlaceholder')}
-                value={displayName}
-                onChangeText={setDisplayName}
-                autoCapitalize="words"
-            />
-            <Text style={styles.switchHint}>{t('members.displayNameHint')}</Text>
+        <Input
+            label={t('members.displayNameLabel')}
+            placeholder={t('members.displayNamePlaceholder')}
+            value={displayName}
+            onChangeText={setDisplayName}
+            autoCapitalize="words"
+        />
+        <Text style={styles.switchHint}>{t('members.displayNameHint')}</Text>
 
-            <Input
-                label={t('members.splitLabel')}
-                placeholder="0"
-                value={split}
-                onChangeText={(text) => {
-                    setSplit(text);
-                    setErrors((prev) => ({...prev, split: undefined}));
-                }}
-                keyboardType="decimal-pad"
-                error={errors.split}
-            />
-            {otherMembers.length > 0 && (
-                <Text style={styles.balanceHint}>
-                    {t('members.autoBalanceHint', {
-                        remaining: splitPreview.remaining,
-                        recipients: otherMembers.length,
-                        share: splitPreview.share,
-                    })}
-                </Text>
-            )}
+        <Input
+            label={t('members.splitLabel')}
+            placeholder="0"
+            value={split}
+            onChangeText={text => {
+                setSplit(text);
+                setErrors(prev => ({...prev, split: undefined}));
+            }}
+            keyboardType="decimal-pad"
+            error={errors.split}
+        />
+        {otherMembers.length > 0 && <Text style={styles.balanceHint}>
+            {t('members.autoBalanceHint', {
+                remaining: splitPreview.remaining,
+                recipients: otherMembers.length,
+                share: splitPreview.share,
+            })}
+        </Text>}
 
-            <View style={styles.switchCard}>
-                <View style={styles.switchTextWrapper}>
-                    <Text style={styles.switchLabel}>{t('members.validatorLabel')}</Text>
-                    <Text style={styles.switchHint}>{t('members.validatorHint')}</Text>
-                </View>
-                <Switch
-                    value={isValidator}
-                    onValueChange={setIsValidator}
-                    trackColor={{false: colors.surfaceSecondary, true: colors.accent}}
-                    thumbColor={isValidator ? colors.accentText : colors.surface}
-                />
+        <View style={styles.switchCard}>
+            <View style={styles.switchTextWrapper}>
+                <Text style={styles.switchLabel}>{t('members.validatorLabel')}</Text>
+                <Text style={styles.switchHint}>{t('members.validatorHint')}</Text>
             </View>
-
-            <Text style={styles.sectionLabel}>{t('members.statusLabel')}</Text>
-            <Text style={styles.sectionHint}>{t('members.statusHint')}</Text>
-            <View style={styles.statusRow}>
-                {STATUS_OPTIONS.map((option) => {
-                    const isActive = status === option;
-                    const labelKey = option === MemberStatus.Active ? 'members.statusActive' : 'members.statusPending';
-                    return (
-                        <TouchableOpacity
-                            key={option}
-                            style={[styles.statusChip, isActive && styles.statusChipActive]}
-                            onPress={() => setStatus(option)}
-                        >
-                            <Text style={[styles.statusChipText, isActive && styles.statusChipTextActive]}>
-                                {t(labelKey)}
-                            </Text>
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
-
-            <Button title={t('members.editSubmit')} onPress={handleSave} loading={isLoading} disabled={isLoading}/>
-            <Button
-                title={t('members.removeButton')}
-                onPress={confirmRemove}
-                variant="danger"
-                disabled={isLoading}
+            <Switch
+                value={isValidator}
+                onValueChange={setIsValidator}
+                trackColor={{false: colors.surfaceSecondary, true: colors.accent}}
+                thumbColor={isValidator ? colors.accentText : colors.surface}
             />
-        </ScrollView>
-    );
+        </View>
+
+        <Text style={styles.sectionLabel}>{t('members.statusLabel')}</Text>
+        <Text style={styles.sectionHint}>{t('members.statusHint')}</Text>
+        <View style={styles.statusRow}>
+            {STATUS_OPTIONS.map(option => {
+                const isActive = status === option;
+                const labelKey = option === MemberStatus.Active ? 'members.statusActive' : 'members.statusPending';
+                return <TouchableOpacity
+                    key={option}
+                    style={[styles.statusChip, isActive && styles.statusChipActive]}
+                    onPress={() => setStatus(option)}
+                >
+                    <Text style={[styles.statusChipText, isActive && styles.statusChipTextActive]}>
+                        {t(labelKey)}
+                    </Text>
+                </TouchableOpacity>;
+            })}
+        </View>
+
+        <Button title={t('members.editSubmit')} onPress={handleSave} loading={isLoading} disabled={isLoading}/>
+        <Button
+            title={t('members.removeButton')}
+            onPress={confirmRemove}
+            variant="danger"
+            disabled={isLoading}
+        />
+    </ScrollView>;
 };
 
 const createStyles = (colors: AppColors) =>

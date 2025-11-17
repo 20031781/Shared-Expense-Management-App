@@ -30,15 +30,13 @@ type PendingInviteAction = { type: 'join' | 'accept'; code: string };
 
 const AppContent = () => {
     const {isAuthenticated, isInitializing, initialize} = useAuthStore();
-    const joinList = useListsStore((state) => state.joinList);
-    const acceptInviteByCode = useListsStore((state) => state.acceptInviteByCode);
+    const joinList = useListsStore(state => state.joinList);
+    const acceptInviteByCode = useListsStore(state => state.acceptInviteByCode);
     const {navigationTheme, statusBarStyle, colors} = useAppTheme();
     const {t} = useTranslation();
     const [pendingInvite, setPendingInvite] = useState<PendingInviteAction | null>(null);
 
-    useEffect(() => {
-        initialize();
-    }, []);
+    useEffect(() => initialize(), []);
 
     useEffect(() => {
         const handleUrl = (url: string | null) => {
@@ -55,7 +53,7 @@ const AppContent = () => {
         };
 
         Linking.getInitialURL().then(handleUrl);
-        const subscription = Linking.addEventListener('url', (event) => handleUrl(event.url));
+        const subscription = Linking.addEventListener('url', event => handleUrl(event.url));
         return () => subscription.remove();
     }, []);
 
@@ -108,18 +106,16 @@ const AppContent = () => {
         return <Loading/>;
     }
 
-    return (
-        <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{flex: 1, backgroundColor: colors.background}}>
-                <SafeAreaProvider>
-                    <NavigationContainer theme={navigationTheme}>
-                        {isAuthenticated ? <MainNavigator/> : <AuthNavigator/>}
-                    </NavigationContainer>
-                    <StatusBar style={statusBarStyle}/>
-                </SafeAreaProvider>
-            </GestureHandlerRootView>
-        </QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>
+        <GestureHandlerRootView style={{flex: 1, backgroundColor: colors.background}}>
+            <SafeAreaProvider>
+                <NavigationContainer theme={navigationTheme}>
+                    {isAuthenticated ? <MainNavigator/> : <AuthNavigator/>}
+                </NavigationContainer>
+                <StatusBar style={statusBarStyle}/>
+            </SafeAreaProvider>
+        </GestureHandlerRootView>
+    </QueryClientProvider>;
 };
 
 const LanguageGate: React.FC<{ children: React.ReactNode }> = ({children}) => {
@@ -133,13 +129,11 @@ const LanguageGate: React.FC<{ children: React.ReactNode }> = ({children}) => {
 };
 
 export default function App() {
-    return (
-        <ThemeProvider>
-            <LanguageProvider>
-                <LanguageGate>
-                    <AppContent/>
-                </LanguageGate>
-            </LanguageProvider>
-        </ThemeProvider>
-    );
+    return <ThemeProvider>
+        <LanguageProvider>
+            <LanguageGate>
+                <AppContent/>
+            </LanguageGate>
+        </LanguageProvider>
+    </ThemeProvider>;
 }

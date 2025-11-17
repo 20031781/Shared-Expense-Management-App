@@ -27,28 +27,23 @@ export const Button: React.FC<ButtonProps> = ({
     const styles = useMemo(() => createStyles(colors), [colors]);
     const indicatorColor = variant === 'primary' ? colors.accentText : colors.accent;
 
-    return (
-        <TouchableOpacity
-            style={[
-                styles.button,
-                styles[variant],
-                styles[size],
-                (disabled || loading) && styles.disabled,
-                style,
-            ]}
-            onPress={onPress}
-            disabled={disabled || loading}
-            activeOpacity={0.7}
-        >
-            {loading ? (
-                <ActivityIndicator color={indicatorColor}/>
-            ) : (
-                <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
-                    {title}
-                </Text>
-            )}
-        </TouchableOpacity>
-    );
+    return <TouchableOpacity
+        style={[
+            styles.button,
+            styles[variant],
+            styles[size],
+            (disabled || loading) && styles.disabled,
+            style,
+        ]}
+        onPress={onPress}
+        disabled={disabled || loading}
+        activeOpacity={0.7}
+    >
+        {loading ? <ActivityIndicator color={indicatorColor}/> :
+            <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
+                {title}
+            </Text>}
+    </TouchableOpacity>;
 };
 
 const createStyles = (colors: AppColors) =>

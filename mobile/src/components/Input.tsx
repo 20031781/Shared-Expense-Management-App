@@ -18,21 +18,19 @@ export const Input: React.FC<InputProps> = ({
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    return (
-        <View style={[styles.container, containerStyle]}>
-            {label && <Text style={styles.label}>{label}</Text>}
-            <TextInput
-                style={[
-                    styles.input,
-                    error && styles.inputError,
-                    style,
-                ]}
-                placeholderTextColor={colors.placeholder}
-                {...props}
-            />
-            {error && <Text style={styles.error}>{error}</Text>}
-        </View>
-    );
+    return <View style={[styles.container, containerStyle]}>
+        {label && <Text style={styles.label}>{label}</Text>}
+        <TextInput
+            style={[
+                styles.input,
+                error && styles.inputError,
+                style,
+            ]}
+            placeholderTextColor={colors.placeholder}
+            {...props}
+        />
+        {error && <Text style={styles.error}>{error}</Text>}
+    </View>;
 };
 
 const createStyles = (colors: AppColors) =>

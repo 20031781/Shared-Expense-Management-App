@@ -25,43 +25,35 @@ export const LanguageSelectionScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const handleSelect = async (nextLanguage: Language) => {
-        await setLanguage(nextLanguage);
-    };
+    const handleSelect = async (nextLanguage: Language) => await setLanguage(nextLanguage);
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.emoji}>🌍</Text>
-                <Text style={styles.title}>{t('languageSelection.title')}</Text>
-                <Text style={styles.subtitle}>{t('languageSelection.subtitle')}</Text>
-            </View>
-
-            <View style={styles.options}>
-                {LANGUAGE_OPTIONS.map((option) => {
-                    const isActive = option.code === language;
-                    return (
-                        <TouchableOpacity
-                            key={option.code}
-                            onPress={() => handleSelect(option.code)}
-                            style={[styles.option, isActive && styles.optionActive]}
-                        >
-                            <Text style={styles.optionEmoji}>{option.emoji}</Text>
-                            <View style={styles.optionCopy}>
-                                <Text style={styles.optionTitle}>{t(option.labelKey)}</Text>
-                                <Text style={styles.optionSubtitle}>{t(option.descriptionKey)}</Text>
-                            </View>
-                            {isActive && (
-                                <Ionicons name="checkmark-circle" size={24} color={colors.accent}/>
-                            )}
-                        </TouchableOpacity>
-                    );
-                })}
-            </View>
-
-            <Text style={styles.footer}>{t('languageSelection.footer')}</Text>
+    return <View style={styles.container}>
+        <View style={styles.header}>
+            <Text style={styles.emoji}>🌍</Text>
+            <Text style={styles.title}>{t('languageSelection.title')}</Text>
+            <Text style={styles.subtitle}>{t('languageSelection.subtitle')}</Text>
         </View>
-    );
+
+        <View style={styles.options}>
+            {LANGUAGE_OPTIONS.map(option => {
+                const isActive = option.code === language;
+                return <TouchableOpacity
+                    key={option.code}
+                    onPress={() => handleSelect(option.code)}
+                    style={[styles.option, isActive && styles.optionActive]}
+                >
+                    <Text style={styles.optionEmoji}>{option.emoji}</Text>
+                    <View style={styles.optionCopy}>
+                        <Text style={styles.optionTitle}>{t(option.labelKey)}</Text>
+                        <Text style={styles.optionSubtitle}>{t(option.descriptionKey)}</Text>
+                    </View>
+                    {isActive && <Ionicons name="checkmark-circle" size={24} color={colors.accent}/>}
+                </TouchableOpacity>;
+            })}
+        </View>
+
+        <Text style={styles.footer}>{t('languageSelection.footer')}</Text>
+    </View>;
 };
 
 const createStyles = (colors: AppColors) =>

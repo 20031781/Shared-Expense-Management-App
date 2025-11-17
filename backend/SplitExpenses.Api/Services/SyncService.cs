@@ -7,18 +7,13 @@ using SplitExpenses.Api.Repositories;
 
 namespace SplitExpenses.Api.Services;
 
-public class SyncService : ISyncService
+public class SyncService(
+    IExpenseRepository expenseRepository,
+    IReimbursementRepository reimbursementRepository)
+    : ISyncService
 {
-    private readonly IExpenseRepository _expenseRepository;
-    private readonly IReimbursementRepository _reimbursementRepository;
-
-    public SyncService(
-        IExpenseRepository expenseRepository,
-        IReimbursementRepository reimbursementRepository)
-    {
-        _expenseRepository = expenseRepository;
-        _reimbursementRepository = reimbursementRepository;
-    }
+    private readonly IExpenseRepository _expenseRepository = expenseRepository;
+    private readonly IReimbursementRepository _reimbursementRepository = reimbursementRepository;
 
     public async Task<SyncResult> ProcessSyncBatchAsync(Guid userId, IEnumerable<SyncQueueItem> items)
     {

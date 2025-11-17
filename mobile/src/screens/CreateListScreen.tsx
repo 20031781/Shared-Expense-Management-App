@@ -31,46 +31,44 @@ export const CreateListScreen: React.FC = () => {
         }
     };
 
-    return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.title}>{t('lists.createListTitle')}</Text>
-                <Text style={styles.subtitle}>{t('lists.createListSubtitle')}</Text>
+    return <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+        <ScrollView contentContainerStyle={styles.content}>
+            <Text style={styles.title}>{t('lists.createListTitle')}</Text>
+            <Text style={styles.subtitle}>{t('lists.createListSubtitle')}</Text>
 
-                <Input
-                    label={t('lists.nameLabel')}
-                    placeholder={t('lists.namePlaceholder')}
-                    value={name}
-                    onChangeText={(text) => {
-                        setName(text);
-                        setError('');
-                    }}
-                    error={error}
-                    autoFocus
+            <Input
+                label={t('lists.nameLabel')}
+                placeholder={t('lists.namePlaceholder')}
+                value={name}
+                onChangeText={text => {
+                    setName(text);
+                    setError('');
+                }}
+                error={error}
+                autoFocus
+            />
+
+            <View style={styles.buttons}>
+                <Button
+                    title={t('lists.createList')}
+                    onPress={handleCreate}
+                    loading={isLoading}
+                    disabled={isLoading}
+                    style={styles.button}
                 />
-
-                <View style={styles.buttons}>
-                    <Button
-                        title={t('lists.createList')}
-                        onPress={handleCreate}
-                        loading={isLoading}
-                        disabled={isLoading}
-                        style={styles.button}
-                    />
-                    <Button
-                        title={t('common.cancel')}
-                        onPress={() => navigation.goBack()}
-                        variant="secondary"
-                        disabled={isLoading}
-                        style={styles.button}
-                    />
-                </View>
-            </ScrollView>
-        </KeyboardAvoidingView>
-    );
+                <Button
+                    title={t('common.cancel')}
+                    onPress={() => navigation.goBack()}
+                    variant="secondary"
+                    disabled={isLoading}
+                    style={styles.button}
+                />
+            </View>
+        </ScrollView>
+    </KeyboardAvoidingView>;
 };
 
 const createStyles = (colors: AppColors) =>

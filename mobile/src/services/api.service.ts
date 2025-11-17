@@ -54,18 +54,18 @@ class ApiService {
 
     private setupInterceptors() {
         this.client.interceptors.request.use(
-            async (config) => {
+            async config => {
                 const tokens = await this.storageService.getTokens();
                 if (tokens?.accessToken) {
                     config.headers.Authorization = `Bearer ${tokens.accessToken}`;
                 }
                 return config;
             },
-            (error) => Promise.reject(error)
+            error => Promise.reject(error)
         );
 
         this.client.interceptors.response.use(
-            (response) => response,
+            response => response,
             async (error: AxiosError) => {
                 const originalRequest = error.config as any;
 

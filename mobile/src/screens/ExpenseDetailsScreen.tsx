@@ -76,18 +76,18 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const paymentLabel = t(`expenses.paymentMethods.${currentExpense.paymentMethod ?? 'other'}`);
     const getMemberLabel = (member?: ListMember | null) => {
         if (!member) return t('members.unknown');
-        return (member.displayName && member.displayName.trim())
+        return member.displayName && member.displayName.trim()
             || member.user?.fullName
             || member.email
             || t('members.unknown');
     };
     const beneficiaryMembers = (currentExpense.beneficiaryMemberIds ?? [])
-        .map((id) => members.find((member) => member.id === id)
-            || currentExpense.splits?.find((split) => split.memberId === id)?.member
+        .map(id => members.find(member => member.id === id)
+            || currentExpense.splits?.find(split => split.memberId === id)?.member
             || null);
     const beneficiaryNames = beneficiaryMembers
-        .map((member) => getMemberLabel(member))
-        .filter((label) => !!label);
+        .map(member => getMemberLabel(member))
+        .filter(label => !!label);
     const totalKnownMembers = members.length || currentExpense.splits?.length || 0;
     const beneficiaryCount = currentExpense.beneficiaryMemberIds?.length ?? 0;
     const beneficiaryLabel = (() => {
@@ -117,63 +117,52 @@ export const ExpenseDetailsScreen: React.FC = () => {
         },
     ];
 
-    const handleEdit = () => {
-        navigation.navigate('CreateExpense', {listId: currentExpense.listId, expenseId: currentExpense.id});
-    };
+    const handleEdit = () => navigation.navigate('CreateExpense', {
+        listId: currentExpense.listId,
+        expenseId: currentExpense.id
+    });
 
-    return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Card style={styles.heroCard}>
-                <Text style={styles.title}>{currentExpense.title}</Text>
-                <Text style={styles.amount}>{currentExpense.currency} {currentExpense.amount.toFixed(2)}</Text>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{statusLabel}</Text>
-                </View>
-                {currentExpense.notes && (
-                    <Text style={styles.notes}>{currentExpense.notes}</Text>
-                )}
-            </Card>
-
-            <Card>
-                <Text style={styles.sectionTitle}>{t('expenses.details')}</Text>
-                <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>{t('expenses.paidByLabel')}</Text>
-                    <Text style={styles.detailValue}>{payerName}</Text>
-                </View>
-                {infoItems.map((item, index) => (
-                    <View key={index} style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>{item.label}</Text>
-                        {item.value ? (
-                            <Text style={styles.detailValue}>{item.value}</Text>
-                        ) : null}
-                    </View>
-                ))}
-                {currentExpense.receiptUrl && (
-                    <TouchableOpacity style={styles.receiptButton} onPress={handleOpenReceipt}>
-                        <Ionicons name="document-text-outline" size={18} color={colors.accent}/>
-                        <Text style={styles.receiptText}>{t('expenses.openReceipt')}</Text>
-                    </TouchableOpacity>
-                )}
-            </Card>
-
-            <View style={styles.actions}>
-                {canEdit && (
-                    <Button
-                        title={t('expenses.editTitle')}
-                        onPress={handleEdit}
-                        variant="secondary"
-                        style={styles.editButton}
-                    />
-                )}
-                <Button
-                    title={t('expenses.deleteAction')}
-                    onPress={handleDelete}
-                    variant="danger"
-                    loading={isDeleting}
-                />
+    return <ScrollView contentContainerStyle={styles.container}>
+        <Card style={styles.heroCard}>
+            <Text style={styles.title}>{currentExpense.title}</Text>
+            <Text style={styles.amount}>{currentExpense.currency} {currentExpense.amount.toFixed(2)}</Text>
+            <View style={styles.badge}>
+                <Text style={styles.badgeText}>{statusLabel}</Text>
             </View>
-        </ScrollView>
-    );
+            {currentExpense.notes && <Text style={styles.notes}>{currentExpense.notes}</Text>}
+        </Card>
+
+        <Card>
+            <Text style={styles.sectionTitle}>{t('expenses.details')}</Text>
+            <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>{t('expenses.paidByLabel')}</Text>
+                <Text style={styles.detailValue}>{payerName}</Text>
+            </View>
+            {infoItems.map((item, index) => <View key={index} style={styles.detailRow}>
+                <Text style={styles.detailLabel}>{item.label}</Text>
+                {item.value ? <Text style={styles.detailValue}>{item.value}</Text> : null}
+            </View>)}
+            {currentExpense.receiptUrl && <TouchableOpacity style={styles.receiptButton} onPress={handleOpenReceipt}>
+                <Ionicons name="document-text-outline" size={18} color={colors.accent}/>
+                <Text style={styles.receiptText}>{t('expenses.openReceipt')}</Text>
+            </TouchableOpacity>}
+        </Card>
+
+        <View style={styles.actions}>
+            {canEdit && <Button
+                title={t('expenses.editTitle')}
+                onPress={handleEdit}
+                variant="secondary"
+                style={styles.editButton}
+            />}
+            <Button
+                title={t('expenses.deleteAction')}
+                onPress={handleDelete}
+                variant="danger"
+                loading={isDeleting}
+            />
+        </View>
+    </ScrollView>;
 };
 
 const createStyles = (colors: AppColors) =>

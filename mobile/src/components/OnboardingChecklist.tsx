@@ -25,56 +25,50 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({title, 
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    return (
-        <View style={styles.container}>
-            <Text style={styles.title}>{title}</Text>
-            {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-            <View style={styles.steps}>
-                {steps.map((step) => {
-                    const disabled = step.disabled && !step.completed;
-                    return (
-                        <View key={step.id} style={[styles.stepCard, step.completed && styles.stepCardCompleted]}>
-                            <View style={styles.stepHeader}>
-                                <View style={[styles.stepBadge, step.completed && styles.stepBadgeCompleted]}>
-                                    <Ionicons
-                                        name={step.completed ? 'checkmark' : 'bulb-outline'}
-                                        size={16}
-                                        color={step.completed ? colors.accentText : colors.accent}
-                                    />
-                                </View>
-                                <View style={styles.stepCopy}>
-                                    <Text style={styles.stepTitle}>{step.title}</Text>
-                                    <Text style={styles.stepDescription}>{step.description}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.stepFooter}>
-                                <TouchableOpacity
-                                    onPress={step.onPress}
-                                    disabled={!step.onPress || disabled}
-                                    style={[styles.stepButton, disabled && styles.stepButtonDisabled]}
-                                >
-                                    <Ionicons
-                                        name={step.completed ? 'checkmark-circle' : 'arrow-forward-circle'}
-                                        size={18}
-                                        color={step.completed ? colors.success : colors.accent}
-                                    />
-                                    <Text
-                                        style={[styles.stepButtonText, disabled && styles.stepButtonTextDisabled]}
-                                    >
-                                        {step.completed ? step.actionLabel : step.actionLabel}
-                                    </Text>
-                                </TouchableOpacity>
-                                {step.hint && (
-                                    <Text style={styles.stepHint}>{step.hint}</Text>
-                                )}
-                            </View>
+    return <View style={styles.container}>
+        <Text style={styles.title}>{title}</Text>
+        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        <View style={styles.steps}>
+            {steps.map(step => {
+                const disabled = step.disabled && !step.completed;
+                return <View key={step.id} style={[styles.stepCard, step.completed && styles.stepCardCompleted]}>
+                    <View style={styles.stepHeader}>
+                        <View style={[styles.stepBadge, step.completed && styles.stepBadgeCompleted]}>
+                            <Ionicons
+                                name={step.completed ? 'checkmark' : 'bulb-outline'}
+                                size={16}
+                                color={step.completed ? colors.accentText : colors.accent}
+                            />
                         </View>
-                    );
-                })}
-            </View>
-            {helper && <Text style={styles.helper}>{helper}</Text>}
+                        <View style={styles.stepCopy}>
+                            <Text style={styles.stepTitle}>{step.title}</Text>
+                            <Text style={styles.stepDescription}>{step.description}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.stepFooter}>
+                        <TouchableOpacity
+                            onPress={step.onPress}
+                            disabled={!step.onPress || disabled}
+                            style={[styles.stepButton, disabled && styles.stepButtonDisabled]}
+                        >
+                            <Ionicons
+                                name={step.completed ? 'checkmark-circle' : 'arrow-forward-circle'}
+                                size={18}
+                                color={step.completed ? colors.success : colors.accent}
+                            />
+                            <Text
+                                style={[styles.stepButtonText, disabled && styles.stepButtonTextDisabled]}
+                            >
+                                {step.actionLabel}
+                            </Text>
+                        </TouchableOpacity>
+                        {step.hint && <Text style={styles.stepHint}>{step.hint}</Text>}
+                    </View>
+                </View>;
+            })}
         </View>
-    );
+        {helper && <Text style={styles.helper}>{helper}</Text>}
+    </View>;
 };
 
 const createStyles = (colors: AppColors) =>
