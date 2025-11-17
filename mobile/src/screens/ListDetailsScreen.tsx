@@ -106,6 +106,50 @@ export const ListDetailsScreen: React.FC = () => {
 
     const chartMax = perMemberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
 
+    const splitSummary = useMemo(() => {
+        if (expenses.length === 0 || listTotalAmount <= 0) {
+            return {rows: [], settlements: [], reason: 'no-expenses' as const};
+        }
+        const membersWithSplit = members.filter((member) => (member.splitPercentage ?? 0) > 0);
+        if (membersWithSplit.length === 0) {
+            return {rows: [], settlements: [], reason: 'no-members' as const};
+        }
+        const totalSplit = membersWithSplit.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
+        if (totalSplit <= 0) {
+            return {rows: [], settlements: [], reason: 'no-split' as const};
+        }
+        const paidMap = new Map<string, number>();
+        expenses.forEach((expense) => {
+            if (!expense.paidByMemberId) return;
+            paidMap.set(expense.paidByMemberId, (paidMap.get(expense.paidByMemberId) ?? 0) + expense.amount);
+        });
+        const rows = membersWithSplit.map((member) => {
+            const percentage = member.splitPercentage ?? 0;
+            const share = listTotalAmount * (percentage / totalSplit);
+            const paid = paidMap.get(member.id) ?? 0;
+            const net = paid - share;
+            return {member, share, paid, net, percentage};
+        }).sort((a, b) => b.net - a.net);
+
+        const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
+        const debtors = rows.filter((row) => row.net < 0).map((row) => ({member: row.member, amount: Math.abs(row.net)}));
+        const settlements: {from: ListMember; to: ListMember; amount: number}[] = [];
+        let creditorIndex = 0;
+        let debtorIndex = 0;
+        while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+            const creditor = creditors[creditorIndex];
+            const debtor = debtors[debtorIndex];
+            const amount = Math.min(creditor.amount, debtor.amount);
+            settlements.push({from: debtor.member, to: creditor.member, amount});
+            creditor.amount -= amount;
+            debtor.amount -= amount;
+            if (creditor.amount < 0.01) creditorIndex++;
+            if (debtor.amount < 0.01) debtorIndex++;
+        }
+
+        return {rows, settlements, reason: null as const};
+    }, [expenses, members, listTotalAmount, getMemberLabel]);
+
     if (!currentList) {
         return <Loading/>;
     }
@@ -279,50 +323,6 @@ export const ListDetailsScreen: React.FC = () => {
             Alert.alert(t('common.error'), error.message || t('lists.inviteShareError'));
         }
     };
-
-    const splitSummary = useMemo(() => {
-        if (expenses.length === 0 || listTotalAmount <= 0) {
-            return {rows: [], settlements: [], reason: 'no-expenses' as const};
-        }
-        const membersWithSplit = members.filter((member) => (member.splitPercentage ?? 0) > 0);
-        if (membersWithSplit.length === 0) {
-            return {rows: [], settlements: [], reason: 'no-members' as const};
-        }
-        const totalSplit = membersWithSplit.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
-        if (totalSplit <= 0) {
-            return {rows: [], settlements: [], reason: 'no-split' as const};
-        }
-        const paidMap = new Map<string, number>();
-        expenses.forEach((expense) => {
-            if (!expense.paidByMemberId) return;
-            paidMap.set(expense.paidByMemberId, (paidMap.get(expense.paidByMemberId) ?? 0) + expense.amount);
-        });
-        const rows = membersWithSplit.map((member) => {
-            const percentage = member.splitPercentage ?? 0;
-            const share = listTotalAmount * (percentage / totalSplit);
-            const paid = paidMap.get(member.id) ?? 0;
-            const net = paid - share;
-            return {member, share, paid, net, percentage};
-        }).sort((a, b) => b.net - a.net);
-
-        const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
-        const debtors = rows.filter((row) => row.net < 0).map((row) => ({member: row.member, amount: Math.abs(row.net)}));
-        const settlements: {from: ListMember; to: ListMember; amount: number}[] = [];
-        let creditorIndex = 0;
-        let debtorIndex = 0;
-        while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
-            const creditor = creditors[creditorIndex];
-            const debtor = debtors[debtorIndex];
-            const amount = Math.min(creditor.amount, debtor.amount);
-            settlements.push({from: debtor.member, to: creditor.member, amount});
-            creditor.amount -= amount;
-            debtor.amount -= amount;
-            if (creditor.amount < 0.01) creditorIndex++;
-            if (debtor.amount < 0.01) debtorIndex++;
-        }
-
-        return {rows, settlements, reason: null as const};
-    }, [expenses, members, listTotalAmount, getMemberLabel]);
 
     return (
         <View style={styles.container}>

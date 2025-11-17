@@ -199,6 +199,14 @@ echo $JAVA_HOME
 1. Xcode installato
 2. Command Line Tools installati
 
+### Errore: "React has detected a change in the order of Hooks"
+
+**Scenario:** Aprendo `ListDetailsScreen` l'app mobile mostrava l'errore sui React Hooks a causa del ritorno anticipato che saltava una `useMemo`.
+
+**Soluzione:**
+- Mantieni l'ordine dei React Hooks costante spostando i calcoli memoizzati (es. `splitSummary`) prima di qualsiasi `return` condizionale.
+- Dopo la modifica ricordati di rieseguire la schermata: il loader verrà renderizzato senza errori e al render successivo i dati saranno caricati correttamente.
+
 ```bash
 xcode-select --install
 ```
