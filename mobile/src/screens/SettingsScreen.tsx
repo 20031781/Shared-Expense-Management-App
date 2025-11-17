@@ -19,6 +19,17 @@ export const SettingsScreen: React.FC = () => {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const styles = useMemo(() => createStyles(colors), [colors]);
 
+    const performLogout = async () => {
+        try {
+            setIsLoggingOut(true);
+            await logout();
+        } catch (error: any) {
+            Alert.alert(t('common.error'), error?.message || t('common.genericError'));
+        } finally {
+            setIsLoggingOut(false);
+        }
+    };
+
     const handleLogout = () => {
         Alert.alert(
             t('settings.logoutTitle'),
@@ -28,16 +39,22 @@ export const SettingsScreen: React.FC = () => {
                 {
                     text: t('settings.logoutConfirm'),
                     style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setIsLoggingOut(true);
-                            await logout();
-                        } catch (error: any) {
-                            Alert.alert(t('common.error'), error?.message || t('common.genericError'));
-                        } finally {
-                            setIsLoggingOut(false);
-                        }
-                    },
+                    onPress: performLogout,
+                },
+            ]
+        );
+    };
+
+    const handleSwitchAccount = () => {
+        Alert.alert(
+            t('settings.switchTitle'),
+            t('settings.switchDescription'),
+            [
+                {text: t('common.cancel'), style: 'cancel'},
+                {
+                    text: t('settings.switchConfirm'),
+                    style: 'default',
+                    onPress: performLogout,
                 },
             ]
         );
@@ -107,10 +124,11 @@ export const SettingsScreen: React.FC = () => {
                         loading={isLoggingOut}
                         style={styles.logoutPrimary}
                     />
-                    <TouchableOpacity style={styles.logoutSecondary} onPress={handleLogout} disabled={isLoggingOut}>
+                    <TouchableOpacity style={styles.logoutSecondary} onPress={handleSwitchAccount} disabled={isLoggingOut}>
                         <Ionicons name="log-out-outline" size={18} color={colors.accent}/>
                         <Text style={styles.logoutSecondaryText}>{t('settings.logoutSecondary')}</Text>
                     </TouchableOpacity>
+                    <Text style={styles.switchInfo}>{t('settings.switchInfo')}</Text>
                 </View>
             </View>
         </View>
@@ -187,5 +205,10 @@ const createStyles = (colors: AppColors) =>
         logoutSecondaryText: {
             color: colors.accent,
             fontWeight: '600',
+        },
+        switchInfo: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            textAlign: 'center',
         },
     });
