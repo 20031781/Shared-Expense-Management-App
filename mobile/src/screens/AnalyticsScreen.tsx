@@ -283,24 +283,6 @@ export const AnalyticsScreen: React.FC = () => {
         })).sort((a, b) => b.amount - a.amount);
     }, []);
 
-    const resolvePayerLabel = useCallback((expense: Expense) => {
-        if (expense.paidByMemberId) {
-            const fromMap = memberMap.get(expense.paidByMemberId);
-            if (fromMap) {
-                return getMemberLabel(fromMap);
-            }
-        }
-        if (expense.paidByMember) {
-            return getMemberLabel(expense.paidByMember);
-        }
-        if (expense.author?.fullName) {
-            return expense.author.fullName;
-        }
-        return t('members.unknown');
-    }, [getMemberLabel, memberMap, t]);
-
-    const payerBreakdown = useMemo(() => groupBy(visibleExpenses, resolvePayerLabel), [visibleExpenses, groupBy, resolvePayerLabel]);
-
     const listBreakdown = useMemo(() => groupBy(userExpenses, expense => listMap.get(expense.listId) || t('lists.details')), [userExpenses, groupBy, listMap, t]);
 
     const memberBreakdown = useMemo(() => {
@@ -514,7 +496,6 @@ export const AnalyticsScreen: React.FC = () => {
                 })}</Text>}
             </Card>
 
-            {renderBreakdown(t('analytics.byPayer'), payerBreakdown)}
             {selectedListId === ALL_LISTS_OPTION && renderBreakdown(t('analytics.byList'), listBreakdown)}
 
             {selectedListId === ALL_LISTS_OPTION && <Card style={styles.card}>

@@ -16,7 +16,7 @@ import {useListsStore} from '@/store/lists.store';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useAuthStore} from '@/store/auth.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {Expense, ExpenseStatus, ListMember, MemberStatus} from '@/types';
+import {Expense, ExpensePaymentMethod, ExpenseStatus, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import listsService from '@/services/lists.service';
@@ -176,9 +176,10 @@ export const ListDetailsScreen: React.FC = () => {
         const statusKey = (expense.status as string).toLowerCase();
         const statusLabel = t(`expenses.status.${statusKey}`);
         const awaitingValidation = statusKey === 'submitted';
-        const paymentLabel = t(`expenses.paymentMethods.${expense.paymentMethod}`);
+        const normalizedPaymentMethod = (expense.paymentMethod || ExpensePaymentMethod.Other).toString().toLowerCase();
+        const paymentLabel = t(`expenses.paymentMethods.${normalizedPaymentMethod}`);
         const beneficiaryLabel = resolveBeneficiariesLabel(expense);
-        const canEditExpense = expense.authorId === user?.id && expense.status === ExpenseStatus.Draft;
+        const canEditExpense = expense.authorId === user?.id || isAdmin;
         return <View key={expense.id} style={styles.expenseSwipeWrapper}>
             <Swipeable
                 ref={ref => {

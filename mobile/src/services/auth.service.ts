@@ -97,6 +97,14 @@ class AuthService {
         }
     }
 
+    async registerDeviceToken(token: string, platform: 'ios' | 'android'): Promise<void> {
+        try {
+            await apiService.post('/auth/device-token', {token, platform});
+        } catch (error) {
+            console.error('Device token registration error:', error);
+        }
+    }
+
     getCurrentUser(): User | null {
         return this.currentUser;
     }
