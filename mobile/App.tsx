@@ -1,13 +1,14 @@
 // noinspection ES6UnusedImports,JSUnusedGlobalSymbols,JSUnusedLocalSymbols
 
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {StatusBar} from 'expo-status-bar';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {Alert} from 'react-native';
+import {Alert, Platform} from 'react-native';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 
 import {AuthNavigator, MainNavigator} from '@navigation/AppNavigator';
 import {useAuthStore} from '@store/auth.store';
@@ -16,6 +17,15 @@ import {Loading} from '@/components';
 import {LanguageProvider, useTranslation} from '@i18n';
 import {ThemeProvider, useAppTheme} from '@theme';
 import {LanguageSelectionScreen} from '@/screens/LanguageSelectionScreen';
+import authService from '@/services/auth.service';
+
+Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+    })
+});
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -35,8 +45,50 @@ const AppContent = () => {
     const {navigationTheme, statusBarStyle, colors} = useAppTheme();
     const {t} = useTranslation();
     const [pendingInvite, setPendingInvite] = useState<PendingInviteAction | null>(null);
+    const hasRegisteredPushToken = useRef(false);
 
     useEffect(() => initialize(), []);
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            hasRegisteredPushToken.current = false;
+            return;
+        }
+        if (Platform.OS === 'web' || hasRegisteredPushToken.current) {
+            return;
+        }
+        let cancelled = false;
+
+        const registerPushToken = async () => {
+            try {
+                const existing = await Notifications.getPermissionsAsync();
+                let finalStatus = existing.status;
+                if (existing.status !== 'granted') {
+                    const request = await Notifications.requestPermissionsAsync();
+                    finalStatus = request.status;
+                }
+                if (finalStatus !== 'granted' || cancelled) {
+                    return;
+                }
+                const token = await Notifications.getDevicePushTokenAsync();
+                if (!token.data || cancelled) {
+                    return;
+                }
+                await authService.registerDeviceToken(token.data, Platform.OS === 'ios' ? 'ios' : 'android');
+                if (!cancelled) {
+                    hasRegisteredPushToken.current = true;
+                }
+            } catch (error) {
+                console.error('Push registration failed:', error);
+            }
+        };
+
+        registerPushToken();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [isAuthenticated]);
 
     useEffect(() => {
         const handleUrl = (url: string | null) => {

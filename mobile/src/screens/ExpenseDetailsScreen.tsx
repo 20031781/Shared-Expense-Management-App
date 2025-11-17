@@ -9,7 +9,7 @@ import {useListsStore} from '@/store/lists.store';
 import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
-import {ExpenseStatus, ListMember} from '@/types';
+import {ExpensePaymentMethod, ListMember} from '@/types';
 
 export const ExpenseDetailsScreen: React.FC = () => {
     const route = useRoute<any>();
@@ -19,7 +19,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading} = useExpensesStore();
-    const {members} = useListsStore();
+    const {members, lists} = useListsStore();
     const {user} = useAuthStore();
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -65,6 +65,11 @@ export const ExpenseDetailsScreen: React.FC = () => {
         return <Loading/>;
     }
 
+    const isListAdmin = useMemo(() => {
+        const targetList = lists.find(list => list.id === currentExpense.listId);
+        return targetList?.adminId === user?.id;
+    }, [lists, currentExpense.listId, user?.id]);
+
     const statusKey = (currentExpense.status as string).toLowerCase();
     const statusLabel = t(`expenses.status.${statusKey}`);
     const payerName = currentExpense.paidByMember?.displayName
@@ -73,7 +78,8 @@ export const ExpenseDetailsScreen: React.FC = () => {
         || currentExpense.paidByMember?.email
         || t('members.unknown');
 
-    const paymentLabel = t(`expenses.paymentMethods.${currentExpense.paymentMethod ?? 'other'}`);
+    const normalizedPaymentMethod = (currentExpense.paymentMethod || ExpensePaymentMethod.Other).toString().toLowerCase();
+    const paymentLabel = t(`expenses.paymentMethods.${normalizedPaymentMethod}`);
     const getMemberLabel = (member?: ListMember | null) => {
         if (!member) return t('members.unknown');
         return member.displayName && member.displayName.trim()
@@ -105,7 +111,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
         }
         return t('expenses.beneficiariesCount', {count: beneficiaryNames.length});
     })();
-    const canEdit = user?.id === currentExpense.authorId && currentExpense.status === ExpenseStatus.Draft;
+    const canEdit = user?.id === currentExpense.authorId || !!user?.isAdmin || isListAdmin;
 
     const infoItems = [
         {label: t('expenses.paymentMethodLabel'), value: paymentLabel},

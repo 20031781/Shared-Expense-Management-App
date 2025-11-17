@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import {format, isValid, parse} from 'date-fns';
 import {Button, Input, Loading} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
@@ -21,12 +20,18 @@ import {ExpensePaymentMethod, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 
+const normalizeDate = (value: Date = new Date()) => {
+    const normalized = new Date(value);
+    normalized.setHours(12, 0, 0, 0);
+    return normalized;
+};
+
 export const CreateExpenseScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const {listId, expenseId} = route.params;
     const isEditing = Boolean(expenseId);
-    const {t} = useTranslation();
+    const {t, language} = useTranslation();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -53,15 +58,14 @@ export const CreateExpenseScreen: React.FC = () => {
         amount?: string;
         payer?: string;
         beneficiaries?: string;
-        date?: string
     }>({});
     const [paymentMethod, setPaymentMethod] = useState<ExpensePaymentMethod>(ExpensePaymentMethod.Card);
-    const [expenseDate, setExpenseDate] = useState(new Date());
-    const [dateInput, setDateInput] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [expenseDate, setExpenseDate] = useState(normalizeDate());
     const [beneficiaryIds, setBeneficiaryIds] = useState<string[]>([]);
     const [showBeneficiaryPicker, setShowBeneficiaryPicker] = useState(false);
     const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
     const [prefillReady, setPrefillReady] = useState(!isEditing);
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     useEffect(() => fetchMembers(listId), [listId]);
 
@@ -101,6 +105,13 @@ export const CreateExpenseScreen: React.FC = () => {
         {key: ExpensePaymentMethod.Other, icon: 'ellipsis-horizontal', label: t('expenses.paymentMethods.other')},
     ], [t]);
 
+    const getMemberLabel = useCallback((member?: ListMember) => {
+        if (!member) return t('members.unknown');
+        return member.displayName && member.displayName.trim()
+            || member.user?.fullName
+            || member.email
+            || t('members.unknown');
+    }, [t]);
     const beneficiarySummary = useMemo(() => {
         if (beneficiaryIds.length === 0) {
             return t('expenses.beneficiariesRequired');
@@ -117,31 +128,12 @@ export const CreateExpenseScreen: React.FC = () => {
         }
         return t('expenses.beneficiariesCount', {count: labels.length});
     }, [beneficiaryIds, members, t, getMemberLabel]);
-    const getMemberLabel = useCallback((member?: ListMember) => {
-        if (!member) return t('members.unknown');
-        return member.displayName && member.displayName.trim()
-            || member.user?.fullName
-            || member.email
-            || t('members.unknown');
-    }, [t]);
-
-    const handleDateInputChange = (value: string) => {
-        setDateInput(value);
-        const parsed = parse(value, 'yyyy-MM-dd', new Date());
-        if (isValid(parsed)) {
-            setExpenseDate(parsed);
-            setErrors(prev => ({...prev, date: undefined}));
-        } else {
-            setErrors(prev => ({...prev, date: t('expenses.invalidDate')}));
-        }
-    };
 
     const handleQuickDate = (offsetDays: number) => {
-        const nextDate = new Date();
+        const nextDate = normalizeDate();
         nextDate.setDate(nextDate.getDate() - offsetDays);
         setExpenseDate(nextDate);
-        setDateInput(format(nextDate, 'yyyy-MM-dd'));
-        setErrors(prev => ({...prev, date: undefined}));
+        setShowDatePicker(false);
     };
 
     const toggleBeneficiary = (memberId: string) => {
@@ -163,8 +155,7 @@ export const CreateExpenseScreen: React.FC = () => {
         setNotes(currentExpense.notes ?? '');
         setSelectedMemberId(currentExpense.paidByMemberId ?? null);
         const parsedDate = new Date(currentExpense.expenseDate);
-        setExpenseDate(parsedDate);
-        setDateInput(format(parsedDate, 'yyyy-MM-dd'));
+        setExpenseDate(normalizeDate(parsedDate));
         setPaymentMethod(currentExpense.paymentMethod ?? ExpensePaymentMethod.Card);
         setBeneficiaryIds(currentExpense.beneficiaryMemberIds?.length
             ? currentExpense.beneficiaryMemberIds
@@ -179,7 +170,6 @@ export const CreateExpenseScreen: React.FC = () => {
             amount?: string;
             payer?: string;
             beneficiaries?: string;
-            date?: string
         } = {};
 
         if (!title.trim()) {
@@ -197,12 +187,6 @@ export const CreateExpenseScreen: React.FC = () => {
         if (beneficiaryIds.length === 0) {
             newErrors.beneficiaries = t('expenses.beneficiariesRequired');
         }
-
-        const parsedExpenseDate = parse(dateInput, 'yyyy-MM-dd', new Date());
-        if (!isValid(parsedExpenseDate)) {
-            newErrors.date = t('expenses.invalidDate');
-        }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -334,6 +318,41 @@ export const CreateExpenseScreen: React.FC = () => {
     }
 
     const hasReceipt = !!receiptUri || !!existingReceiptUrl;
+    const locale = language === 'it' ? 'it-IT' : 'en-US';
+    const formattedExpenseDate = useMemo(() => new Intl.DateTimeFormat(locale, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).format(expenseDate), [expenseDate, locale]);
+    const normalizedExpenseDate = useMemo(() => expenseDate.toISOString(), [expenseDate]);
+    const dateOptions = useMemo(() => {
+        const today = normalizeDate();
+        return Array.from({length: 60}).map((_, index) => {
+            const optionDate = new Date(today);
+            optionDate.setDate(today.getDate() - index);
+            return {
+                iso: optionDate.toISOString(),
+                label: new Intl.DateTimeFormat(locale, {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                }).format(optionDate),
+                relative: index === 0
+                    ? t('expenses.dateToday')
+                    : index === 1
+                        ? t('expenses.dateYesterday')
+                        : t('expenses.dateDaysAgo', {days: index}),
+                date: optionDate,
+            };
+        });
+    }, [locale, t]);
+    const handleSelectDate = (date: Date) => {
+        setExpenseDate(normalizeDate(date));
+        setShowDatePicker(false);
+    };
+    const handleOpenDatePicker = () => setShowDatePicker(true);
 
     return <KeyboardAvoidingView
         style={styles.container}
@@ -366,15 +385,17 @@ export const CreateExpenseScreen: React.FC = () => {
                 keyboardType="decimal-pad"
             />
 
-            <Input
-                label={t('expenses.dateLabel')}
-                placeholder="YYYY-MM-DD"
-                value={dateInput}
-                onChangeText={handleDateInputChange}
-                autoCapitalize="none"
-                keyboardType="numbers-and-punctuation"
-                error={errors.date}
-            />
+            <View style={styles.datePickerSection}>
+                <Text style={styles.label}>{t('expenses.dateLabel')}</Text>
+                <TouchableOpacity style={styles.datePickerInput} onPress={handleOpenDatePicker}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.accent}/>
+                    <View style={styles.datePickerTexts}>
+                        <Text style={styles.datePickerValue}>{formattedExpenseDate}</Text>
+                        <Text style={styles.datePickerHint}>{t('expenses.dateHelper')}</Text>
+                    </View>
+                    <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
+                </TouchableOpacity>
+            </View>
             <View style={styles.dateQuickActions}>
                 <TouchableOpacity style={[styles.dateChip, styles.dateChipPrimary]} onPress={() => handleQuickDate(0)}>
                     <Text style={[styles.dateChipText, styles.dateChipPrimaryText]}>{t('expenses.dateToday')}</Text>
@@ -383,7 +404,6 @@ export const CreateExpenseScreen: React.FC = () => {
                     <Text style={styles.dateChipText}>{t('expenses.dateYesterday')}</Text>
                 </TouchableOpacity>
             </View>
-            <Text style={styles.helperText}>{t('expenses.dateHelper')}</Text>
 
             <View style={styles.paymentSection}>
                 <Text style={styles.label}>{t('expenses.paymentMethodLabel')}</Text>
@@ -509,6 +529,35 @@ export const CreateExpenseScreen: React.FC = () => {
             </View>
         </Modal>
 
+        <Modal visible={showDatePicker} animationType="slide" transparent>
+            <View style={styles.modalBackdrop}>
+                <View style={styles.modalContent}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>{t('expenses.dateLabel')}</Text>
+                        <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                            <Ionicons name="close" size={24} color={colors.text}/>
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView>
+                        {dateOptions.map(option => {
+                            const isSelected = option.iso === normalizedExpenseDate;
+                            return <TouchableOpacity
+                                key={option.iso}
+                                style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
+                                onPress={() => handleSelectDate(option.date)}
+                            >
+                                <View>
+                                    <Text style={styles.memberEmail}>{option.label}</Text>
+                                    <Text style={styles.memberMeta}>{option.relative}</Text>
+                                </View>
+                                {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
+                            </TouchableOpacity>;
+                        })}
+                    </ScrollView>
+                </View>
+            </View>
+        </Modal>
+
         <Modal visible={showBeneficiaryPicker} animationType="slide" transparent>
             <View style={styles.modalBackdrop}>
                 <View style={styles.modalContent}>
@@ -578,6 +627,33 @@ const createStyles = (colors: AppColors) =>
             color: colors.secondaryText,
         },
         helperText: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        datePickerSection: {
+            gap: 8,
+            marginTop: 8,
+        },
+        datePickerInput: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            gap: 12,
+        },
+        datePickerTexts: {
+            flex: 1,
+        },
+        datePickerValue: {
+            fontSize: 16,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        datePickerHint: {
             fontSize: 12,
             color: colors.secondaryText,
         },

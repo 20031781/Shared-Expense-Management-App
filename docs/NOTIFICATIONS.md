@@ -18,14 +18,55 @@ Questa pagina riepiloga come personalizzare e testare le notifiche push tra app 
 
 ## Registrare il device
 
-Assicurati che il token FCM del dispositivo sia registrato con:
+L'app mobile ora richiede automaticamente i permessi di notifica e registra il token FCM tramite `/api/auth/device-token`
+ogni volta che effettui il login. Dopo il primo avvio puoi già trovare i token associati nella tabella `device_tokens` del
+database (colonne `token` e `platform`).
+
+Se vuoi forzare o testare la registrazione manuale puoi comunque usare:
 
 ```bash
 curl -X POST http://localhost:5000/api/auth/device-token \
   -H "Authorization: Bearer <ACCESS_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"token":"<FCM_TOKEN>","platform":"ios"}'
+  -d '{"token":"<FCM_TOKEN>","platform":"android"}'
 ```
+
+> Nota: Sostituisci `<FCM_TOKEN>` con il token reale ottenuto da Firebase (vedi sezione successiva) e imposta `platform`
+> a `ios` se stai testando su iPhone/iPad.
+
+## Recuperare i token per gli endpoint di test
+
+Gli endpoint descritti sotto richiedono sia un access token JWT valido sia almeno un token FCM registrato. Puoi recuperarli
+così:
+
+### Access token
+
+1. Usa le stesse credenziali dell'app mobile per autenticarti via REST (`POST /api/auth/login`).
+2. Esempio:
+
+   ```bash
+   curl -X POST http://localhost:5000/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"demo@splitexpenses.app","password":"<PASSWORD>"}'
+   ```
+
+3. Copia il campo `accessToken` dalla risposta e riutilizzalo come `Bearer <ACCESS_TOKEN>` negli esempi.
+
+### Token FCM
+
+1. Avvia l'app (Android o iOS) e accedi con il tuo account.
+2. Verifica che in Postgres esista un record nella tabella `device_tokens` per il tuo `user_id`:
+
+   ```sql
+   select token, platform, created_at from device_tokens where user_id = '<USER_ID>' order by created_at desc limit 5;
+   ```
+
+3. Copia il valore `token` (è quello da inserire in `<FCM_TOKEN>` negli esempi cURL oppure da usare per i test su Firebase`).
+4. In alternativa puoi leggere il token direttamente dalla risposta di `POST /api/auth/device-token` se decidi di registrarlo
+   manualmente.
+
+> Se la tabella rimane vuota significa che il dispositivo non ha concesso i permessi di notifica oppure non ha completato il
+> login. Apri Impostazioni → Notifiche nell'app, abilita i toggle e riavvia l'app per forzare una nuova registrazione.
 
 ## Endpoint di test
 
@@ -39,6 +80,8 @@ riprodurre l'intero flusso applicativo.
 | Richiesta validazione | `POST /api/notifications/test/validation-request/{expenseId}/{validatorId}` | `validatorId` è l'`id` utente del validatore.                  |
 | Esito validazione     | `POST /api/notifications/test/validation-result/{expenseId}?approved=true`  | Imposta `approved=false` per simulare un rifiuto.              |
 | Rimborso              | `POST /api/notifications/test/reimbursement/{reimbursementId}`              | Notifica sia debitore che creditore (in base alle preferenze). |
+
+> La tabella `notifications` del database resta vuota finché non invii un evento di test: è normale se hai solo aperto l'app senza aver chiamato questi endpoint.
 
 ### Esempio completo
 
