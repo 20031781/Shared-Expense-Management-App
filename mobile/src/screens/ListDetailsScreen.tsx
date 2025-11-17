@@ -84,6 +84,8 @@ export const ListDetailsScreen: React.FC = () => {
 
     const totalAmount = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
 
+    const listTotalAmount = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
+
     const memberMap = useMemo(() => {
         const map = new Map<string, ListMember>();
         members.forEach((member) => map.set(member.id, member));
