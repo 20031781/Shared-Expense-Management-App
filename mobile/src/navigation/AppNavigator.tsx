@@ -8,9 +8,11 @@ import {ListsScreen} from '@/screens/ListsScreen';
 import {CreateListScreen} from '@/screens/CreateListScreen';
 import {ListDetailsScreen} from '@/screens/ListDetailsScreen';
 import {CreateExpenseScreen} from '@/screens/CreateExpenseScreen';
+import {ExpenseDetailsScreen} from '@/screens/ExpenseDetailsScreen';
 import {AddMemberScreen} from '@/screens/AddMemberScreen';
 import {EditMemberScreen} from '@/screens/EditMemberScreen';
 import {SettingsScreen} from '@/screens/SettingsScreen';
+import {AnalyticsScreen} from '@/screens/AnalyticsScreen';
 import {useTranslation} from '@i18n';
 import {useAppTheme} from '@theme';
 
@@ -51,6 +53,11 @@ const ListsStack = () => {
                 component={EditMemberScreen}
                 options={{title: t('members.editTitle'), presentation: 'modal'}}
             />
+            <Stack.Screen
+                name="ExpenseDetails"
+                component={ExpenseDetailsScreen}
+                options={{title: t('expenses.detailsTitle')}}
+            />
         </Stack.Navigator>
     );
 };
@@ -63,6 +70,19 @@ const SettingsStack = () => {
                 name="SettingsHome"
                 component={SettingsScreen}
                 options={{title: t('settings.title')}}
+            />
+        </Stack.Navigator>
+    );
+};
+
+const AnalyticsStack = () => {
+    const {t} = useTranslation();
+    return (
+        <Stack.Navigator>
+            <Stack.Screen
+                name="AnalyticsHome"
+                component={AnalyticsScreen}
+                options={{title: t('analytics.title')}}
             />
         </Stack.Navigator>
     );
@@ -81,14 +101,13 @@ export const MainNavigator = () => {
         <Tab.Navigator
             screenOptions={({route}) => ({
                 tabBarIcon: ({focused, color, size}) => {
-                    let iconName: any;
-
-                    if (route.name === 'ListsTab') {
-                        iconName = focused ? 'list' : 'list-outline';
-                    } else {
-                        iconName = focused ? 'settings' : 'settings-outline';
-                    }
-
+                    const iconMap: Record<string, {active: any; inactive: any}> = {
+                        ListsTab: {active: 'list', inactive: 'list-outline'},
+                        AnalyticsTab: {active: 'stats-chart', inactive: 'stats-chart-outline'},
+                        SettingsTab: {active: 'settings', inactive: 'settings-outline'},
+                    };
+                    const selected = iconMap[route.name] ?? iconMap.ListsTab;
+                    const iconName = focused ? selected.active : selected.inactive;
                     return <Ionicons name={iconName} size={size} color={color}/>;
                 },
                 tabBarActiveTintColor: colors.accent,
@@ -104,6 +123,11 @@ export const MainNavigator = () => {
                 name="ListsTab"
                 component={ListsStack}
                 options={{title: t('navigation.lists')}}
+            />
+            <Tab.Screen
+                name="AnalyticsTab"
+                component={AnalyticsStack}
+                options={{title: t('navigation.analytics')}}
             />
             <Tab.Screen
                 name="SettingsTab"

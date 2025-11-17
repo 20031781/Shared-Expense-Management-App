@@ -4,8 +4,10 @@ import expensesService, {CreateExpenseData} from '@/services/expenses.service';
 
 interface ExpensesState {
     expenses: Expense[];
+    userExpenses: Expense[];
     currentExpense: Expense | null;
     isLoading: boolean;
+    userExpensesLoading: boolean;
     error: string | null;
 
     fetchListExpenses: (listId: string, fromDate?: string, toDate?: string) => Promise<void>;
@@ -23,8 +25,10 @@ interface ExpensesState {
 
 export const useExpensesStore = create<ExpensesState>((set) => ({
     expenses: [],
+    userExpenses: [],
     currentExpense: null,
     isLoading: false,
+    userExpensesLoading: false,
     error: null,
 
     fetchListExpenses: async (listId: string, fromDate?: string, toDate?: string) => {
@@ -39,11 +43,11 @@ export const useExpensesStore = create<ExpensesState>((set) => ({
 
     fetchUserExpenses: async (fromDate?: string, toDate?: string) => {
         try {
-            set({isLoading: true, error: null});
+            set({userExpensesLoading: true, error: null});
             const expenses = await expensesService.getUserExpenses(fromDate, toDate);
-            set({expenses, isLoading: false});
+            set({userExpenses: expenses, userExpensesLoading: false});
         } catch (error: any) {
-            set({error: error.message, isLoading: false});
+            set({error: error.message, userExpensesLoading: false});
         }
     },
 
