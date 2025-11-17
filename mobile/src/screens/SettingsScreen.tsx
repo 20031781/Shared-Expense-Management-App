@@ -1,5 +1,5 @@
-import React, {useMemo, useState} from 'react';
-import {Alert, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useMemo, useState} from 'react';
+import {Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {availableLanguages, useTranslation} from '@i18n';
 import {AppColors, ThemePreference, useAppTheme} from '@theme';
@@ -116,7 +116,7 @@ export const SettingsScreen: React.FC = () => {
     };
 
     return (
-        <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
             <View style={styles.sectionWrapper}>
                 <Text style={styles.header}>{t('settings.languageLabel')}</Text>
                 <Text style={styles.description}>{t('settings.languageDescription')}</Text>
@@ -215,7 +215,7 @@ export const SettingsScreen: React.FC = () => {
                     />
                 </View>
             </View>
-        </View>
+        </ScrollView>
     );
 };
 
@@ -223,9 +223,11 @@ const createStyles = (colors: AppColors) =>
     StyleSheet.create({
         container: {
             flex: 1,
+            backgroundColor: colors.background,
+        },
+        scrollContent: {
             padding: 16,
             gap: 24,
-            backgroundColor: colors.background,
         },
         sectionWrapper: {
             gap: 8,

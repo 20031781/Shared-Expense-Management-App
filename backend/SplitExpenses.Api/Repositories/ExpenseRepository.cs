@@ -1,5 +1,8 @@
 #region
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Dapper;
 using SplitExpenses.Api.Data;
@@ -22,8 +25,10 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
                                              notes AS "Notes",
                                              receipt_url AS "ReceiptUrl",
                                              status AS "Status",
+                                             payment_method AS "PaymentMethod",
                                              server_timestamp AS "ServerTimestamp",
                                              paid_by_member_id AS "PaidByMemberId",
+                                             beneficiary_member_ids AS "BeneficiaryMemberIds",
                                              inserted_at AS "InsertedAt",
                                              created_at AS "CreatedAt",
                                              updated_at AS "UpdatedAt"
@@ -117,8 +122,8 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         expense.ServerTimestamp = now;
 
         const string sql =
-            $@"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, server_timestamp, paid_by_member_id, inserted_at, created_at, updated_at)
-                VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @ServerTimestamp, @PaidByMemberId, @InsertedAt, @CreatedAt, @UpdatedAt)
+            $@"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, payment_method, server_timestamp, paid_by_member_id, beneficiary_member_ids, inserted_at, created_at, updated_at)
+                VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @PaymentMethodText, @ServerTimestamp, @PaidByMemberId, @BeneficiaryMemberIds, @InsertedAt, @CreatedAt, @UpdatedAt)
                 RETURNING {ExpenseProjection}";
 
         var parameters = new
@@ -133,8 +138,10 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
             expense.Notes,
             expense.ReceiptUrl,
             StatusText = expense.Status.ToString().ToLower(),
+            PaymentMethodText = expense.PaymentMethod.ToString().ToLower(),
             expense.ServerTimestamp,
             expense.PaidByMemberId,
+            BeneficiaryMemberIds = expense.BeneficiaryMemberIds?.Distinct().ToArray() ?? Array.Empty<Guid>(),
             expense.InsertedAt,
             expense.CreatedAt,
             expense.UpdatedAt
@@ -158,8 +165,10 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
                     notes = @Notes,
                     receipt_url = @ReceiptUrl,
                     status = @StatusText,
+                    payment_method = @PaymentMethodText,
                     server_timestamp = @ServerTimestamp,
                     paid_by_member_id = @PaidByMemberId,
+                    beneficiary_member_ids = @BeneficiaryMemberIds,
                     updated_at = @UpdatedAt
                 WHERE id = @Id
                 RETURNING {ExpenseProjection}";
@@ -174,8 +183,10 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
             expense.Notes,
             expense.ReceiptUrl,
             StatusText = expense.Status.ToString().ToLower(),
+            PaymentMethodText = expense.PaymentMethod.ToString().ToLower(),
             expense.ServerTimestamp,
             expense.PaidByMemberId,
+            BeneficiaryMemberIds = expense.BeneficiaryMemberIds?.Distinct().ToArray() ?? Array.Empty<Guid>(),
             expense.UpdatedAt
         };
 
@@ -264,8 +275,10 @@ internal class ExpenseDto
     public string? Notes { get; set; }
     public string? ReceiptUrl { get; set; }
     public string Status { get; set; } = "draft";
+    public string PaymentMethod { get; set; } = "card";
     public DateTime ServerTimestamp { get; set; }
     public Guid? PaidByMemberId { get; set; }
+    public Guid[] BeneficiaryMemberIds { get; set; } = Array.Empty<Guid>();
     public DateTime InsertedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -289,8 +302,16 @@ internal class ExpenseDto
                 "rejected" => ExpenseStatus.Rejected,
                 _ => ExpenseStatus.Draft
             },
+            PaymentMethod = PaymentMethod.ToLower() switch
+            {
+                "cash" => ExpensePaymentMethod.Cash,
+                "transfer" => ExpensePaymentMethod.Transfer,
+                "other" => ExpensePaymentMethod.Other,
+                _ => ExpensePaymentMethod.Card
+            },
             ServerTimestamp = ServerTimestamp,
             PaidByMemberId = PaidByMemberId,
+            BeneficiaryMemberIds = BeneficiaryMemberIds?.ToList() ?? new List<Guid>(),
             InsertedAt = InsertedAt,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt

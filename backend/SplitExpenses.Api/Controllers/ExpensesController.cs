@@ -1,5 +1,7 @@
 #region
 
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -50,6 +52,11 @@ public class ExpensesController(
     {
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
         if (request.PaidByMemberId == Guid.Empty) return BadRequest("PaidByMemberId is required");
+        var members = (await listRepository.GetListMembersAsync(request.ListId)).ToList();
+        if (members.All(m => m.Id != request.PaidByMemberId))
+            return BadRequest("PaidByMemberId does not belong to the list");
+        var normalizedBeneficiaries = NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
+
         var expense = new Expense
         {
             ListId = request.ListId,
@@ -60,7 +67,9 @@ public class ExpensesController(
             ExpenseDate = request.ExpenseDate,
             Notes = request.Notes,
             PaidByMemberId = request.PaidByMemberId,
-            Status = ExpenseStatus.Draft
+            Status = ExpenseStatus.Draft,
+            PaymentMethod = request.PaymentMethod,
+            BeneficiaryMemberIds = normalizedBeneficiaries.ToList()
         };
 
         expense = await expenseRepository.CreateAsync(expense);
@@ -79,12 +88,18 @@ public class ExpensesController(
         // Solo l'autore può modificare spese in draft
         if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
         if (expense.AuthorId != userId || expense.Status != ExpenseStatus.Draft) return Forbid();
+        var members = (await listRepository.GetListMembersAsync(expense.ListId)).ToList();
+        if (members.All(m => m.Id != request.PaidByMemberId))
+            return BadRequest("PaidByMemberId does not belong to the list");
+        var normalizedBeneficiaries = NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
 
         expense.Title = request.Title;
         expense.Amount = request.Amount;
         expense.ExpenseDate = request.ExpenseDate;
         expense.Notes = request.Notes;
         expense.PaidByMemberId = request.PaidByMemberId;
+        expense.PaymentMethod = request.PaymentMethod;
+        expense.BeneficiaryMemberIds = normalizedBeneficiaries.ToList();
 
         expense = await expenseRepository.UpdateAsync(expense);
         return Ok(expense);
@@ -200,6 +215,33 @@ public class ExpensesController(
         userId = Guid.Empty;
         return false;
     }
+
+    private static IReadOnlyCollection<Guid> NormalizeBeneficiaries(IEnumerable<Guid>? requestedBeneficiaries,
+        IReadOnlyCollection<ListMember> members,
+        Guid fallbackMemberId)
+    {
+        var memberLookup = members.ToDictionary(m => m.Id, m => m);
+        var sanitized = (requestedBeneficiaries ?? Array.Empty<Guid>())
+            .Where(memberLookup.ContainsKey)
+            .Distinct()
+            .ToList();
+
+        if (sanitized.Count > 0)
+            return sanitized;
+
+        var weighted = members
+            .Where(m => m.Status == MemberStatus.Active && m.SplitPercentage > 0)
+            .Select(m => m.Id)
+            .ToList();
+
+        if (weighted.Count > 0)
+            return weighted;
+
+        if (memberLookup.Count > 0)
+            return memberLookup.Keys.ToList();
+
+        return new[] { fallbackMemberId };
+    }
 }
 
 public record CreateExpenseRequest(
@@ -209,13 +251,17 @@ public record CreateExpenseRequest(
     string Currency,
     DateTime ExpenseDate,
     string? Notes,
-    Guid PaidByMemberId);
+    Guid PaidByMemberId,
+    ExpensePaymentMethod PaymentMethod = ExpensePaymentMethod.Card,
+    IReadOnlyCollection<Guid>? BeneficiaryMemberIds = null);
 
 public record UpdateExpenseRequest(
     string Title,
     decimal Amount,
     DateTime ExpenseDate,
     string? Notes,
-    Guid PaidByMemberId);
+    Guid PaidByMemberId,
+    ExpensePaymentMethod PaymentMethod = ExpensePaymentMethod.Card,
+    IReadOnlyCollection<Guid>? BeneficiaryMemberIds = null);
 
 public record ValidateExpenseRequest(bool Approved, string? Notes);

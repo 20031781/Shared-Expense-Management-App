@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+
 namespace SplitExpenses.Api.Models;
 
 public class Expense
@@ -12,11 +15,13 @@ public class Expense
     public string? Notes { get; set; }
     public string? ReceiptUrl { get; set; }
     public ExpenseStatus Status { get; set; }
+    public ExpensePaymentMethod PaymentMethod { get; set; } = ExpensePaymentMethod.Card;
     public DateTime ServerTimestamp { get; set; }
     public Guid? PaidByMemberId { get; set; }
     public DateTime InsertedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public ICollection<Guid> BeneficiaryMemberIds { get; set; } = new List<Guid>();
 
     // Navigation
     public List? List { get; set; }
@@ -24,6 +29,14 @@ public class Expense
     public ListMember? PaidByMember { get; set; }
     public ICollection<ExpenseValidation> Validations { get; set; } = new List<ExpenseValidation>();
     public ICollection<ExpenseSplit> Splits { get; set; } = new List<ExpenseSplit>();
+}
+
+public enum ExpensePaymentMethod
+{
+    Cash,
+    Card,
+    Transfer,
+    Other
 }
 
 public enum ExpenseStatus

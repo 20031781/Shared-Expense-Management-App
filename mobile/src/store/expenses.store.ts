@@ -14,7 +14,7 @@ interface ExpensesState {
     fetchUserExpenses: (fromDate?: string, toDate?: string) => Promise<void>;
     fetchExpenseById: (id: string) => Promise<void>;
     createExpense: (data: CreateExpenseData) => Promise<Expense>;
-    updateExpense: (id: string, data: Partial<CreateExpenseData>) => Promise<void>;
+    updateExpense: (id: string, data: Partial<CreateExpenseData>) => Promise<Expense>;
     deleteExpense: (id: string) => Promise<void>;
     submitExpense: (id: string) => Promise<void>;
     validateExpense: (id: string, status: ValidationStatus, notes?: string) => Promise<void>;
@@ -85,6 +85,7 @@ export const useExpensesStore = create<ExpensesState>((set) => ({
                 currentExpense: state.currentExpense?.id === id ? updatedExpense : state.currentExpense,
                 isLoading: false
             }));
+            return updatedExpense;
         } catch (error: any) {
             set({error: error.message, isLoading: false});
             throw error;

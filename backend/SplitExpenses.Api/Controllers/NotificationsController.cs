@@ -8,7 +8,7 @@ using SplitExpenses.Api.Services;
 
 namespace SplitExpenses.Api.Controllers;
 
-[Authorize]
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class NotificationsController(INotificationService notificationService) : ControllerBase

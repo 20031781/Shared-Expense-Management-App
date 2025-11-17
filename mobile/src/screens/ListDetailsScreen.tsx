@@ -16,11 +16,12 @@ import {useListsStore} from '@/store/lists.store';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useAuthStore} from '@/store/auth.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {Expense, ListMember, MemberStatus} from '@/types';
+import {Expense, ExpenseStatus, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import listsService from '@/services/lists.service';
 import {Swipeable} from 'react-native-gesture-handler';
+import {buildSplitSummary} from '@/lib/split';
 
 type SummaryFilter = '7' | '30' | '90' | 'all';
 
@@ -76,6 +77,11 @@ export const ListDetailsScreen: React.FC = () => {
         navigation.navigate('ExpenseDetails', {expenseId: expense.id});
     };
 
+    const handleEditExpense = (expense: Expense) => {
+        closeSwipe(expense.id);
+        navigation.navigate('CreateExpense', {listId, expenseId: expense.id});
+    };
+
     const getMemberLabel = useCallback((member?: ListMember) => {
         if (!member) return t('members.unknown');
         return (member.displayName && member.displayName.trim())
@@ -93,8 +99,6 @@ export const ListDetailsScreen: React.FC = () => {
     }, [expenses, summaryRange]);
 
     const totalAmount = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
-
-    const listTotalAmount = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
 
     const memberMap = useMemo(() => {
         const map = new Map<string, ListMember>();
@@ -117,52 +121,24 @@ export const ListDetailsScreen: React.FC = () => {
 
     const chartMax = perMemberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
 
-    const splitSummary = useMemo(() => {
-        if (expenses.length === 0 || listTotalAmount <= 0) {
-            return {rows: [], settlements: [], reason: 'no-expenses' as const};
-        }
-        const membersWithSplit = members.filter((member) => (member.splitPercentage ?? 0) > 0);
-        if (membersWithSplit.length === 0) {
-            return {rows: [], settlements: [], reason: 'no-members' as const};
-        }
-        const totalSplit = membersWithSplit.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
-        if (totalSplit <= 0) {
-            return {rows: [], settlements: [], reason: 'no-split' as const};
-        }
-        const paidMap = new Map<string, number>();
-        expenses.forEach((expense) => {
-            if (!expense.paidByMemberId) return;
-            paidMap.set(expense.paidByMemberId, (paidMap.get(expense.paidByMemberId) ?? 0) + expense.amount);
-        });
-        const rows = membersWithSplit.map((member) => {
-            const percentage = member.splitPercentage ?? 0;
-            const share = listTotalAmount * (percentage / totalSplit);
-            const paid = paidMap.get(member.id) ?? 0;
-            const net = paid - share;
-            return {member, share, paid, net, percentage};
-        }).sort((a, b) => b.net - a.net);
+    const splitSummary = useMemo(() => buildSplitSummary(expenses, members), [expenses, members]);
 
-        const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
-        const debtors = rows.filter((row) => row.net < 0).map((row) => ({
-            member: row.member,
-            amount: Math.abs(row.net)
-        }));
-        const settlements: { from: ListMember; to: ListMember; amount: number }[] = [];
-        let creditorIndex = 0;
-        let debtorIndex = 0;
-        while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
-            const creditor = creditors[creditorIndex];
-            const debtor = debtors[debtorIndex];
-            const amount = Math.min(creditor.amount, debtor.amount);
-            settlements.push({from: debtor.member, to: creditor.member, amount});
-            creditor.amount -= amount;
-            debtor.amount -= amount;
-            if (creditor.amount < 0.01) creditorIndex++;
-            if (debtor.amount < 0.01) debtorIndex++;
+    const resolveBeneficiariesLabel = useCallback((expense: Expense) => {
+        const ids = expense.beneficiaryMemberIds?.length > 0
+            ? expense.beneficiaryMemberIds
+            : members.map((member) => member.id);
+        const names = ids
+            .map((id) => memberMap.get(id))
+            .filter((member): member is ListMember => !!member)
+            .map((member) => getMemberLabel(member));
+        if (names.length === 0 || !expense.beneficiaryMemberIds?.length || names.length === members.length) {
+            return t('expenses.beneficiariesAll');
         }
-
-        return {rows, settlements, reason: null as const};
-    }, [expenses, members, listTotalAmount, getMemberLabel]);
+        if (names.length <= 2) {
+            return names.join(', ');
+        }
+        return t('expenses.beneficiariesCount', {count: names.length});
+    }, [memberMap, getMemberLabel, members, t]);
 
     if (!currentList) {
         return <Loading/>;
@@ -211,6 +187,9 @@ export const ListDetailsScreen: React.FC = () => {
         const statusKey = (expense.status as string).toLowerCase();
         const statusLabel = t(`expenses.status.${statusKey}`);
         const awaitingValidation = statusKey === 'submitted';
+        const paymentLabel = t(`expenses.paymentMethods.${expense.paymentMethod}`);
+        const beneficiaryLabel = resolveBeneficiariesLabel(expense);
+        const canEditExpense = expense.authorId === user?.id && expense.status === ExpenseStatus.Draft;
         return (
             <View key={expense.id} style={styles.expenseSwipeWrapper}>
                 <Swipeable
@@ -221,6 +200,15 @@ export const ListDetailsScreen: React.FC = () => {
                             delete swipeableRefs.current[expense.id];
                         }
                     }}
+                    renderLeftActions={canEditExpense ? () => (
+                        <TouchableOpacity
+                            style={styles.editAction}
+                            onPress={() => handleEditExpense(expense)}
+                        >
+                            <Ionicons name="create-outline" size={20} color={colors.accentText}/>
+                            <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
+                        </TouchableOpacity>
+                    ) : undefined}
                     renderRightActions={() => (
                         <TouchableOpacity
                             style={styles.deleteAction}
@@ -256,6 +244,16 @@ export const ListDetailsScreen: React.FC = () => {
                                     <Text
                                         style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>
                                 )}
+                                <View style={styles.expenseTags}>
+                                    <View style={styles.expenseTag}>
+                                        <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
+                                        <Text style={styles.expenseTagText}>{paymentLabel}</Text>
+                                    </View>
+                                    <View style={styles.expenseTag}>
+                                        <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
+                                        <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
+                                    </View>
+                                </View>
                             </View>
                             <View style={styles.expenseRight}>
                                 <Text style={styles.expenseAmount}>
@@ -671,6 +669,25 @@ const createStyles = (colors: AppColors) =>
             fontSize: 12,
             color: colors.secondaryText,
         },
+        expenseTags: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 6,
+            marginTop: 6,
+        },
+        expenseTag: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 10,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        expenseTagText: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
         expensePayer: {
             fontSize: 12,
             color: colors.success,
@@ -849,7 +866,22 @@ const createStyles = (colors: AppColors) =>
             flexDirection: 'column',
             gap: 4,
         },
+        editAction: {
+            width: 90,
+            marginVertical: 8,
+            backgroundColor: colors.accent,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 12,
+            flexDirection: 'column',
+            gap: 4,
+        },
         deleteActionText: {
+            color: colors.accentText,
+            fontSize: 12,
+            fontWeight: '600',
+        },
+        editActionText: {
             color: colors.accentText,
             fontSize: 12,
             fontWeight: '600',

@@ -1,4 +1,4 @@
-import {Expense, ExpenseSplit, ExpenseValidation, ValidationStatus} from '@/types';
+import {Expense, ExpensePaymentMethod, ExpenseSplit, ExpenseValidation, ValidationStatus} from '@/types';
 import apiService from './api.service';
 
 export interface CreateExpenseData {
@@ -10,6 +10,8 @@ export interface CreateExpenseData {
     notes?: string;
     receiptUrl?: string;
     paidByMemberId: string;
+    paymentMethod: ExpensePaymentMethod;
+    beneficiaryMemberIds: string[];
 }
 
 class ExpensesService {

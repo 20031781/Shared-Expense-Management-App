@@ -17,6 +17,8 @@ Per produzione, usa **Supabase hosted** con le migrations complete in `../supaba
 2. **002_stored_procedures.sql** - Funzioni per calcolo rimborsi
 3. **003_roles_and_member_split.sql** - Flag Admin utente + percentuali membri
 4. **004_member_display_name_and_expense_fix.sql** - Display name membri + colonne mancanti per le spese
+5. **005_expense_date_column.sql** - Allinea il nome della colonna `expense_date` con l'API
+6. **006_expense_payment_and_beneficiaries.sql** - Tipologia pagamento e destinatari collegati a ogni spesa
 
 ---
 
