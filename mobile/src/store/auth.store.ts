@@ -6,6 +6,7 @@ interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    isInitializing: boolean;
     error: string | null;
 
     setUser: (user: User | null) => void;
@@ -20,7 +21,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
     user: null,
     isAuthenticated: false,
-    isLoading: true,
+    isLoading: false,
+    isInitializing: true,
     error: null,
 
     setUser: (user) => set({
@@ -85,31 +87,30 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     initialize: async () => {
         try {
-            set({isLoading: true});
+            set({isInitializing: true});
             const user = await authService.initialize();
             set({
                 user,
                 isAuthenticated: !!user,
-                isLoading: false
+                isInitializing: false
             });
         } catch (error) {
             set({
                 user: null,
                 isAuthenticated: false,
-                isLoading: false
+                isInitializing: false
             });
         }
     },
 
     updateProfile: async (updates: Partial<User>) => {
         try {
-            set({isLoading: true, error: null});
+            set({error: null});
             const user = await authService.updateProfile(updates);
-            set({user, isLoading: false});
+            set({user});
         } catch (error: any) {
             set({
-                error: error.message || 'Update failed',
-                isLoading: false
+                error: error.message || 'Update failed'
             });
             throw error;
         }

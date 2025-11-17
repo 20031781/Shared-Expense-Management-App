@@ -12,23 +12,36 @@ import {
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import {Button, Input} from '@/components';
+import {format, isValid, parse} from 'date-fns';
+import {Button, Input, Loading} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useListsStore} from '@/store/lists.store';
-import {ListMember, MemberStatus} from '@/types';
+import {ExpensePaymentMethod, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 
 export const CreateExpenseScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
-    const {listId} = route.params;
+    const {listId, expenseId} = route.params;
+    const isEditing = Boolean(expenseId);
     const {t} = useTranslation();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    const {createExpense, uploadReceipt, isLoading} = useExpensesStore();
+    useEffect(() => {
+        navigation.setOptions({title: t(isEditing ? 'expenses.editTitle' : 'expenses.newExpense')});
+    }, [navigation, t, isEditing]);
+
+    const {
+        createExpense,
+        uploadReceipt,
+        isLoading,
+        updateExpense,
+        fetchExpenseById,
+        currentExpense,
+    } = useExpensesStore();
     const {members, fetchMembers} = useListsStore();
 
     const [title, setTitle] = useState('');
@@ -37,11 +50,24 @@ export const CreateExpenseScreen: React.FC = () => {
     const [receiptUri, setReceiptUri] = useState<string | null>(null);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [showPayerPicker, setShowPayerPicker] = useState(false);
-    const [errors, setErrors] = useState<{ title?: string; amount?: string; payer?: string }>({});
+    const [errors, setErrors] = useState<{ title?: string; amount?: string; payer?: string; beneficiaries?: string; date?: string }>({});
+    const [paymentMethod, setPaymentMethod] = useState<ExpensePaymentMethod>(ExpensePaymentMethod.Card);
+    const [expenseDate, setExpenseDate] = useState(new Date());
+    const [dateInput, setDateInput] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [beneficiaryIds, setBeneficiaryIds] = useState<string[]>([]);
+    const [showBeneficiaryPicker, setShowBeneficiaryPicker] = useState(false);
+    const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
+    const [prefillReady, setPrefillReady] = useState(!isEditing);
 
     useEffect(() => {
         fetchMembers(listId);
     }, [listId]);
+
+    useEffect(() => {
+        if (expenseId) {
+            fetchExpenseById(expenseId);
+        }
+    }, [expenseId, fetchExpenseById]);
 
     useEffect(() => {
         if (!selectedMemberId && members.length > 0) {
@@ -52,8 +78,39 @@ export const CreateExpenseScreen: React.FC = () => {
         }
     }, [members, selectedMemberId]);
 
+    useEffect(() => {
+        if (beneficiaryIds.length === 0 && members.length > 0 && !isEditing) {
+            const activeMembers = members.filter((member) => member.status === MemberStatus.Active);
+            const source = activeMembers.length > 0 ? activeMembers : members;
+            setBeneficiaryIds(source.map((member) => member.id));
+        }
+    }, [beneficiaryIds.length, members, isEditing]);
+
     const selectedMember = useMemo(() => members.find((m) => m.id === selectedMemberId), [members, selectedMemberId]);
     const hasMembers = members.length > 0;
+    const paymentOptions = useMemo(() => ([
+        {key: ExpensePaymentMethod.Card, icon: 'card-outline', label: t('expenses.paymentMethods.card')},
+        {key: ExpensePaymentMethod.Cash, icon: 'cash-outline', label: t('expenses.paymentMethods.cash')},
+        {key: ExpensePaymentMethod.Transfer, icon: 'swap-horizontal-outline', label: t('expenses.paymentMethods.transfer')},
+        {key: ExpensePaymentMethod.Other, icon: 'ellipsis-horizontal', label: t('expenses.paymentMethods.other')},
+    ]), [t]);
+
+    const beneficiarySummary = useMemo(() => {
+        if (beneficiaryIds.length === 0) {
+            return t('expenses.beneficiariesRequired');
+        }
+        if (beneficiaryIds.length === members.length) {
+            return t('expenses.beneficiariesAll');
+        }
+        const labels = beneficiaryIds
+            .map((id) => members.find((member) => member.id === id))
+            .filter((member): member is ListMember => !!member)
+            .map((member) => getMemberLabel(member));
+        if (labels.length <= 2) {
+            return labels.join(', ');
+        }
+        return t('expenses.beneficiariesCount', {count: labels.length});
+    }, [beneficiaryIds, members, t, getMemberLabel]);
     const getMemberLabel = useCallback((member?: ListMember) => {
         if (!member) return t('members.unknown');
         return (member.displayName && member.displayName.trim())
@@ -62,8 +119,56 @@ export const CreateExpenseScreen: React.FC = () => {
             || t('members.unknown');
     }, [t]);
 
+    const handleDateInputChange = (value: string) => {
+        setDateInput(value);
+        const parsed = parse(value, 'yyyy-MM-dd', new Date());
+        if (isValid(parsed)) {
+            setExpenseDate(parsed);
+            setErrors((prev) => ({...prev, date: undefined}));
+        } else {
+            setErrors((prev) => ({...prev, date: t('expenses.invalidDate')}));
+        }
+    };
+
+    const handleQuickDate = (offsetDays: number) => {
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() - offsetDays);
+        setExpenseDate(nextDate);
+        setDateInput(format(nextDate, 'yyyy-MM-dd'));
+        setErrors((prev) => ({...prev, date: undefined}));
+    };
+
+    const toggleBeneficiary = (memberId: string) => {
+        setBeneficiaryIds((prev) => prev.includes(memberId)
+            ? prev.filter((id) => id !== memberId)
+            : [...prev, memberId]);
+        setErrors((prev) => ({...prev, beneficiaries: undefined}));
+    };
+
+    const handleSelectAllBeneficiaries = () => {
+        setBeneficiaryIds(members.map((member) => member.id));
+        setErrors((prev) => ({...prev, beneficiaries: undefined}));
+    };
+
+    useEffect(() => {
+        if (!isEditing || !expenseId || !currentExpense || currentExpense.id !== expenseId) return;
+        setTitle(currentExpense.title);
+        setAmount(currentExpense.amount.toFixed(2));
+        setNotes(currentExpense.notes ?? '');
+        setSelectedMemberId(currentExpense.paidByMemberId ?? null);
+        const parsedDate = new Date(currentExpense.expenseDate);
+        setExpenseDate(parsedDate);
+        setDateInput(format(parsedDate, 'yyyy-MM-dd'));
+        setPaymentMethod(currentExpense.paymentMethod ?? ExpensePaymentMethod.Card);
+        setBeneficiaryIds(currentExpense.beneficiaryMemberIds?.length
+            ? currentExpense.beneficiaryMemberIds
+            : members.map((member) => member.id));
+        setExistingReceiptUrl(currentExpense.receiptUrl ?? null);
+        setPrefillReady(true);
+    }, [isEditing, expenseId, currentExpense, members]);
+
     const validate = () => {
-        const newErrors: { title?: string; amount?: string; payer?: string } = {};
+        const newErrors: { title?: string; amount?: string; payer?: string; beneficiaries?: string; date?: string } = {};
 
         if (!title.trim()) {
             newErrors.title = t('expenses.titleRequired');
@@ -75,6 +180,15 @@ export const CreateExpenseScreen: React.FC = () => {
 
         if (!selectedMemberId) {
             newErrors.payer = t('expenses.payerRequired');
+        }
+
+        if (beneficiaryIds.length === 0) {
+            newErrors.beneficiaries = t('expenses.beneficiariesRequired');
+        }
+
+        const parsedExpenseDate = parse(dateInput, 'yyyy-MM-dd', new Date());
+        if (!isValid(parsedExpenseDate)) {
+            newErrors.date = t('expenses.invalidDate');
         }
 
         setErrors(newErrors);
@@ -120,25 +234,41 @@ export const CreateExpenseScreen: React.FC = () => {
         }
     };
 
-    const handleCreate = async () => {
+    const handleSubmit = async () => {
         if (!validate()) return;
 
         try {
-            const expense = await createExpense({
-                listId,
+            const basePayload = {
                 title: title.trim(),
                 amount: parseFloat(amount),
                 currency: 'EUR',
-                expenseDate: new Date().toISOString(),
+                expenseDate: expenseDate.toISOString(),
                 notes: notes.trim() || undefined,
                 paidByMemberId: selectedMemberId!,
-            });
+                paymentMethod,
+                beneficiaryMemberIds: beneficiaryIds,
+            };
+
+            const expense = isEditing
+                ? await updateExpense(expenseId, {
+                    title: basePayload.title,
+                    amount: basePayload.amount,
+                    expenseDate: basePayload.expenseDate,
+                    notes: basePayload.notes,
+                    paidByMemberId: basePayload.paidByMemberId,
+                    paymentMethod: basePayload.paymentMethod,
+                    beneficiaryMemberIds: basePayload.beneficiaryMemberIds,
+                })
+                : await createExpense({
+                    listId,
+                    ...basePayload,
+                });
 
             if (receiptUri) {
                 await uploadReceipt(expense.id, receiptUri);
             }
 
-            Alert.alert(t('common.success'), t('expenses.createdSuccess'), [
+            Alert.alert(t('common.success'), isEditing ? t('expenses.updatedSuccess') : t('expenses.createdSuccess'), [
                 {
                     text: t('common.ok'),
                     onPress: () => navigation.goBack(),
@@ -169,6 +299,33 @@ export const CreateExpenseScreen: React.FC = () => {
             </TouchableOpacity>
         );
     };
+
+    const renderBeneficiaryOption = (member: ListMember) => {
+        const isSelected = beneficiaryIds.includes(member.id);
+        return (
+            <TouchableOpacity
+                key={`beneficiary-${member.id}`}
+                style={[styles.memberOption, isSelected && styles.memberOptionSelected]}
+                onPress={() => toggleBeneficiary(member.id)}
+            >
+                <View>
+                    <Text style={styles.memberEmail}>{getMemberLabel(member)}</Text>
+                    <Text style={styles.memberMeta}>{(member.splitPercentage ?? 0).toFixed(0)}%</Text>
+                </View>
+                <Ionicons
+                    name={isSelected ? 'checkbox' : 'square-outline'}
+                    size={20}
+                    color={isSelected ? colors.accent : colors.secondaryText}
+                />
+            </TouchableOpacity>
+        );
+    };
+
+    if (!prefillReady) {
+        return <Loading/>;
+    }
+
+    const hasReceipt = !!receiptUri || !!existingReceiptUrl;
 
     return (
         <KeyboardAvoidingView
@@ -202,6 +359,47 @@ export const CreateExpenseScreen: React.FC = () => {
                     keyboardType="decimal-pad"
                 />
 
+                <Input
+                    label={t('expenses.dateLabel')}
+                    placeholder="YYYY-MM-DD"
+                    value={dateInput}
+                    onChangeText={handleDateInputChange}
+                    autoCapitalize="none"
+                    keyboardType="numbers-and-punctuation"
+                    error={errors.date}
+                />
+                <View style={styles.dateQuickActions}>
+                    <TouchableOpacity style={[styles.dateChip, styles.dateChipPrimary]} onPress={() => handleQuickDate(0)}>
+                        <Text style={[styles.dateChipText, styles.dateChipPrimaryText]}>{t('expenses.dateToday')}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.dateChip} onPress={() => handleQuickDate(1)}>
+                        <Text style={styles.dateChipText}>{t('expenses.dateYesterday')}</Text>
+                    </TouchableOpacity>
+                </View>
+                <Text style={styles.helperText}>{t('expenses.dateHelper')}</Text>
+
+                <View style={styles.paymentSection}>
+                    <Text style={styles.label}>{t('expenses.paymentMethodLabel')}</Text>
+                    <Text style={styles.helperText}>{t('expenses.paymentMethodHelper')}</Text>
+                    <View style={styles.paymentOptions}>
+                        {paymentOptions.map(({key, icon, label}) => {
+                            const isActive = paymentMethod === key;
+                            return (
+                                <TouchableOpacity
+                                    key={key}
+                                    style={[styles.paymentOption, isActive && styles.paymentOptionActive]}
+                                    onPress={() => setPaymentMethod(key)}
+                                >
+                                    <Ionicons name={icon as any} size={16} color={isActive ? colors.accentText : colors.accent}/>
+                                    <Text style={[styles.paymentOptionLabel, isActive && styles.paymentOptionLabelActive]}>
+                                        {label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </View>
+
                 <View style={styles.payerSection}>
                     <Text style={styles.label}>{t('expenses.payerLabel')}</Text>
                     <TouchableOpacity
@@ -218,6 +416,22 @@ export const CreateExpenseScreen: React.FC = () => {
                     <Text style={styles.helperText}>
                         {hasMembers ? t('expenses.payerHelper') : t('expenses.missingMembersHelper')}
                     </Text>
+                </View>
+
+                <View style={styles.payerSection}>
+                    <Text style={styles.label}>{t('expenses.beneficiariesLabel')}</Text>
+                    <TouchableOpacity
+                        style={[styles.payerSelector, beneficiaryIds.length === 0 && styles.payerSelectorEmpty]}
+                        onPress={() => hasMembers && setShowBeneficiaryPicker(true)}
+                        disabled={!hasMembers}
+                    >
+                        <Text style={beneficiaryIds.length > 0 ? styles.payerValue : styles.payerPlaceholder}>
+                            {beneficiaryIds.length > 0 ? beneficiarySummary : t('expenses.beneficiariesPlaceholder')}
+                        </Text>
+                        <Ionicons name="chevron-down" size={20} color={colors.secondaryText}/>
+                    </TouchableOpacity>
+                    {errors.beneficiaries && <Text style={styles.errorText}>{errors.beneficiaries}</Text>}
+                    <Text style={styles.helperText}>{t('expenses.beneficiariesHelper')}</Text>
                 </View>
 
                 <Input
@@ -244,23 +458,27 @@ export const CreateExpenseScreen: React.FC = () => {
                         </TouchableOpacity>
                     </View>
 
-                    {receiptUri && (
+                    {hasReceipt && (
                         <View style={styles.receiptPreview}>
                             <Ionicons name="checkmark-circle" size={24} color={colors.success}/>
-                            <Text style={styles.receiptPreviewText}>{t('expenses.receiptAdded')}</Text>
-                            <TouchableOpacity onPress={() => setReceiptUri(null)}>
-                                <Ionicons name="close-circle" size={24} color={colors.danger}/>
-                            </TouchableOpacity>
+                            <Text style={styles.receiptPreviewText}>
+                                {receiptUri ? t('expenses.receiptAdded') : t('expenses.receiptOnFile')}
+                            </Text>
+                            {receiptUri && (
+                                <TouchableOpacity onPress={() => setReceiptUri(null)}>
+                                    <Ionicons name="close-circle" size={24} color={colors.danger}/>
+                                </TouchableOpacity>
+                            )}
                         </View>
                     )}
                 </View>
 
                 <View style={styles.buttons}>
                     <Button
-                        title={t('expenses.createButton')}
-                        onPress={handleCreate}
+                        title={isEditing ? t('expenses.saveChanges') : t('expenses.createButton')}
+                        onPress={handleSubmit}
                         loading={isLoading}
-                        disabled={isLoading || !hasMembers}
+                        disabled={isLoading || !hasMembers || beneficiaryIds.length === 0}
                         style={styles.button}
                     />
                     <Button
@@ -284,6 +502,27 @@ export const CreateExpenseScreen: React.FC = () => {
                         </View>
                         <ScrollView>
                             {members.map(renderMemberOption)}
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            <Modal visible={showBeneficiaryPicker} animationType="slide" transparent>
+                <View style={styles.modalBackdrop}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>{t('expenses.beneficiariesLabel')}</Text>
+                            <TouchableOpacity onPress={() => setShowBeneficiaryPicker(false)}>
+                                <Ionicons name="close" size={24} color={colors.text}/>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.beneficiaryActions}>
+                            <TouchableOpacity onPress={handleSelectAllBeneficiaries}>
+                                <Text style={styles.beneficiaryActionText}>{t('expenses.selectAll')}</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView>
+                            {members.map(renderBeneficiaryOption)}
                         </ScrollView>
                     </View>
                 </View>
@@ -340,6 +579,58 @@ const createStyles = (colors: AppColors) =>
         helperText: {
             fontSize: 12,
             color: colors.secondaryText,
+        },
+        paymentSection: {
+            gap: 8,
+        },
+        paymentOptions: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+        },
+        paymentOption: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: colors.border,
+        },
+        paymentOptionActive: {
+            backgroundColor: colors.accent,
+            borderColor: colors.accent,
+        },
+        paymentOptionLabel: {
+            color: colors.text,
+            fontSize: 13,
+            fontWeight: '600',
+        },
+        paymentOptionLabelActive: {
+            color: colors.accentText,
+        },
+        dateQuickActions: {
+            flexDirection: 'row',
+            gap: 8,
+            marginTop: 8,
+        },
+        dateChip: {
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 16,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        dateChipPrimary: {
+            backgroundColor: colors.accent,
+        },
+        dateChipText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: colors.secondaryText,
+        },
+        dateChipPrimaryText: {
+            color: colors.accentText,
         },
         errorText: {
             fontSize: 12,
@@ -398,6 +689,16 @@ const createStyles = (colors: AppColors) =>
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             paddingBottom: 16,
+        },
+        beneficiaryActions: {
+            paddingHorizontal: 20,
+            paddingVertical: 8,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.surfaceSecondary,
+        },
+        beneficiaryActionText: {
+            color: colors.accent,
+            fontWeight: '600',
         },
         modalHeader: {
             flexDirection: 'row',

@@ -29,7 +29,7 @@ const queryClient = new QueryClient({
 type PendingInviteAction = { type: 'join' | 'accept'; code: string };
 
 const AppContent = () => {
-    const {isAuthenticated, isLoading, initialize} = useAuthStore();
+    const {isAuthenticated, isInitializing, initialize} = useAuthStore();
     const joinList = useListsStore((state) => state.joinList);
     const acceptInviteByCode = useListsStore((state) => state.acceptInviteByCode);
     const {navigationTheme, statusBarStyle, colors} = useAppTheme();
@@ -104,7 +104,7 @@ const AppContent = () => {
         executeAction();
     }, [isAuthenticated, pendingInvite, joinList, acceptInviteByCode, t]);
 
-    if (isLoading) {
+    if (isInitializing) {
         return <Loading/>;
     }
 

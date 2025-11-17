@@ -62,6 +62,13 @@ export enum ExpenseStatus {
     Rejected = 'rejected',
 }
 
+export enum ExpensePaymentMethod {
+    Cash = 'cash',
+    Card = 'card',
+    Transfer = 'transfer',
+    Other = 'other',
+}
+
 export interface Expense {
     id: string;
     listId: string;
@@ -73,11 +80,13 @@ export interface Expense {
     notes?: string;
     receiptUrl?: string;
     status: ExpenseStatus;
+    paymentMethod: ExpensePaymentMethod;
     serverTimestamp: string;
     paidByMemberId?: string | null;
     insertedAt: string;
     createdAt: string;
     updatedAt: string;
+    beneficiaryMemberIds: string[];
     author?: User;
     paidByMember?: ListMember;
     validations?: ExpenseValidation[];

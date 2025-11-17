@@ -20,6 +20,7 @@ import {Expense, ListMember} from '@/types';
 import expensesService from '@/services/expenses.service';
 import listsService from '@/services/lists.service';
 import {useFocusEffect} from '@react-navigation/native';
+import {buildSplitSummary} from '@/lib/split';
 
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
@@ -321,57 +322,12 @@ export const AnalyticsScreen: React.FC = () => {
 
     const memberChartMax = memberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
 
-    const listTotalAmount = useMemo(() => listInsights.expenses.reduce((sum, expense) => sum + expense.amount, 0), [listInsights.expenses]);
-
     const splitSummary = useMemo(() => {
         if (selectedListId === ALL_LISTS_OPTION) {
             return {rows: [], settlements: [], reason: 'no-expenses' as const};
         }
-        if (listInsights.expenses.length === 0 || listTotalAmount <= 0) {
-            return {rows: [], settlements: [], reason: 'no-expenses' as const};
-        }
-        const membersWithSplit = listInsights.members.filter((member) => (member.splitPercentage ?? 0) > 0);
-        if (membersWithSplit.length === 0) {
-            return {rows: [], settlements: [], reason: 'no-members' as const};
-        }
-        const totalSplit = membersWithSplit.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
-        if (totalSplit <= 0) {
-            return {rows: [], settlements: [], reason: 'no-split' as const};
-        }
-        const paidMap = new Map<string, number>();
-        listInsights.expenses.forEach((expense) => {
-            if (!expense.paidByMemberId) return;
-            paidMap.set(expense.paidByMemberId, (paidMap.get(expense.paidByMemberId) ?? 0) + expense.amount);
-        });
-        const rows = membersWithSplit.map((member) => {
-            const percentage = member.splitPercentage ?? 0;
-            const share = listTotalAmount * (percentage / totalSplit);
-            const paid = paidMap.get(member.id) ?? 0;
-            const net = paid - share;
-            return {member, share, paid, net, percentage};
-        }).sort((a, b) => b.net - a.net);
-
-        const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
-        const debtors = rows.filter((row) => row.net < 0).map((row) => ({
-            member: row.member,
-            amount: Math.abs(row.net)
-        }));
-        const settlements: { from: ListMember; to: ListMember; amount: number }[] = [];
-        let creditorIndex = 0;
-        let debtorIndex = 0;
-        while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
-            const creditor = creditors[creditorIndex];
-            const debtor = debtors[debtorIndex];
-            const amount = Math.min(creditor.amount, debtor.amount);
-            settlements.push({from: debtor.member, to: creditor.member, amount});
-            creditor.amount -= amount;
-            debtor.amount -= amount;
-            if (creditor.amount < 0.01) creditorIndex++;
-            if (debtor.amount < 0.01) debtorIndex++;
-        }
-
-        return {rows, settlements, reason: null as const};
-    }, [selectedListId, listInsights.expenses, listInsights.members, listTotalAmount]);
+        return buildSplitSummary(listInsights.expenses, listInsights.members);
+    }, [selectedListId, listInsights.expenses, listInsights.members]);
 
     const dailyTotals = useMemo(() => {
         const map = new Map<string, number>();

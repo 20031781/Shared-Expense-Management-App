@@ -19,7 +19,7 @@ export const LoginScreen: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
-    const {login, signUp, isLoading} = useAuthStore();
+    const {login, signUp, isLoading, isInitializing} = useAuthStore();
     const {t, language, setLanguage} = useTranslation();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -42,7 +42,7 @@ export const LoginScreen: React.FC = () => {
         }
     };
 
-    if (isLoading) {
+    if (isInitializing) {
         return <Loading/>;
     }
 

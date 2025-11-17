@@ -6,8 +6,10 @@ import {Ionicons} from '@expo/vector-icons';
 import {Button, Card, Loading} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useListsStore} from '@/store/lists.store';
+import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {ExpenseStatus, ListMember} from '@/types';
 
 export const ExpenseDetailsScreen: React.FC = () => {
     const route = useRoute<any>();
@@ -18,6 +20,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const styles = useMemo(() => createStyles(colors), [colors]);
     const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading} = useExpensesStore();
     const {members} = useListsStore();
+    const {user} = useAuthStore();
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
@@ -70,13 +73,53 @@ export const ExpenseDetailsScreen: React.FC = () => {
         || currentExpense.paidByMember?.email
         || t('members.unknown');
 
+    const paymentLabel = t(`expenses.paymentMethods.${currentExpense.paymentMethod ?? 'other'}`);
+    const getMemberLabel = (member?: ListMember | null) => {
+        if (!member) return t('members.unknown');
+        return (member.displayName && member.displayName.trim())
+            || member.user?.fullName
+            || member.email
+            || t('members.unknown');
+    };
+    const beneficiaryMembers = (currentExpense.beneficiaryMemberIds ?? [])
+        .map((id) => members.find((member) => member.id === id)
+            || currentExpense.splits?.find((split) => split.memberId === id)?.member
+            || null);
+    const beneficiaryNames = beneficiaryMembers
+        .map((member) => getMemberLabel(member))
+        .filter((label) => !!label);
+    const totalKnownMembers = members.length || currentExpense.splits?.length || 0;
+    const beneficiaryCount = currentExpense.beneficiaryMemberIds?.length ?? 0;
+    const beneficiaryLabel = (() => {
+        if (beneficiaryCount === 0) {
+            return t('expenses.beneficiariesRequired');
+        }
+        if (totalKnownMembers > 0 && beneficiaryCount >= totalKnownMembers) {
+            return t('expenses.beneficiariesAll');
+        }
+        if (beneficiaryNames.length === 0) {
+            return t('expenses.beneficiariesRequired');
+        }
+        if (beneficiaryNames.length <= 2) {
+            return beneficiaryNames.join(', ');
+        }
+        return t('expenses.beneficiariesCount', {count: beneficiaryNames.length});
+    })();
+    const canEdit = user?.id === currentExpense.authorId && currentExpense.status === ExpenseStatus.Draft;
+
     const infoItems = [
+        {label: t('expenses.paymentMethodLabel'), value: paymentLabel},
+        {label: t('expenses.beneficiariesLabel'), value: beneficiaryLabel},
         {label: t('expenses.spentOn', {date: new Date(currentExpense.expenseDate).toLocaleDateString()}), value: ''},
         {
-            label: t('expenses.insertedOn', {date: new Date(currentExpense.insertedAt || currentExpense.createdAt).toLocaleString()}),
+            label: t('expenses.insertedOn', {date: new Date(currentExpense.insertedAt || currentExpense.createdAt).toLocaleDateString()}),
             value: ''
         },
     ];
+
+    const handleEdit = () => {
+        navigation.navigate('CreateExpense', {listId: currentExpense.listId, expenseId: currentExpense.id});
+    };
 
     return (
         <ScrollView contentContainerStyle={styles.container}>
@@ -100,6 +143,9 @@ export const ExpenseDetailsScreen: React.FC = () => {
                 {infoItems.map((item, index) => (
                     <View key={index} style={styles.detailRow}>
                         <Text style={styles.detailLabel}>{item.label}</Text>
+                        {item.value ? (
+                            <Text style={styles.detailValue}>{item.value}</Text>
+                        ) : null}
                     </View>
                 ))}
                 {currentExpense.receiptUrl && (
@@ -111,6 +157,14 @@ export const ExpenseDetailsScreen: React.FC = () => {
             </Card>
 
             <View style={styles.actions}>
+                {canEdit && (
+                    <Button
+                        title={t('expenses.editTitle')}
+                        onPress={handleEdit}
+                        variant="secondary"
+                        style={styles.editButton}
+                    />
+                )}
                 <Button
                     title={t('expenses.deleteAction')}
                     onPress={handleDelete}
@@ -190,5 +244,9 @@ const createStyles = (colors: AppColors) =>
         actions: {
             marginTop: 8,
             marginHorizontal: 16,
+            gap: 12,
+        },
+        editButton: {
+            width: '100%',
         },
     });
