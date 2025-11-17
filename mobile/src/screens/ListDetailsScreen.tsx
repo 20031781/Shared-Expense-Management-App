@@ -83,7 +83,6 @@ export const ListDetailsScreen: React.FC = () => {
     }, [expenses, summaryRange]);
 
     const totalAmount = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
-    const listTotalAmount = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
 
     const memberMap = useMemo(() => {
         const map = new Map<string, ListMember>();
@@ -388,64 +387,6 @@ export const ListDetailsScreen: React.FC = () => {
                     </View>
                 </View>
 
-                <View style={styles.splitCard}>
-                    <Text style={styles.summaryTitle}>{t('lists.splitSectionTitle')}</Text>
-                    <Text style={styles.splitHelper}>{t('lists.splitOptimizedHint')}</Text>
-                    {splitSummary.reason === 'no-expenses' && (
-                        <Text style={styles.chartEmpty}>{t('lists.splitSectionEmpty')}</Text>
-                    )}
-                    {splitSummary.reason === 'no-members' && (
-                        <Text style={styles.chartEmpty}>{t('lists.splitSectionNeedMembers')}</Text>
-                    )}
-                    {splitSummary.reason === 'no-split' && (
-                        <Text style={styles.chartEmpty}>{t('lists.splitSectionNeedPercentages')}</Text>
-                    )}
-                    {splitSummary.reason === null && (
-                        <>
-                            {splitSummary.rows.map((row) => (
-                                <View key={row.member.id} style={styles.splitRow}>
-                                    <View style={styles.splitMemberInfo}>
-                                        <Text style={styles.splitMemberName}>{getMemberLabel(row.member)}</Text>
-                                        <Text style={styles.splitMemberShare}>{t('lists.splitShareLabel', {value: row.percentage})}</Text>
-                                    </View>
-                                    <View style={styles.splitAmountBlock}>
-                                        <Text
-                                            style={[
-                                                styles.splitAmount,
-                                                row.net < 0 ? styles.splitOwes : styles.splitReceives,
-                                            ]}
-                                        >
-                                            {currency} {Math.abs(row.net).toFixed(2)}
-                                        </Text>
-                                        <Text style={styles.splitHint}>
-                                            {row.net < 0 ? t('lists.splitNetGive') : t('lists.splitNetReceive')}
-                                        </Text>
-                                    </View>
-                                </View>
-                            ))}
-                            <View style={styles.settlementsWrapper}>
-                                <Text style={styles.settlementsTitle}>{t('lists.splitSettlementsTitle')}</Text>
-                                {splitSummary.settlements.length === 0 ? (
-                                    <Text style={styles.chartEmpty}>{t('lists.splitSettlementsEmpty')}</Text>
-                                ) : (
-                                    splitSummary.settlements.map((settlement, index) => (
-                                        <Text
-                                            key={`${settlement.from.id}-${settlement.to.id}-${index}`}
-                                            style={styles.settlementText}
-                                        >
-                                            {t('lists.splitSettlement', {
-                                                from: getMemberLabel(settlement.from),
-                                                to: getMemberLabel(settlement.to),
-                                                amount: `${currency} ${settlement.amount.toFixed(2)}`,
-                                            })}
-                                        </Text>
-                                    ))
-                                )}
-                            </View>
-                        </>
-                    )}
-                </View>
-
                 <View style={styles.tabs}>
                     <TouchableOpacity
                         style={[styles.tab, activeTab === 'expenses' && styles.activeTab]}
@@ -489,6 +430,9 @@ export const ListDetailsScreen: React.FC = () => {
                             ) : (
                                 <>
                                     <Text style={styles.statusLegend}>{t('members.statusLegend')}</Text>
+                                    {!isAdmin && (
+                                        <Text style={styles.membersReadOnly}>{t('members.readOnlyNotice')}</Text>
+                                    )}
                                     {members.map(renderMember)}
                                 </>
                             )}
@@ -761,6 +705,12 @@ const createStyles = (colors: AppColors) =>
             marginBottom: 8,
             marginLeft: 16,
         },
+        membersReadOnly: {
+            fontSize: 12,
+            color: colors.warning,
+            marginBottom: 8,
+            marginLeft: 16,
+        },
         memberSplit: {
             fontSize: 12,
             color: colors.secondaryText,
@@ -827,68 +777,6 @@ const createStyles = (colors: AppColors) =>
             shadowOffset: {width: 0, height: 2},
             shadowOpacity: 0.2,
             shadowRadius: 4,
-        },
-        splitCard: {
-            marginHorizontal: 16,
-            marginBottom: 16,
-            padding: 16,
-            borderRadius: 16,
-            backgroundColor: colors.surface,
-            gap: 12,
-        },
-        splitHelper: {
-            fontSize: 12,
-            color: colors.secondaryText,
-        },
-        splitRow: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingVertical: 8,
-            borderBottomWidth: StyleSheet.hairlineWidth,
-            borderColor: colors.surfaceSecondary,
-        },
-        splitMemberInfo: {
-            flex: 1,
-            gap: 4,
-        },
-        splitMemberName: {
-            fontSize: 16,
-            fontWeight: '600',
-            color: colors.text,
-        },
-        splitMemberShare: {
-            fontSize: 12,
-            color: colors.secondaryText,
-        },
-        splitAmountBlock: {
-            alignItems: 'flex-end',
-        },
-        splitAmount: {
-            fontSize: 16,
-            fontWeight: '700',
-        },
-        splitOwes: {
-            color: colors.danger,
-        },
-        splitReceives: {
-            color: colors.success,
-        },
-        splitHint: {
-            fontSize: 12,
-            color: colors.secondaryText,
-        },
-        settlementsWrapper: {
-            gap: 6,
-        },
-        settlementsTitle: {
-            fontSize: 14,
-            fontWeight: '700',
-            color: colors.text,
-        },
-        settlementText: {
-            fontSize: 13,
-            color: colors.text,
         },
         deleteAction: {
             width: 90,

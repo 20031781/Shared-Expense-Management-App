@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Button, Input, Loading} from '@/components';
@@ -20,12 +20,21 @@ export const EditMemberScreen: React.FC = () => {
     const {members, fetchMembers, updateMember, removeMember, isLoading} = useListsStore();
     const member = members.find((m) => m.id === memberId);
     const formatSplit = (value?: number) => (value ?? 0).toFixed(2);
+    const otherMembers = useMemo(() => members.filter((m) => m.id !== memberId), [members, memberId]);
 
     const [displayName, setDisplayName] = useState(member?.displayName ?? '');
     const [split, setSplit] = useState(formatSplit(member?.splitPercentage));
     const [isValidator, setIsValidator] = useState(member?.isValidator ?? false);
     const [status, setStatus] = useState<MemberStatus>(member?.status ?? MemberStatus.Pending);
     const [errors, setErrors] = useState<{split?: string}>({});
+
+    const splitPreview = useMemo(() => {
+        const parsedValue = parseFloat(split);
+        const normalized = Number.isNaN(parsedValue) ? 0 : Math.min(Math.max(parsedValue, 0), 100);
+        const remaining = Math.max(0, 100 - normalized);
+        const share = otherMembers.length > 0 ? remaining / otherMembers.length : 0;
+        return {remaining, share};
+    }, [split, otherMembers.length]);
 
     useEffect(() => {
         if (!member) {
@@ -52,19 +61,43 @@ export const EditMemberScreen: React.FC = () => {
         return Object.keys(nextErrors).length === 0;
     };
 
+    const rebalanceOtherSplits = useCallback(async (targetSplitValue: number) => {
+        if (otherMembers.length === 0) return;
+        const remaining = Math.max(0, 100 - targetSplitValue);
+        const count = otherMembers.length;
+        const scaledRemaining = Math.max(0, Math.round(remaining * 100));
+        const baseShare = count > 0 ? Math.floor(scaledRemaining / count) : 0;
+        let remainder = count > 0 ? scaledRemaining - baseShare * count : 0;
+
+        for (const other of otherMembers) {
+            let shareCents = baseShare;
+            if (remainder > 0) {
+                shareCents += 1;
+                remainder -= 1;
+            }
+            const share = shareCents / 100;
+            if (Math.abs((other.splitPercentage ?? 0) - share) < 0.01) {
+                continue;
+            }
+            await updateMember(listId, other.id, {splitPercentage: share});
+        }
+    }, [otherMembers, updateMember, listId]);
+
     const handleSave = async () => {
         if (!member) return;
         if (!validate()) return;
 
         try {
             const trimmedDisplayName = displayName.trim();
+            const targetSplit = parseFloat(split);
             await updateMember(listId, member.id, {
                 displayName: trimmedDisplayName || undefined,
-                splitPercentage: parseFloat(split),
+                splitPercentage: targetSplit,
                 isValidator,
                 status,
                 clearDisplayName: trimmedDisplayName ? undefined : true,
             });
+            await rebalanceOtherSplits(targetSplit);
             Alert.alert(t('common.success'), t('members.editSuccess'), [
                 {text: t('common.ok'), onPress: () => navigation.goBack()},
             ]);
@@ -126,6 +159,15 @@ export const EditMemberScreen: React.FC = () => {
                 keyboardType="decimal-pad"
                 error={errors.split}
             />
+            {otherMembers.length > 0 && (
+                <Text style={styles.balanceHint}>
+                    {t('members.autoBalanceHint', {
+                        remaining: splitPreview.remaining,
+                        recipients: otherMembers.length,
+                        share: splitPreview.share,
+                    })}
+                </Text>
+            )}
 
             <View style={styles.switchCard}>
                 <View style={styles.switchTextWrapper}>
@@ -209,6 +251,12 @@ const createStyles = (colors: AppColors) =>
         switchHint: {
             fontSize: 12,
             color: colors.secondaryText,
+        },
+        balanceHint: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            marginTop: -8,
+            marginBottom: 8,
         },
         sectionLabel: {
             fontSize: 16,
