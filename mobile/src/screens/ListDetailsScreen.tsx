@@ -452,15 +452,19 @@ export const ListDetailsScreen: React.FC = () => {
                                             <View style={styles.statusLegendItem}>
                                                 <View style={[styles.statusDot, styles.activeStatus]}/>
                                                 <View style={styles.statusLegendCopy}>
-                                                    <Text style={styles.legendLabel}>{t('members.statusActiveShort')}</Text>
-                                                    <Text style={styles.legendDescription}>{t('members.statusLegendActive')}</Text>
+                                                    <Text
+                                                        style={styles.legendLabel}>{t('members.statusActiveShort')}</Text>
+                                                    <Text
+                                                        style={styles.legendDescription}>{t('members.statusLegendActive')}</Text>
                                                 </View>
                                             </View>
                                             <View style={styles.statusLegendItem}>
                                                 <View style={[styles.statusDot, styles.pendingStatus]}/>
                                                 <View style={styles.statusLegendCopy}>
-                                                    <Text style={styles.legendLabel}>{t('members.statusPendingShort')}</Text>
-                                                    <Text style={styles.legendDescription}>{t('members.statusLegendPending')}</Text>
+                                                    <Text
+                                                        style={styles.legendLabel}>{t('members.statusPendingShort')}</Text>
+                                                    <Text
+                                                        style={styles.legendDescription}>{t('members.statusLegendPending')}</Text>
                                                 </View>
                                             </View>
                                         </View>
