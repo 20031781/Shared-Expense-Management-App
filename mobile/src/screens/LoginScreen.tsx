@@ -1,5 +1,14 @@
 import React, {useMemo, useState} from 'react';
-import {Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import {Button, Input, Loading} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
@@ -59,7 +68,8 @@ export const LoginScreen: React.FC = () => {
                                     style={[styles.languageChip, language === option && styles.languageChipActive]}
                                     onPress={() => handleLanguageChange(option)}
                                 >
-                                    <Text style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>
+                                    <Text
+                                        style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>
                                         {option.toUpperCase()}
                                     </Text>
                                 </TouchableOpacity>

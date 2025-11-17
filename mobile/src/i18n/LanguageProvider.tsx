@@ -22,7 +22,7 @@ const LanguageContext = createContext<LanguageContextValue>({
     hasSelectedLanguage: false,
 });
 
-export const LanguageProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
     const [language, setLanguage] = useState<Language>('en');
     const [isReady, setIsReady] = useState(false);
     const [hasSelectedLanguage, setHasSelectedLanguage] = useState(false);

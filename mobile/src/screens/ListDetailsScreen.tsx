@@ -1,5 +1,15 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {ActivityIndicator, Alert, Linking, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {
+    ActivityIndicator,
+    Alert,
+    Linking,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Button, Card, Loading} from '@/components';
 import {useListsStore} from '@/store/lists.store';
@@ -133,8 +143,11 @@ export const ListDetailsScreen: React.FC = () => {
         }).sort((a, b) => b.net - a.net);
 
         const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
-        const debtors = rows.filter((row) => row.net < 0).map((row) => ({member: row.member, amount: Math.abs(row.net)}));
-        const settlements: {from: ListMember; to: ListMember; amount: number}[] = [];
+        const debtors = rows.filter((row) => row.net < 0).map((row) => ({
+            member: row.member,
+            amount: Math.abs(row.net)
+        }));
+        const settlements: { from: ListMember; to: ListMember; amount: number }[] = [];
         let creditorIndex = 0;
         let debtorIndex = 0;
         while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
@@ -240,7 +253,8 @@ export const ListDetailsScreen: React.FC = () => {
                                     {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
                                 </Text>
                                 {payer && (
-                                    <Text style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>
+                                    <Text
+                                        style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>
                                 )}
                             </View>
                             <View style={styles.expenseRight}>
@@ -275,7 +289,7 @@ export const ListDetailsScreen: React.FC = () => {
                         <View style={styles.memberBadges}>
                             <Text style={styles.memberSplit}>
                                 {t('members.splitValue', {value: member.splitPercentage ?? 0})}
-                        </Text>
+                            </Text>
                             {member.isValidator && (
                                 <View style={styles.validatorBadge}>
                                     <Ionicons name="shield-checkmark" size={14} color={colors.success}/>
@@ -287,7 +301,8 @@ export const ListDetailsScreen: React.FC = () => {
                     <View style={styles.memberActions}>
                         <View style={styles.memberStatusBlock}>
                             <View style={styles.memberStatusWrapper}>
-                                <View style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
+                                <View
+                                    style={[styles.statusDot, isActive ? styles.activeStatus : styles.pendingStatus]}/>
                                 <Text style={styles.memberStatusText}>
                                     {isActive ? t('members.statusActiveShort') : t('members.statusPendingShort')}
                                 </Text>

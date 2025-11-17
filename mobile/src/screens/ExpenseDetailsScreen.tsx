@@ -3,7 +3,7 @@ import {Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} fr
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Ionicons} from '@expo/vector-icons';
 
-import {Card, Loading, Button} from '@/components';
+import {Button, Card, Loading} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useListsStore} from '@/store/lists.store';
 import {useTranslation} from '@i18n';
@@ -72,7 +72,10 @@ export const ExpenseDetailsScreen: React.FC = () => {
 
     const infoItems = [
         {label: t('expenses.spentOn', {date: new Date(currentExpense.expenseDate).toLocaleDateString()}), value: ''},
-        {label: t('expenses.insertedOn', {date: new Date(currentExpense.insertedAt || currentExpense.createdAt).toLocaleString()}), value: ''},
+        {
+            label: t('expenses.insertedOn', {date: new Date(currentExpense.insertedAt || currentExpense.createdAt).toLocaleString()}),
+            value: ''
+        },
     ];
 
     return (

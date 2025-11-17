@@ -234,6 +234,7 @@ erDiagram
 ## Stack Tecnologico
 
 ### Backend
+
 ```
 ASP.NET Core 8.0
 ├── Controllers (REST API)
@@ -250,6 +251,7 @@ ASP.NET Core 8.0
 ```
 
 ### Mobile
+
 ```
 React Native + Expo + TypeScript
 ├── screens/ (UI Components)
@@ -264,6 +266,7 @@ React Native + Expo + TypeScript
 ```
 
 ### Database
+
 ```
 PostgreSQL (Docker Compose)
 ├── Tables (11)
@@ -279,18 +282,21 @@ PostgreSQL (Docker Compose)
 ## Pattern e Principi
 
 ### Backend Architecture
+
 - **Layered Architecture**: Controllers → Services → Repositories
 - **Dependency Injection**: Tutti i servizi registrati in Program.cs
 - **Repository Pattern**: Astrazione accesso dati
 - **Single Responsibility**: Ogni classe ha un solo scopo
 
 ### Mobile Architecture
+
 - **Component-Based**: React functional components
 - **State Management**: Zustand stores
 - **Hooks Pattern**: React hooks for logic
 - **Service Layer**: REST API centralizzata tramite Axios
 
 ### Security
+
 - **Authentication**: Google OAuth + JWT
 - **Authorization**: Claims-based con policy
 - **Data Security**: Permessi PostgreSQL + validazioni server-side
@@ -335,16 +341,19 @@ graph LR
 ## Scalabilità
 
 ### Horizontal Scaling
+
 - API stateless: può essere replicata
 - Load balancer distribuisce carico
 - Connection pooling gestito da PostgreSQL/PgBouncer
 
 ### Vertical Scaling
+
 - Aumenta risorse Docker container
 - Ottimizza query database con indici
 - Caching strategico (Redis future)
 
 ### Performance Optimization
+
 - Indici database su campi chiave
 - Batch operations per sync
 - Pagination per liste grandi
@@ -353,17 +362,20 @@ graph LR
 ## Monitoring e Observability
 
 ### Logs
+
 - Application Insights (Azure)
 - Serilog structured logging
 - Docker logs persistenti
 
 ### Metrics
+
 - Request rate/latency
 - Error rate
 - Database query performance
 - Sync success rate
 
 ### Alerts
+
 - API down
 - High error rate
 - Database connection issues

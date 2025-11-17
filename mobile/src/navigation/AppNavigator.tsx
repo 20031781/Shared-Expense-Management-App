@@ -101,7 +101,7 @@ export const MainNavigator = () => {
         <Tab.Navigator
             screenOptions={({route}) => ({
                 tabBarIcon: ({focused, color, size}) => {
-                    const iconMap: Record<string, {active: any; inactive: any}> = {
+                    const iconMap: Record<string, { active: any; inactive: any }> = {
                         ListsTab: {active: 'list', inactive: 'list-outline'},
                         AnalyticsTab: {active: 'stats-chart', inactive: 'stats-chart-outline'},
                         SettingsTab: {active: 'settings', inactive: 'settings-outline'},

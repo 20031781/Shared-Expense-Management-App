@@ -5,6 +5,7 @@
 ### Errore: "dotnet: command not found"
 
 **Soluzione:**
+
 ```bash
 # Verifica installazione .NET
 dotnet --version
@@ -18,6 +19,7 @@ dotnet --version
 **Problema:** Porta 5000 già in uso
 
 **Soluzione:**
+
 ```bash
 # Trova processo sulla porta
 lsof -i :5000
@@ -32,12 +34,14 @@ ports:
 ### Errore: "Unable to connect to PostgreSQL"
 
 **Verifica:**
+
 1. Il container `splitexpenses-postgres` è in esecuzione (`docker ps`).
 2. La porta `5432` non è occupata da altri servizi.
 3. La connection string in `appsettings.json` punta al database corretto (`split_expenses`).
 4. Username/password coincidono con quelli definiti in `docker-compose.db.yml`.
 
 **Test connessione:**
+
 ```bash
 docker exec -it splitexpenses-postgres pg_isready -U postgres -d split_expenses
 
@@ -48,11 +52,13 @@ psql "postgresql://postgres:postgres@localhost:5432/split_expenses"
 ### Errore: "Invalid Google OAuth token"
 
 **Verifica:**
+
 1. Client ID configurato correttamente
 2. Redirect URI autorizzato in Google Console
 3. Token non scaduto
 
 **Redirect URI corretto:**
+
 ```
 http://localhost:5000/signin-google
 https://your-domain.com/signin-google
@@ -60,16 +66,23 @@ https://your-domain.com/signin-google
 
 ### Errore: "Request failed with status code 400" quando creo una lista
 
-**Problema:** Con l'attributo `[ApiController]` attivo, ogni proprietà non-nullable del DTO è obbligatoria. `CreateListRequest` richiedeva `Members`, quindi una richiesta senza il campo veniva respinta durante il model binding e Rider non poteva mai arrivare al breakpoint nell'`action`.
+**Problema:** Con l'attributo `[ApiController]` attivo, ogni proprietà non-nullable del DTO è obbligatoria.
+`CreateListRequest` richiedeva `Members`, quindi una richiesta senza il campo veniva respinta durante il model binding e
+Rider non poteva mai arrivare al breakpoint nell'`action`.
 
 **Soluzione:**
-1. Il DTO (`backend/SplitExpenses.Api/Controllers/ListsController.cs`) inizializza ora `Members` a una lista vuota, così il model binding non fallisce più quando il campo manca.
-2. Il client mobile (`mobile/src/services/lists.service.ts`) invia sempre `members: []`, rendendo esplicito il payload accettato dall'API.
-3. Riavvia l'API in modalità Debug: qualsiasi `POST /api/lists` raggiungerà il breakpoint impostato su `CreateList` e restituirà `201 Created` se il token è valido.
+
+1. Il DTO (`backend/SplitExpenses.Api/Controllers/ListsController.cs`) inizializza ora `Members` a una lista vuota, così
+   il model binding non fallisce più quando il campo manca.
+2. Il client mobile (`mobile/src/services/lists.service.ts`) invia sempre `members: []`, rendendo esplicito il payload
+   accettato dall'API.
+3. Riavvia l'API in modalità Debug: qualsiasi `POST /api/lists` raggiungerà il breakpoint impostato su `CreateList` e
+   restituirà `201 Created` se il token è valido.
 
 ### Errore: "Firebase credentials not found"
 
 **Soluzione:**
+
 1. Scarica credenziali da Firebase Console
 2. Salva come `backend/firebase-credentials.json`
 3. Verifica path in docker-compose.yml
@@ -91,6 +104,7 @@ Aggiorna `JWT_SECRET_KEY` in `.env`
 ### Errore: "Docker daemon not running"
 
 **Linux/Mac:**
+
 ```bash
 sudo systemctl start docker
 ```
@@ -101,6 +115,7 @@ Avvia Docker Desktop
 ### Errore: "Cannot connect to Docker daemon"
 
 **Soluzione:**
+
 ```bash
 # Aggiungi utente a gruppo docker
 sudo usermod -aG docker $USER
@@ -110,11 +125,13 @@ newgrp docker
 ### Container si riavvia continuamente
 
 **Diagnosi:**
+
 ```bash
 docker-compose logs api
 ```
 
 **Cause comuni:**
+
 - Errore configurazione `.env`
 - Porta già in uso
 - Credenziali Firebase mancanti
@@ -135,6 +152,7 @@ docker-compose up -d
 **Problema:** L'utente PostgreSQL non ha i permessi corretti.
 
 **Soluzione:**
+
 1. Connettiti con l'utente `postgres`.
 2. Esegui i GRANT necessari:
    ```sql
@@ -148,6 +166,7 @@ docker-compose up -d
 ### Query lenta
 
 **Soluzione:**
+
 1. Abilita `auto_explain` o usa `EXPLAIN ANALYZE` da psql/DataGrip.
 2. Aggiungi indici sulle colonne usate nei filtri (`list_id`, `member_id`, ...).
 3. Limita i risultati con pagination (`LIMIT/OFFSET`).
@@ -162,11 +181,13 @@ CREATE INDEX IF NOT EXISTS idx_expenses_list_id ON expenses(list_id);
 ### Stored procedure fallisce
 
 **Diagnosi:**
+
 ```sql
 SELECT * FROM calculate_optimized_reimbursements('list-uuid');
 ```
 
 **Verifica:**
+
 - Parametri passati correttamente (UUID esistente).
 - Constraint e foreign key soddisfatti.
 - Nessun lock persistente (`SELECT * FROM pg_locks;`).
@@ -176,6 +197,7 @@ SELECT * FROM calculate_optimized_reimbursements('list-uuid');
 ### Errore: "Workload 'maui' not installed"
 
 **Soluzione:**
+
 ```bash
 dotnet workload install maui
 ```
@@ -183,6 +205,7 @@ dotnet workload install maui
 ### Errore build Android
 
 **Verifica:**
+
 1. Android SDK installato
 2. Java JDK installato (JDK 11 o superiore)
 3. Variabili ambiente configurate
@@ -196,16 +219,21 @@ echo $JAVA_HOME
 ### Errore build iOS
 
 **Solo su Mac:**
+
 1. Xcode installato
 2. Command Line Tools installati
 
 ### Errore: "React has detected a change in the order of Hooks"
 
-**Scenario:** Aprendo `ListDetailsScreen` l'app mobile mostrava l'errore sui React Hooks a causa del ritorno anticipato che saltava una `useMemo`.
+**Scenario:** Aprendo `ListDetailsScreen` l'app mobile mostrava l'errore sui React Hooks a causa del ritorno anticipato
+che saltava una `useMemo`.
 
 **Soluzione:**
-- Mantieni l'ordine dei React Hooks costante spostando i calcoli memoizzati (es. `splitSummary`) prima di qualsiasi `return` condizionale.
-- Dopo la modifica ricordati di rieseguire la schermata: il loader verrà renderizzato senza errori e al render successivo i dati saranno caricati correttamente.
+
+- Mantieni l'ordine dei React Hooks costante spostando i calcoli memoizzati (es. `splitSummary`) prima di qualsiasi
+  `return` condizionale.
+- Dopo la modifica ricordati di rieseguire la schermata: il loader verrà renderizzato senza errori e al render
+  successivo i dati saranno caricati correttamente.
 
 ```bash
 xcode-select --install
@@ -214,10 +242,12 @@ xcode-select --install
 ### Google Sign-In non funziona
 
 **Android:**
+
 - SHA-1 certificate fingerprint configurato in Firebase
 - Client ID Android corretto in google-services.json
 
 **iOS:**
+
 - URL Scheme configurato in Info.plist
 - Client ID iOS corretto in GoogleService-Info.plist
 
@@ -226,6 +256,7 @@ xcode-select --install
 **Verifica logs:**
 
 **Android:**
+
 ```bash
 adb logcat
 ```
@@ -235,9 +266,13 @@ Window → Devices and Simulators → View Device Logs
 
 ### Errore: "Rendered more hooks than during the previous render"
 
-**Problema:** In `mobile/src/screens/ListDetailsScreen.tsx` il componente restituiva `<Loading />` prima di eseguire alcuni `useMemo`, quindi al render successivo React vedeva più hook del previsto e bloccava l'app quando si apriva una lista esistente.
+**Problema:** In `mobile/src/screens/ListDetailsScreen.tsx` il componente restituiva `<Loading />` prima di eseguire
+alcuni `useMemo`, quindi al render successivo React vedeva più hook del previsto e bloccava l'app quando si apriva una
+lista esistente.
 
-**Soluzione:** Mantieni tutti gli hook (useMemo, useEffect, ecc.) in cima al componente e solo dopo gestisci i `return` condizionali. Nel fix attuale gli hook vengono eseguiti sempre e la guardia `if (!currentList)` vive subito dopo i calcoli, evitando il crash.
+**Soluzione:** Mantieni tutti gli hook (useMemo, useEffect, ecc.) in cima al componente e solo dopo gestisci i `return`
+condizionali. Nel fix attuale gli hook vengono eseguiti sempre e la guardia `if (!currentList)` vive subito dopo i
+calcoli, evitando il crash.
 
 ## API Testing
 
@@ -266,6 +301,7 @@ curl http://localhost:5000/api/lists \
 ### Swagger UI non carica
 
 **Verifica:**
+
 1. Ambiente Development: `ASPNETCORE_ENVIRONMENT=Development`
 2. Swagger registrato in Program.cs
 3. Browser cache pulita
@@ -277,6 +313,7 @@ curl http://localhost:5000/api/lists \
 **Problema:** Browser blocca richieste cross-origin
 
 **Soluzione in Program.cs:**
+
 ```csharp
 builder.Services.AddCors(options =>
 {
@@ -292,6 +329,7 @@ builder.Services.AddCors(options =>
 ### Timeout su richieste
 
 **Aumenta timeout HttpClient:**
+
 ```csharp
 builder.Services.AddHttpClient("api", client =>
 {
@@ -304,11 +342,13 @@ builder.Services.AddHttpClient("api", client =>
 ### API lenta
 
 **Diagnosi:**
+
 1. Abilita logging query
 2. Monitora tempo risposta
 3. Profila con Application Insights
 
 **Ottimizzazioni:**
+
 - Usa pagination
 - Aggiungi caching
 - Ottimizza query N+1
@@ -316,6 +356,7 @@ builder.Services.AddHttpClient("api", client =>
 ### App mobile lenta
 
 **Ottimizzazioni:**
+
 - Lazy loading liste
 - Virtualizzazione liste lunghe
 - Compressione immagini
@@ -324,6 +365,7 @@ builder.Services.AddHttpClient("api", client =>
 ### Database lento
 
 **Verifica:**
+
 1. Controlla l'utilizzo CPU/RAM del container (`docker stats splitexpenses-postgres`).
 2. Consulta i log PostgreSQL (`docker logs splitexpenses-postgres`).
 3. Usa `EXPLAIN (ANALYZE, BUFFERS)` per individuare query lente.
@@ -333,12 +375,14 @@ builder.Services.AddHttpClient("api", client =>
 ### NAS: Container non parte
 
 **Verifica:**
+
 1. Docker installato correttamente
 2. Permessi file corretti
 3. Porte non in conflitto
 4. Variabili ambiente corrette
 
 **Logs:**
+
 ```bash
 docker logs splitexpenses-api
 ```
@@ -346,6 +390,7 @@ docker logs splitexpenses-api
 ### SSL/HTTPS Issues
 
 **Con Nginx reverse proxy:**
+
 ```nginx
 server {
     listen 443 ssl;
@@ -367,11 +412,13 @@ server {
 ### GitHub Actions fail
 
 **Build fail:**
+
 1. Verifica .NET SDK version
 2. Verifica dipendenze NuGet
 3. Controlla secrets configurati
 
 **Secrets necessari:**
+
 - `DOCKER_USERNAME`
 - `DOCKER_PASSWORD`
 - `SERVER_HOST`
@@ -385,6 +432,7 @@ server {
 ### Deploy fail
 
 **SSH connection issues:**
+
 ```bash
 # Test connessione SSH
 ssh username@server-host
@@ -398,11 +446,13 @@ cat ~/.ssh/id_rsa.pub
 ### Offline sync non funziona
 
 **Verifica:**
+
 1. SQLite database inizializzato
 2. Network connectivity detection attivo
 3. Sync queue popolata
 
 **Test manuale:**
+
 ```csharp
 await syncService.ProcessSyncBatchAsync(userId, pendingItems);
 ```
@@ -410,6 +460,7 @@ await syncService.ProcessSyncBatchAsync(userId, pendingItems);
 ### Conflitti continui
 
 **Strategia:**
+
 1. Last-write-wins basato su server_timestamp
 2. Mostra banner UI per conflitti critici
 3. Log conflitti per analisi
@@ -419,11 +470,13 @@ await syncService.ProcessSyncBatchAsync(userId, pendingItems);
 ### "Null reference exception"
 
 **Cause:**
+
 - Dependency injection non configurato
 - Servizio non registrato
 - Database query restituisce null
 
 **Fix:**
+
 ```csharp
 // Usa null-conditional operator
 var user = await userRepository.GetByIdAsync(id);
@@ -434,11 +487,13 @@ if (user == null)
 ### "Unauthorized 401"
 
 **Cause:**
+
 - JWT token mancante
 - Token scaduto
 - Token invalido
 
 **Fix:**
+
 1. Implementa refresh token flow
 2. Verifica header Authorization
 3. Controlla validità token
@@ -446,11 +501,13 @@ if (user == null)
 ### "Forbidden 403"
 
 **Cause:**
+
 - Claim/ruoli utente non sufficienti
 - Risorsa appartiene ad un altro utente
 - Policy di autorizzazione lato backend non soddisfatta
 
 **Fix:**
+
 1. Verifica che il JWT contenga i claim attesi.
 2. Controlla l'ownership della risorsa nel database.
 3. Aggiorna i requisiti `[Authorize]` nel controller se necessario.
@@ -497,12 +554,14 @@ SET log_min_duration_statement = 0;
 ## Contatti e Supporto
 
 ### Risorse Utili
+
 - [ASP.NET Core Docs](https://docs.microsoft.com/aspnet/core)
 - [.NET MAUI Docs](https://docs.microsoft.com/dotnet/maui)
 - [PostgreSQL Docs](https://www.postgresql.org/docs/)
 - [Docker Docs](https://docs.docker.com)
 
 ### Community
+
 - Stack Overflow: Tag `asp.net-core`, `maui`, `postgresql`
 - GitHub Issues (se repository pubblico)
 - Discord/Slack community (se disponibile)

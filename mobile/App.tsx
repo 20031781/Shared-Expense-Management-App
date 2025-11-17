@@ -26,7 +26,7 @@ const queryClient = new QueryClient({
     },
 });
 
-type PendingInviteAction = {type: 'join' | 'accept'; code: string};
+type PendingInviteAction = { type: 'join' | 'accept'; code: string };
 
 const AppContent = () => {
     const {isAuthenticated, isLoading, initialize} = useAuthStore();
@@ -122,7 +122,7 @@ const AppContent = () => {
     );
 };
 
-const LanguageGate: React.FC<{children: React.ReactNode}> = ({children}) => {
+const LanguageGate: React.FC<{ children: React.ReactNode }> = ({children}) => {
     const {hasSelectedLanguage} = useTranslation();
 
     if (!hasSelectedLanguage) {

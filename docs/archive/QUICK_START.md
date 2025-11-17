@@ -3,6 +3,7 @@
 ## 🎯 Cosa è stato creato
 
 ### ✅ Backend API (ASP.NET Core 8.0)
+
 - Autenticazione Google OAuth2 con JWT
 - CRUD completo per Liste, Spese, Rimborsi
 - Algoritmo ottimizzazione rimborsi (minimizza transazioni)
@@ -11,23 +12,27 @@
 - Docker ready
 
 ### ✅ Database (Supabase PostgreSQL)
+
 - 11 tabelle create con relazioni
 - Row Level Security (RLS) configurato
 - Stored procedures per calcoli automatici
 - Trigger per aggiornamenti automatici
 
 ### ✅ CI/CD Pipeline (GitHub Actions)
+
 - Build e test backend
 - Docker build e push
 - Deploy automatico
 - Build Android/iOS
 
 ### 📱 Mobile App (.NET MAUI)
+
 **NOTA**: L'app mobile richiede setup separato. Vedi `MOBILE_SETUP.md`
 
 ## 🚀 Avvio Rapido Backend
 
 ### 1. Prerequisiti
+
 ```bash
 # Verifica .NET 8.0
 dotnet --version
@@ -42,6 +47,7 @@ docker-compose --version
 Il database Supabase è già configurato. Devi solo configurare Google OAuth e Firebase.
 
 **File `backend/.env` già creato con:**
+
 - ✅ Supabase URL e Key
 - ⚠️ JWT Secret (CAMBIALO in produzione!)
 - ❌ Google Client ID/Secret (DA CONFIGURARE)
@@ -95,6 +101,7 @@ Le migration sono già state eseguite su Supabase. Per verificare:
 3. Table Editor → Vedi tutte le tabelle create
 
 **Tabelle principali:**
+
 - `users` - Utenti
 - `lists` - Liste spese
 - `list_members` - Membri con ruoli
@@ -114,6 +121,7 @@ Le migration sono già state eseguite su Supabase. Per verificare:
 ### Backend Status
 
 ✅ **COMPLETO** - Tutti i repository sono stati implementati:
+
 - `UserRepository.cs` - Gestione utenti e token
 - `ListRepository.cs` - Gestione liste e membri
 - `ExpenseRepository.cs` - Gestione spese, validazioni e splits
@@ -139,17 +147,20 @@ Il backend è production-ready e può essere testato immediatamente.
 ## 🔐 Sicurezza
 
 ### Database
+
 - ✅ RLS abilitato su tutte le tabelle
 - ✅ Policies restrittive configurate
 - ✅ Validazione dati con constraints
 
 ### API
+
 - ✅ JWT authentication
 - ✅ Refresh token con rotazione
 - ✅ CORS configurato
 - ⚠️ HTTPS da configurare in production
 
 ### Mobile
+
 - ❌ Storage sicuro token (da implementare)
 - ❌ SSL Pinning (da implementare)
 - ❌ Code obfuscation (da configurare)
@@ -157,6 +168,7 @@ Il backend è production-ready e può essere testato immediatamente.
 ## 📞 Support
 
 Per domande o problemi:
+
 1. Controlla README.md
 2. Verifica logs: `docker-compose logs -f`
 3. Controlla Swagger per test API
@@ -165,6 +177,7 @@ Per domande o problemi:
 ## 🎯 Checklist Setup
 
 ### Backend
+
 - [ ] Configurato Google OAuth
 - [ ] Configurato Firebase
 - [ ] Cambiato JWT Secret
@@ -173,12 +186,14 @@ Per domande o problemi:
 - [ ] Testato endpoint /auth/google
 
 ### Database
+
 - [x] Tabelle create
 - [x] RLS configurato
 - [x] Stored procedures create
 - [x] Trigger configurati
 
 ### Mobile
+
 - [ ] Progetto MAUI creato
 - [ ] Google Sign-In configurato
 - [ ] API Service implementato
@@ -187,6 +202,7 @@ Per domande o problemi:
 - [ ] Build Android/iOS testato
 
 ### Deployment
+
 - [ ] NAS/Server preparato
 - [ ] Docker Compose deployato
 - [ ] SSL/HTTPS configurato

@@ -26,7 +26,7 @@ export const EditMemberScreen: React.FC = () => {
     const [split, setSplit] = useState(formatSplit(member?.splitPercentage));
     const [isValidator, setIsValidator] = useState(member?.isValidator ?? false);
     const [status, setStatus] = useState<MemberStatus>(member?.status ?? MemberStatus.Pending);
-    const [errors, setErrors] = useState<{split?: string}>({});
+    const [errors, setErrors] = useState<{ split?: string }>({});
 
     const splitPreview = useMemo(() => {
         const parsedValue = parseFloat(split);
@@ -52,7 +52,7 @@ export const EditMemberScreen: React.FC = () => {
     }, [memberId, member]);
 
     const validate = () => {
-        const nextErrors: {split?: string} = {};
+        const nextErrors: { split?: string } = {};
         const parsed = parseFloat(split);
         if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
             nextErrors.split = t('members.splitRequired');

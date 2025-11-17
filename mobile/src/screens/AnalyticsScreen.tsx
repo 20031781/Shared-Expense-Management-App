@@ -22,7 +22,7 @@ import listsService from '@/services/lists.service';
 
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
-type DateRangeInput = {from?: string; to?: string};
+type DateRangeInput = { from?: string; to?: string };
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -91,7 +91,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [customRange, setCustomRange] = useState<DateRangeInput>({from: '', to: ''});
     const [appliedCustomRange, setAppliedCustomRange] = useState<DateRangeInput | null>(null);
     const [customError, setCustomError] = useState<string | null>(null);
-    const [rangeSummary, setRangeSummary] = useState<{fromDate?: Date; toDate?: Date; daySpan?: number}>({
+    const [rangeSummary, setRangeSummary] = useState<{ fromDate?: Date; toDate?: Date; daySpan?: number }>({
         fromDate: DEFAULT_RANGE.fromDate,
         toDate: DEFAULT_RANGE.toDate,
         daySpan: DEFAULT_RANGE.daySpan,
@@ -99,7 +99,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [currentRange, setCurrentRange] = useState<ResolvedRange>(DEFAULT_RANGE);
     const [selectedListId, setSelectedListId] = useState<string>(ALL_LISTS_OPTION);
     const [isListDropdownVisible, setIsListDropdownVisible] = useState(false);
-    const [listInsights, setListInsights] = useState<{expenses: Expense[]; members: ListMember[]}>({
+    const [listInsights, setListInsights] = useState<{ expenses: Expense[]; members: ListMember[] }>({
         expenses: [],
         members: [],
     });
@@ -270,7 +270,10 @@ export const AnalyticsScreen: React.FC = () => {
             if (!key) return;
             map.set(key, (map.get(key) ?? 0) + expense.amount);
         });
-        return Array.from(map.entries()).map(([label, amount]) => ({label, amount})).sort((a, b) => b.amount - a.amount);
+        return Array.from(map.entries()).map(([label, amount]) => ({
+            label,
+            amount
+        })).sort((a, b) => b.amount - a.amount);
     }, []);
 
     const resolvePayerLabel = useCallback((expense: Expense) => {
@@ -339,8 +342,11 @@ export const AnalyticsScreen: React.FC = () => {
         }).sort((a, b) => b.net - a.net);
 
         const creditors = rows.filter((row) => row.net > 0).map((row) => ({member: row.member, amount: row.net}));
-        const debtors = rows.filter((row) => row.net < 0).map((row) => ({member: row.member, amount: Math.abs(row.net)}));
-        const settlements: {from: ListMember; to: ListMember; amount: number}[] = [];
+        const debtors = rows.filter((row) => row.net < 0).map((row) => ({
+            member: row.member,
+            amount: Math.abs(row.net)
+        }));
+        const settlements: { from: ListMember; to: ListMember; amount: number }[] = [];
         let creditorIndex = 0;
         let debtorIndex = 0;
         while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
@@ -367,7 +373,7 @@ export const AnalyticsScreen: React.FC = () => {
     }, [visibleExpenses]);
 
     const topDay = useMemo(() => {
-        let best: {date: string; amount: number} | null = null;
+        let best: { date: string; amount: number } | null = null;
         dailyTotals.forEach((amount, date) => {
             if (!best || amount > best.amount) {
                 best = {date, amount};
@@ -382,7 +388,7 @@ export const AnalyticsScreen: React.FC = () => {
         return <Loading/>;
     }
 
-    const renderBreakdown = (title: string, data: {label: string; amount: number}[]) => {
+    const renderBreakdown = (title: string, data: { label: string; amount: number }[]) => {
         const localMax = data.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
         return (
             <Card style={styles.card}>
@@ -398,7 +404,7 @@ export const AnalyticsScreen: React.FC = () => {
                             </View>
                             <View style={styles.chartBarWrapper}>
                                 <View
-                                    style={[styles.chartBar, {width: `${Math.max((item.amount / localMax) * 100, 5)}%`} ]}
+                                    style={[styles.chartBar, {width: `${Math.max((item.amount / localMax) * 100, 5)}%`}]}
                                 />
                             </View>
                         </View>
@@ -455,229 +461,241 @@ export const AnalyticsScreen: React.FC = () => {
                 </TouchableWithoutFeedback>
             </Modal>
             <ScrollView
-            contentContainerStyle={styles.container}
-            refreshControl={(
-                <RefreshControl refreshing={userExpensesLoading && userExpenses.length > 0} onRefresh={handleRefresh}/>
-            )}
-        >
-            <View style={styles.header}>
-                <Text style={styles.title}>{t('analytics.title')}</Text>
-                <Text style={styles.subtitle}>{t('analytics.subtitle')}</Text>
-            </View>
-
-            <View style={styles.filters}>
-                {TIMEFRAME_OPTIONS.map((option) => (
-                    <TouchableOpacity
-                        key={option}
-                        style={[styles.filterChip, timeframe === option && styles.filterChipActive]}
-                        onPress={() => setTimeframe(option)}
-                    >
-                        <Text style={[styles.filterChipText, timeframe === option && styles.filterChipTextActive]}>
-                            {chipLabels[option]}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-
-            {timeframe === 'custom' && (
-                <Card style={styles.card}>
-                    <Text style={styles.sectionTitle}>{t('analytics.customTitle')}</Text>
-                    <Input
-                        label={t('analytics.customFrom')}
-                        placeholder="YYYY-MM-DD"
-                        value={customRange.from}
-                        onChangeText={(text) => setCustomRange((prev) => ({...prev, from: text}))}
-                        autoCapitalize="none"
-                        keyboardType="numbers-and-punctuation"
-                    />
-                    <Input
-                        label={t('analytics.customTo')}
-                        placeholder="YYYY-MM-DD"
-                        value={customRange.to}
-                        onChangeText={(text) => setCustomRange((prev) => ({...prev, to: text}))}
-                        autoCapitalize="none"
-                        keyboardType="numbers-and-punctuation"
-                    />
-                    {customError && <Text style={styles.error}>{customError}</Text>}
-                    <Button
-                        title={t('analytics.customApply')}
-                        onPress={handleApplyCustom}
-                        style={styles.customButton}
-                        disabled={!customRange.from || !customRange.to}
-                    />
-                </Card>
-            )}
-
-            <Card style={styles.card}>
-                <Text style={styles.sectionTitle}>{t('analytics.listPickerLabel')}</Text>
-                <View style={styles.listPickerRow}>
-                    <TouchableOpacity
-                        style={[styles.listChip, selectedListId === ALL_LISTS_OPTION && styles.listChipActive]}
-                        onPress={() => handleSelectListId(ALL_LISTS_OPTION)}
-                    >
-                        <Text style={[styles.listChipText, selectedListId === ALL_LISTS_OPTION && styles.listChipTextActive]}>
-                            {t('analytics.listPickerAll')}
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        style={styles.dropdownTrigger}
-                        onPress={() => setIsListDropdownVisible(true)}
-                        disabled={lists.length === 0}
-                    >
-                        <Text style={styles.dropdownTriggerText} numberOfLines={1}>
-                            {selectedListId === ALL_LISTS_OPTION
-                                ? t('analytics.listPickerDropdownPlaceholder')
-                                : selectedList?.name || t('analytics.listPickerFallback')}
-                        </Text>
-                        <Text style={styles.dropdownTriggerIcon}>⌄</Text>
-                    </TouchableOpacity>
-                </View>
-                <Text style={styles.listPickerHint}>
-                    {selectedListId === ALL_LISTS_OPTION
-                        ? t('analytics.listPickerHelper')
-                        : t('analytics.listPickerSelected', {name: selectedList?.name || t('analytics.listPickerFallback')})}
-                </Text>
-            </Card>
-
-            <Card style={styles.card}>
-                <Text style={styles.sectionTitle}>{t('analytics.summaryTitle')}</Text>
-                <Text style={styles.rangeLabel}>{renderRangeLabel()}</Text>
-                <View style={styles.summaryRow}>
-                    <View style={styles.summaryItem}>
-                        <Text style={styles.summaryLabel}>{t('analytics.total')}</Text>
-                        <Text style={styles.summaryValue}>{currency} {totalSpent.toFixed(2)}</Text>
-                    </View>
-                    <View style={styles.summaryItem}>
-                        <Text style={styles.summaryLabel}>{t('analytics.averageDaily')}</Text>
-                        <Text style={styles.summaryValue}>{currency} {averageDaily.toFixed(2)}</Text>
-                    </View>
-                </View>
-                {topDay && (
-                    <Text style={styles.topDay}>{t('analytics.topDay', {date: topDay.date, amount: `${currency} ${topDay.amount.toFixed(2)}`})}</Text>
+                contentContainerStyle={styles.container}
+                refreshControl={(
+                    <RefreshControl refreshing={userExpensesLoading && userExpenses.length > 0}
+                                    onRefresh={handleRefresh}/>
                 )}
-            </Card>
+            >
+                <View style={styles.header}>
+                    <Text style={styles.title}>{t('analytics.title')}</Text>
+                    <Text style={styles.subtitle}>{t('analytics.subtitle')}</Text>
+                </View>
 
-            {renderBreakdown(t('analytics.byPayer'), payerBreakdown)}
-            {selectedListId === ALL_LISTS_OPTION && renderBreakdown(t('analytics.byList'), listBreakdown)}
+                <View style={styles.filters}>
+                    {TIMEFRAME_OPTIONS.map((option) => (
+                        <TouchableOpacity
+                            key={option}
+                            style={[styles.filterChip, timeframe === option && styles.filterChipActive]}
+                            onPress={() => setTimeframe(option)}
+                        >
+                            <Text style={[styles.filterChipText, timeframe === option && styles.filterChipTextActive]}>
+                                {chipLabels[option]}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
-            {selectedListId === ALL_LISTS_OPTION && (
+                {timeframe === 'custom' && (
+                    <Card style={styles.card}>
+                        <Text style={styles.sectionTitle}>{t('analytics.customTitle')}</Text>
+                        <Input
+                            label={t('analytics.customFrom')}
+                            placeholder="YYYY-MM-DD"
+                            value={customRange.from}
+                            onChangeText={(text) => setCustomRange((prev) => ({...prev, from: text}))}
+                            autoCapitalize="none"
+                            keyboardType="numbers-and-punctuation"
+                        />
+                        <Input
+                            label={t('analytics.customTo')}
+                            placeholder="YYYY-MM-DD"
+                            value={customRange.to}
+                            onChangeText={(text) => setCustomRange((prev) => ({...prev, to: text}))}
+                            autoCapitalize="none"
+                            keyboardType="numbers-and-punctuation"
+                        />
+                        {customError && <Text style={styles.error}>{customError}</Text>}
+                        <Button
+                            title={t('analytics.customApply')}
+                            onPress={handleApplyCustom}
+                            style={styles.customButton}
+                            disabled={!customRange.from || !customRange.to}
+                        />
+                    </Card>
+                )}
+
                 <Card style={styles.card}>
-                    <Text style={styles.sectionTitle}>{t('analytics.listInsightsPlaceholderTitle')}</Text>
-                    <Text style={styles.emptyText}>{t('analytics.listPickerHelper')}</Text>
+                    <Text style={styles.sectionTitle}>{t('analytics.listPickerLabel')}</Text>
+                    <View style={styles.listPickerRow}>
+                        <TouchableOpacity
+                            style={[styles.listChip, selectedListId === ALL_LISTS_OPTION && styles.listChipActive]}
+                            onPress={() => handleSelectListId(ALL_LISTS_OPTION)}
+                        >
+                            <Text
+                                style={[styles.listChipText, selectedListId === ALL_LISTS_OPTION && styles.listChipTextActive]}>
+                                {t('analytics.listPickerAll')}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.dropdownTrigger}
+                            onPress={() => setIsListDropdownVisible(true)}
+                            disabled={lists.length === 0}
+                        >
+                            <Text style={styles.dropdownTriggerText} numberOfLines={1}>
+                                {selectedListId === ALL_LISTS_OPTION
+                                    ? t('analytics.listPickerDropdownPlaceholder')
+                                    : selectedList?.name || t('analytics.listPickerFallback')}
+                            </Text>
+                            <Text style={styles.dropdownTriggerIcon}>⌄</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.listPickerHint}>
+                        {selectedListId === ALL_LISTS_OPTION
+                            ? t('analytics.listPickerHelper')
+                            : t('analytics.listPickerSelected', {name: selectedList?.name || t('analytics.listPickerFallback')})}
+                    </Text>
                 </Card>
-            )}
 
-            {selectedListId !== ALL_LISTS_OPTION && (
-                <>
-                    {isCustomRangeMissing && (
-                        <Card style={styles.card}>
-                            <Text style={styles.sectionTitle}>{selectedList?.name || t('analytics.listPickerFallback')}</Text>
-                            <Text style={styles.emptyText}>{t('analytics.listPickerApplyCustom')}</Text>
-                        </Card>
+                <Card style={styles.card}>
+                    <Text style={styles.sectionTitle}>{t('analytics.summaryTitle')}</Text>
+                    <Text style={styles.rangeLabel}>{renderRangeLabel()}</Text>
+                    <View style={styles.summaryRow}>
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryLabel}>{t('analytics.total')}</Text>
+                            <Text style={styles.summaryValue}>{currency} {totalSpent.toFixed(2)}</Text>
+                        </View>
+                        <View style={styles.summaryItem}>
+                            <Text style={styles.summaryLabel}>{t('analytics.averageDaily')}</Text>
+                            <Text style={styles.summaryValue}>{currency} {averageDaily.toFixed(2)}</Text>
+                        </View>
+                    </View>
+                    {topDay && (
+                        <Text style={styles.topDay}>{t('analytics.topDay', {
+                            date: topDay.date,
+                            amount: `${currency} ${topDay.amount.toFixed(2)}`
+                        })}</Text>
                     )}
+                </Card>
 
-                    {!isCustomRangeMissing && listInsightsLoading && (
-                        <Card style={styles.card}>
-                            <View style={styles.loadingRow}>
-                                <ActivityIndicator color={colors.accent}/>
-                                <Text style={styles.loadingText}>{t('analytics.listInsightsLoading')}</Text>
-                            </View>
-                        </Card>
-                    )}
+                {renderBreakdown(t('analytics.byPayer'), payerBreakdown)}
+                {selectedListId === ALL_LISTS_OPTION && renderBreakdown(t('analytics.byList'), listBreakdown)}
 
-                    {!isCustomRangeMissing && !listInsightsLoading && listInsightsError && (
-                        <Card style={styles.card}>
-                            <Text style={styles.error}>{listInsightsError}</Text>
-                            <Button
-                                title={t('common.retry')}
-                                onPress={handleRetryListInsights}
-                                style={styles.retryButton}
-                            />
-                        </Card>
-                    )}
+                {selectedListId === ALL_LISTS_OPTION && (
+                    <Card style={styles.card}>
+                        <Text style={styles.sectionTitle}>{t('analytics.listInsightsPlaceholderTitle')}</Text>
+                        <Text style={styles.emptyText}>{t('analytics.listPickerHelper')}</Text>
+                    </Card>
+                )}
 
-                    {!isCustomRangeMissing && !listInsightsLoading && !listInsightsError && (
-                        <>
+                {selectedListId !== ALL_LISTS_OPTION && (
+                    <>
+                        {isCustomRangeMissing && (
                             <Card style={styles.card}>
-                                <Text style={styles.sectionTitle}>{t('analytics.memberBreakdownTitle')}</Text>
-                                {memberBreakdown.length === 0 ? (
-                                    <Text style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text>
-                                ) : (
-                                    memberBreakdown.map((item) => (
-                                        <View key={item.memberId} style={styles.chartRow}>
-                                            <View style={styles.chartLabelWrapper}>
-                                                <Text style={styles.chartLabel}>{getMemberLabel(memberMap.get(item.memberId))}</Text>
-                                                <Text style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
-                                            </View>
-                                            <View style={styles.chartBarWrapper}>
-                                                <View
-                                                    style={[styles.chartBar, {width: `${Math.max((item.amount / memberChartMax) * 100, 5)}%`} ]}
-                                                />
-                                            </View>
-                                        </View>
-                                    ))
-                                )}
+                                <Text
+                                    style={styles.sectionTitle}>{selectedList?.name || t('analytics.listPickerFallback')}</Text>
+                                <Text style={styles.emptyText}>{t('analytics.listPickerApplyCustom')}</Text>
                             </Card>
+                        )}
 
+                        {!isCustomRangeMissing && listInsightsLoading && (
                             <Card style={styles.card}>
-                                <Text style={styles.sectionTitle}>{t('lists.splitSectionTitle')}</Text>
-                                <Text style={styles.splitHelper}>{t('lists.splitOptimizedHint')}</Text>
-                                {splitSummary.reason === 'no-expenses' && (
-                                    <Text style={styles.emptyText}>{t('lists.splitSectionEmpty')}</Text>
-                                )}
-                                {splitSummary.reason === 'no-members' && (
-                                    <Text style={styles.emptyText}>{t('lists.splitSectionNeedMembers')}</Text>
-                                )}
-                                {splitSummary.reason === 'no-split' && (
-                                    <Text style={styles.emptyText}>{t('lists.splitSectionNeedPercentages')}</Text>
-                                )}
-                                {splitSummary.reason === null && (
-                                    <>
-                                        {splitSummary.rows.map((row) => (
-                                            <View key={row.member.id} style={styles.splitRow}>
-                                                <View style={styles.splitMemberInfo}>
-                                                    <Text style={styles.splitMemberName}>{getMemberLabel(row.member)}</Text>
-                                                    <Text style={styles.splitMemberShare}>{t('lists.splitShareLabel', {value: row.percentage})}</Text>
-                                                </View>
-                                                <View style={styles.splitAmountBlock}>
+                                <View style={styles.loadingRow}>
+                                    <ActivityIndicator color={colors.accent}/>
+                                    <Text style={styles.loadingText}>{t('analytics.listInsightsLoading')}</Text>
+                                </View>
+                            </Card>
+                        )}
+
+                        {!isCustomRangeMissing && !listInsightsLoading && listInsightsError && (
+                            <Card style={styles.card}>
+                                <Text style={styles.error}>{listInsightsError}</Text>
+                                <Button
+                                    title={t('common.retry')}
+                                    onPress={handleRetryListInsights}
+                                    style={styles.retryButton}
+                                />
+                            </Card>
+                        )}
+
+                        {!isCustomRangeMissing && !listInsightsLoading && !listInsightsError && (
+                            <>
+                                <Card style={styles.card}>
+                                    <Text style={styles.sectionTitle}>{t('analytics.memberBreakdownTitle')}</Text>
+                                    {memberBreakdown.length === 0 ? (
+                                        <Text style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text>
+                                    ) : (
+                                        memberBreakdown.map((item) => (
+                                            <View key={item.memberId} style={styles.chartRow}>
+                                                <View style={styles.chartLabelWrapper}>
                                                     <Text
-                                                        style={[styles.splitAmount, row.net < 0 ? styles.splitOwes : styles.splitReceives]}
-                                                    >
-                                                        {currency} {Math.abs(row.net).toFixed(2)}
-                                                    </Text>
-                                                    <Text style={styles.splitHint}>
-                                                        {row.net < 0 ? t('lists.splitNetGive') : t('lists.splitNetReceive')}
-                                                    </Text>
+                                                        style={styles.chartLabel}>{getMemberLabel(memberMap.get(item.memberId))}</Text>
+                                                    <Text
+                                                        style={styles.chartValue}>{currency} {item.amount.toFixed(2)}</Text>
+                                                </View>
+                                                <View style={styles.chartBarWrapper}>
+                                                    <View
+                                                        style={[styles.chartBar, {width: `${Math.max((item.amount / memberChartMax) * 100, 5)}%`}]}
+                                                    />
                                                 </View>
                                             </View>
-                                        ))}
-                                        <View style={styles.settlementsWrapper}>
-                                            <Text style={styles.settlementsTitle}>{t('lists.splitSettlementsTitle')}</Text>
-                                            {splitSummary.settlements.length === 0 ? (
-                                                <Text style={styles.emptyText}>{t('lists.splitSettlementsEmpty')}</Text>
-                                            ) : (
-                                                splitSummary.settlements.map((settlement, index) => (
+                                        ))
+                                    )}
+                                </Card>
+
+                                <Card style={styles.card}>
+                                    <Text style={styles.sectionTitle}>{t('lists.splitSectionTitle')}</Text>
+                                    <Text style={styles.splitHelper}>{t('lists.splitOptimizedHint')}</Text>
+                                    {splitSummary.reason === 'no-expenses' && (
+                                        <Text style={styles.emptyText}>{t('lists.splitSectionEmpty')}</Text>
+                                    )}
+                                    {splitSummary.reason === 'no-members' && (
+                                        <Text style={styles.emptyText}>{t('lists.splitSectionNeedMembers')}</Text>
+                                    )}
+                                    {splitSummary.reason === 'no-split' && (
+                                        <Text style={styles.emptyText}>{t('lists.splitSectionNeedPercentages')}</Text>
+                                    )}
+                                    {splitSummary.reason === null && (
+                                        <>
+                                            {splitSummary.rows.map((row) => (
+                                                <View key={row.member.id} style={styles.splitRow}>
+                                                    <View style={styles.splitMemberInfo}>
+                                                        <Text
+                                                            style={styles.splitMemberName}>{getMemberLabel(row.member)}</Text>
+                                                        <Text
+                                                            style={styles.splitMemberShare}>{t('lists.splitShareLabel', {value: row.percentage})}</Text>
+                                                    </View>
+                                                    <View style={styles.splitAmountBlock}>
+                                                        <Text
+                                                            style={[styles.splitAmount, row.net < 0 ? styles.splitOwes : styles.splitReceives]}
+                                                        >
+                                                            {currency} {Math.abs(row.net).toFixed(2)}
+                                                        </Text>
+                                                        <Text style={styles.splitHint}>
+                                                            {row.net < 0 ? t('lists.splitNetGive') : t('lists.splitNetReceive')}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            ))}
+                                            <View style={styles.settlementsWrapper}>
+                                                <Text
+                                                    style={styles.settlementsTitle}>{t('lists.splitSettlementsTitle')}</Text>
+                                                {splitSummary.settlements.length === 0 ? (
                                                     <Text
-                                                        key={`${settlement.from.id}-${settlement.to.id}-${index}`}
-                                                        style={styles.settlementText}
-                                                    >
-                                                        {t('lists.splitSettlement', {
-                                                            from: getMemberLabel(settlement.from),
-                                                            to: getMemberLabel(settlement.to),
-                                                            amount: `${currency} ${settlement.amount.toFixed(2)}`,
-                                                        })}
-                                                    </Text>
-                                                ))
-                                            )}
-                                        </View>
-                                    </>
-                                )}
-                            </Card>
-                        </>
-                    )}
-                </>
-            )}
-        </ScrollView>
+                                                        style={styles.emptyText}>{t('lists.splitSettlementsEmpty')}</Text>
+                                                ) : (
+                                                    splitSummary.settlements.map((settlement, index) => (
+                                                        <Text
+                                                            key={`${settlement.from.id}-${settlement.to.id}-${index}`}
+                                                            style={styles.settlementText}
+                                                        >
+                                                            {t('lists.splitSettlement', {
+                                                                from: getMemberLabel(settlement.from),
+                                                                to: getMemberLabel(settlement.to),
+                                                                amount: `${currency} ${settlement.amount.toFixed(2)}`,
+                                                            })}
+                                                        </Text>
+                                                    ))
+                                                )}
+                                            </View>
+                                        </>
+                                    )}
+                                </Card>
+                            </>
+                        )}
+                    </>
+                )}
+            </ScrollView>
         </>
     );
 };

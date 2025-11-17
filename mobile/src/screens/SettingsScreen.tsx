@@ -6,7 +6,7 @@ import {AppColors, ThemePreference, useAppTheme} from '@theme';
 import {Button} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 
-const themeOptions: {value: ThemePreference; icon: string; labelKey: string}[] = [
+const themeOptions: { value: ThemePreference; icon: string; labelKey: string }[] = [
     {value: 'light', icon: 'sunny-outline', labelKey: 'settings.themeLight'},
     {value: 'dark', icon: 'moon-outline', labelKey: 'settings.themeDark'},
     {value: 'system', icon: 'phone-portrait-outline', labelKey: 'settings.themeSystem'},
@@ -124,7 +124,8 @@ export const SettingsScreen: React.FC = () => {
                         loading={isLoggingOut}
                         style={styles.logoutPrimary}
                     />
-                    <TouchableOpacity style={styles.logoutSecondary} onPress={handleSwitchAccount} disabled={isLoggingOut}>
+                    <TouchableOpacity style={styles.logoutSecondary} onPress={handleSwitchAccount}
+                                      disabled={isLoggingOut}>
                         <Ionicons name="log-out-outline" size={18} color={colors.accent}/>
                         <Text style={styles.logoutSecondaryText}>{t('settings.logoutSecondary')}</Text>
                     </TouchableOpacity>

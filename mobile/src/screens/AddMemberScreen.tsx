@@ -19,10 +19,10 @@ export const AddMemberScreen: React.FC = () => {
     const [email, setEmail] = useState('');
     const [displayName, setDisplayName] = useState('');
     const [isValidator, setIsValidator] = useState(false);
-    const [errors, setErrors] = useState<{email?: string}>({});
+    const [errors, setErrors] = useState<{ email?: string }>({});
 
     const validate = () => {
-        const nextErrors: {email?: string} = {};
+        const nextErrors: { email?: string } = {};
         if (!email.trim()) {
             nextErrors.email = t('members.emailRequired');
         }

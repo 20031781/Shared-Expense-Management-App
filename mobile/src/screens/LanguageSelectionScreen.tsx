@@ -5,7 +5,7 @@ import {useTranslation} from '@i18n';
 import {Language} from '@i18n/translations';
 import {AppColors, useAppTheme} from '@theme';
 
-const LANGUAGE_OPTIONS: {code: Language; labelKey: string; descriptionKey: string; emoji: string;}[] = [
+const LANGUAGE_OPTIONS: { code: Language; labelKey: string; descriptionKey: string; emoji: string; }[] = [
     {
         code: 'it',
         labelKey: 'settings.italian',

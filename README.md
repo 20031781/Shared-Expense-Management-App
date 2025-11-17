@@ -58,7 +58,8 @@ npm start
 
 ## 🧹 Pulizia delle dipendenze (`node_modules`)
 
-Per mantenere il repository leggero, **non committare mai le cartelle `node_modules`** (già escluse via `.gitignore`). Se hai bisogno di rimuoverle manualmente:
+Per mantenere il repository leggero, **non committare mai le cartelle `node_modules`** (già escluse via `.gitignore`).
+Se hai bisogno di rimuoverle manualmente:
 
 ```bash
 # dalla root del progetto

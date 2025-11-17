@@ -1,7 +1,11 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Appearance, ColorSchemeName} from 'react-native';
-import {DarkTheme as NavigationDarkTheme, DefaultTheme as NavigationLightTheme, Theme as NavigationTheme,} from '@react-navigation/native';
+import {
+    DarkTheme as NavigationDarkTheme,
+    DefaultTheme as NavigationLightTheme,
+    Theme as NavigationTheme,
+} from '@react-navigation/native';
 
 export type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -91,7 +95,7 @@ const ThemeContext = createContext<ThemeContextValue>({
     statusBarStyle: 'dark',
 });
 
-export const ThemeProvider: React.FC<{children: React.ReactNode}> = ({children}) => {
+export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({children}) => {
     const [preference, setPreferenceState] = useState<ThemePreference>('system');
     const [systemScheme, setSystemScheme] = useState<ColorSchemeName>(Appearance.getColorScheme());
 

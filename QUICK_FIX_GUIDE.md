@@ -3,9 +3,11 @@
 ## ✅ Problemi Risolti
 
 ### 1. ✅ Routines Duplicate nel DB Locale
+
 **Non danno fastidio**, puoi ignorarle. Sono dalla vecchia migration Supabase.
 
 Se vuoi pulire tutto:
+
 ```sql
 -- In DataGrip esegui:
 -- backend/migrations/000_reset_database.sql
@@ -15,6 +17,7 @@ Se vuoi pulire tutto:
 ---
 
 ### 2. ✅ Errore Navigation "JoinList"
+
 **Risolto** - Il pulsante "Join List" ora mostra un alert "Coming Soon" invece di navigare.
 
 L'errore non apparirà più! ✅
@@ -22,6 +25,7 @@ L'errore non apparirà più! ✅
 ---
 
 ### 3. ✅ Errore 401 Unauthorized
+
 **Causa:** Quando fai signup su Supabase, l'utente viene creato in `auth.users` ma NON in `public.users`.
 
 **Soluzione:** Applica la migration che sincronizza automaticamente i due:
@@ -35,6 +39,7 @@ L'errore non apparirà più! ✅
 5. Clicca **Run** ▶️
 
 Questo crea un trigger che:
+
 - Quando fai signup, crea automaticamente l'utente in `public.users`
 - Sincronizza email e nome
 - Abilita RLS per sicurezza
@@ -61,11 +66,12 @@ npm start
 ```
 
 ### Step 3: Crea Account
+
 1. Apri app su telefono
 2. Clicca **"Don't have an account? Sign Up"**
 3. Inserisci:
-   - Email: `test@example.com`
-   - Password: `password123`
+    - Email: `test@example.com`
+    - Password: `password123`
 4. Clicca **Sign Up**
 5. Dovresti vedere il messaggio **"Account created successfully!"** ✅
 
@@ -82,6 +88,7 @@ SELECT * FROM auth.users;
 ```
 
 ### Step 5: Crea Lista
+
 1. Clicca **"+"** (FAB button in basso a destra)
 2. Inserisci nome: `Vacanza 2024`
 3. Salva

@@ -50,16 +50,16 @@ Usa le migrations semplificate per sviluppo locale.
     - Password: `postgres`
 
 2. Esegui in ordine i file SQL in `backend/migrations/`:
-   - Apri `001_initial_schema.sql`
-   - Clicca **Execute** (Ctrl+Enter)
-   - Apri `002_stored_procedures.sql`
-   - Clicca **Execute** (Ctrl+Enter)
-   - Apri `003_roles_and_member_split.sql`
-   - Clicca **Execute** (Ctrl+Enter)
-   - Apri `004_member_display_name_and_expense_fix.sql`
-   - Clicca **Execute** (Ctrl+Enter)
-   - Apri `005_expense_date_column.sql`
-   - Clicca **Execute** (Ctrl+Enter)
+    - Apri `001_initial_schema.sql`
+    - Clicca **Execute** (Ctrl+Enter)
+    - Apri `002_stored_procedures.sql`
+    - Clicca **Execute** (Ctrl+Enter)
+    - Apri `003_roles_and_member_split.sql`
+    - Clicca **Execute** (Ctrl+Enter)
+    - Apri `004_member_display_name_and_expense_fix.sql`
+    - Clicca **Execute** (Ctrl+Enter)
+    - Apri `005_expense_date_column.sql`
+    - Clicca **Execute** (Ctrl+Enter)
 
 **Con psql (CLI):**
 
@@ -72,7 +72,9 @@ docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 004_m
 docker exec -i splitexpenses-postgres psql -U postgres -d split_expenses < 005_expense_date_column.sql
 ```
 
-> 💡 **Importante**: la migrazione `003` abilita il campo `split_percentage` (necessario per modificare i membri) e la `005` rinomina il campo `expense_date` evitando l'errore 500 in fase di creazione di una spesa. Assicurati di applicarle entrambe.
+> 💡 **Importante**: la migrazione `003` abilita il campo `split_percentage` (necessario per modificare i membri) e la
+`005` rinomina il campo `expense_date` evitando l'errore 500 in fase di creazione di una spesa. Assicurati di applicarle
+> entrambe.
 
 **Verifica che funzioni:**
 
@@ -173,9 +175,13 @@ Vedrai un QR code nel terminale.
 
 #### Condividere l'invito via WhatsApp
 
-- Nella schermata **Dettaglio lista** tocca l'icona di condivisione (in alto a destra) per generare un messaggio WhatsApp con un link cliccabile `https://splitexpenses.app/accept/<CODICE>` e con il deep-link `splitexpenses://accept/<CODICE>` per l'apertura diretta dell'app.
-- Chi riceve il messaggio può toccare il link HTTPS per aprire l'app (o il browser, se l'app non è installata) e accettare l'invito automaticamente; in alternativa può copiare il codice dal testo.
-- Fino a quando un membro non accetta l'invito rimarrà con il **pallino giallo** in elenco: significa che è ancora in stato "In attesa".
+- Nella schermata **Dettaglio lista** tocca l'icona di condivisione (in alto a destra) per generare un messaggio
+  WhatsApp con un link cliccabile `https://splitexpenses.app/accept/<CODICE>` e con il deep-link
+  `splitexpenses://accept/<CODICE>` per l'apertura diretta dell'app.
+- Chi riceve il messaggio può toccare il link HTTPS per aprire l'app (o il browser, se l'app non è installata) e
+  accettare l'invito automaticamente; in alternativa può copiare il codice dal testo.
+- Fino a quando un membro non accetta l'invito rimarrà con il **pallino giallo** in elenco: significa che è ancora in
+  stato "In attesa".
 
 ---
 
@@ -206,8 +212,10 @@ Quando vuoi condividere rapidamente l'app senza passare dagli store puoi creare 
    ```
 
 6. Avvia la build cloud: `eas build -p android --profile production`.
-7. Quando richiesto rispondi **yes** alla domanda "Generate a new Android Keystore?" (EAS la conserverà per le build successive).
-8. Al termine della build, EAS mostra l'URL per scaricare l'APK (`https://expo.dev/artifacts/eas/XXXXX.apk`). Condividilo con i tester e installa manualmente abilitando le origini sconosciute.
+7. Quando richiesto rispondi **yes** alla domanda "Generate a new Android Keystore?" (EAS la conserverà per le build
+   successive).
+8. Al termine della build, EAS mostra l'URL per scaricare l'APK (`https://expo.dev/artifacts/eas/XXXXX.apk`).
+   Condividilo con i tester e installa manualmente abilitando le origini sconosciute.
 
 ---
 

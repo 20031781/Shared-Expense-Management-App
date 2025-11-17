@@ -37,7 +37,7 @@ export const CreateExpenseScreen: React.FC = () => {
     const [receiptUri, setReceiptUri] = useState<string | null>(null);
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [showPayerPicker, setShowPayerPicker] = useState(false);
-    const [errors, setErrors] = useState<{title?: string; amount?: string; payer?: string}>({});
+    const [errors, setErrors] = useState<{ title?: string; amount?: string; payer?: string }>({});
 
     useEffect(() => {
         fetchMembers(listId);
@@ -63,7 +63,7 @@ export const CreateExpenseScreen: React.FC = () => {
     }, [t]);
 
     const validate = () => {
-        const newErrors: {title?: string; amount?: string; payer?: string} = {};
+        const newErrors: { title?: string; amount?: string; payer?: string } = {};
 
         if (!title.trim()) {
             newErrors.title = t('expenses.titleRequired');

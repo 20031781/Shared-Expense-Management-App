@@ -3,25 +3,30 @@
 ## 📄 Documentation Files
 
 ### Getting Started
+
 - **GETTING_STARTED.md** - Prima guida per nuovi utenti
 - **README.md** - Documentazione tecnica principale
 - **QUICK_START.md** - Avvio rapido backend (5 minuti)
 
 ### Reference Documentation
+
 - **PROJECT_SUMMARY.md** - Panoramica completa, statistiche, status
 - **ARCHITECTURE.md** - Design sistema, diagrammi, pattern
 - **MOBILE_SETUP.md** - Guida completa setup .NET MAUI
 - **TROUBLESHOOTING.md** - Risoluzione problemi comuni
 
 ### Legal
+
 - **LICENSE.md** - Licenza e termini utilizzo
 
 ### Utility
+
 - **FILE_INDEX.md** - Questo file (indice completo)
 
 ## 🖥️ Backend Files
 
 ### Root Configuration
+
 ```
 backend/
 ├── Dockerfile                      # Docker image multi-stage build
@@ -31,6 +36,7 @@ backend/
 ```
 
 ### API Project
+
 ```
 backend/SplitExpenses.Api/
 ├── Program.cs                      # Application entry point, DI config
@@ -39,6 +45,7 @@ backend/SplitExpenses.Api/
 ```
 
 ### Controllers (REST API Endpoints)
+
 ```
 backend/SplitExpenses.Api/Controllers/
 ├── AuthController.cs              # Authentication endpoints
@@ -73,6 +80,7 @@ backend/SplitExpenses.Api/Controllers/
 ```
 
 ### Services (Business Logic)
+
 ```
 backend/SplitExpenses.Api/Services/
 ├── IAuthService.cs                # Auth interface
@@ -86,6 +94,7 @@ backend/SplitExpenses.Api/Services/
 ```
 
 ### Repositories (Data Access)
+
 ```
 backend/SplitExpenses.Api/Repositories/
 ├── IUserRepository.cs             # User data interface
@@ -99,6 +108,7 @@ backend/SplitExpenses.Api/Repositories/
 ```
 
 ### Models (Domain Models)
+
 ```
 backend/SplitExpenses.Api/Models/
 ├── User.cs                        # User model + NotificationPreferences
@@ -118,6 +128,7 @@ mobile/                            # ❌ Da creare
 ## 🗄️ Database (Supabase)
 
 ### Migrations Applied
+
 ```
 ✅ 001_initial_schema_tables       # 11 tabelle create
 ✅ 002_row_level_security          # RLS + 20+ policies
@@ -125,6 +136,7 @@ mobile/                            # ❌ Da creare
 ```
 
 ### Tables (11)
+
 1. **users** - Utenti registrati
 2. **refresh_tokens** - Token sessioni
 3. **device_tokens** - Token FCM
@@ -138,6 +150,7 @@ mobile/                            # ❌ Da creare
 11. **notifications** - Notifiche
 
 ### Stored Procedures (4)
+
 - `calculate_expense_splits` - Divisione automatica spese
 - `update_expense_status_after_validation` - Trigger validazioni
 - `calculate_optimized_reimbursements` - Algoritmo greedy
@@ -155,6 +168,7 @@ mobile/                            # ❌ Da creare
 ## 📊 Statistics
 
 ### Backend Code
+
 - **Total Files:** 37
 - **C# Files:** 26
 - **Controllers:** 4 (25+ endpoints)
@@ -164,12 +178,14 @@ mobile/                            # ❌ Da creare
 - **Lines of Code:** ~5,000
 
 ### Documentation
+
 - **MD Files:** 8
 - **Total Pages:** ~50 (se stampato)
 - **Code Examples:** 100+
 - **Diagrams:** 5 (Mermaid)
 
 ### Database
+
 - **Tables:** 11
 - **Stored Procedures:** 4
 - **Triggers:** 1
@@ -181,23 +197,27 @@ mobile/                            # ❌ Da creare
 ### By Purpose
 
 **Configuration:**
+
 - `backend/.env` - Environment variables
 - `backend/docker-compose.yml` - Docker orchestration
 - `backend/SplitExpenses.Api/appsettings.json` - App settings
 - `.github/workflows/*.yml` - CI/CD pipelines
 
 **Source Code:**
+
 - `backend/SplitExpenses.Api/Controllers/` - API endpoints
 - `backend/SplitExpenses.Api/Services/` - Business logic
 - `backend/SplitExpenses.Api/Repositories/` - Data access
 - `backend/SplitExpenses.Api/Models/` - Domain models
 
 **Documentation:**
+
 - `*.md` files in root - User guides
 - `ARCHITECTURE.md` - Technical design
 - `TROUBLESHOOTING.md` - Problem solving
 
 **Infrastructure:**
+
 - `backend/Dockerfile` - Container image
 - `.github/workflows/` - Automation
 
@@ -211,17 +231,20 @@ mobile/                            # ❌ Da creare
 ## 🎯 Implementation Priority
 
 ### Alta Priorità (prossimi passi)
+
 1. Mobile app project structure ❌
 2. Mobile ViewModels ❌
 3. Mobile Services ❌
 4. Mobile Views ❌
 
 ### Media Priorità
+
 5. Test suite ❌
 6. Performance optimization
 7. Advanced features (upload foto, grafici, export CSV)
 
 ### Bassa Priorità
+
 8. Multi-currency support con conversione
 9. Analytics e tracking
 10. Widget e shortcuts
