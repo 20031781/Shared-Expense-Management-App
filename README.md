@@ -63,7 +63,7 @@ Se hai bisogno di rimuoverle manualmente:
 
 ```bash
 # dalla root del progetto
-rm -rf mobile/node_modules
+rm -Recurse -Force "mobile/node_modules"
 ```
 
 Successivamente reinstalla i pacchetti solo quando necessario:
