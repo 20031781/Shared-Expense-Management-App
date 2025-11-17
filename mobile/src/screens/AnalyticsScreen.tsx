@@ -19,6 +19,7 @@ import {AppColors, useAppTheme} from '@theme';
 import {Expense, ListMember} from '@/types';
 import expensesService from '@/services/expenses.service';
 import listsService from '@/services/lists.service';
+import {useFocusEffect} from '@react-navigation/native';
 
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
@@ -156,6 +157,15 @@ export const AnalyticsScreen: React.FC = () => {
             setRangeSummary({});
         }
     }, [timeframe, loadExpenses, appliedCustomRange]);
+
+    useFocusEffect(
+        useCallback(() => {
+            if (timeframe === 'custom' && !appliedCustomRange) {
+                return;
+            }
+            loadExpenses(timeframe, timeframe === 'custom' ? appliedCustomRange : null).catch(() => undefined);
+        }, [timeframe, appliedCustomRange, loadExpenses])
+    );
 
     const isCustomRangeMissing = timeframe === 'custom' && !appliedCustomRange;
 
@@ -528,16 +538,23 @@ export const AnalyticsScreen: React.FC = () => {
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={styles.dropdownTrigger}
+                            style={[styles.dropdownTrigger, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerActive]}
                             onPress={() => setIsListDropdownVisible(true)}
                             disabled={lists.length === 0}
                         >
-                            <Text style={styles.dropdownTriggerText} numberOfLines={1}>
+                            <Text
+                                style={[styles.dropdownTriggerText, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerTextActive]}
+                                numberOfLines={1}
+                            >
                                 {selectedListId === ALL_LISTS_OPTION
                                     ? t('analytics.listPickerDropdownPlaceholder')
                                     : selectedList?.name || t('analytics.listPickerFallback')}
                             </Text>
-                            <Text style={styles.dropdownTriggerIcon}>⌄</Text>
+                            <Text
+                                style={[styles.dropdownTriggerIcon, selectedListId !== ALL_LISTS_OPTION && styles.dropdownTriggerIconActive]}
+                            >
+                                ⌄
+                            </Text>
                         </TouchableOpacity>
                     </View>
                     <Text style={styles.listPickerHint}>
@@ -751,7 +768,6 @@ const createStyles = (colors: AppColors) =>
             flex: 1,
             flexDirection: 'row',
             alignItems: 'center',
-            justifyContent: 'space-between',
             paddingHorizontal: 12,
             paddingVertical: 10,
             borderRadius: 12,
@@ -759,15 +775,25 @@ const createStyles = (colors: AppColors) =>
             borderColor: colors.surfaceSecondary,
             backgroundColor: colors.surface,
         },
+        dropdownTriggerActive: {
+            backgroundColor: colors.accent,
+            borderColor: colors.accent,
+        },
         dropdownTriggerText: {
             flex: 1,
             fontSize: 14,
             color: colors.text,
             marginRight: 8,
         },
+        dropdownTriggerTextActive: {
+            color: colors.accentText,
+        },
         dropdownTriggerIcon: {
             fontSize: 16,
             color: colors.secondaryText,
+        },
+        dropdownTriggerIconActive: {
+            color: colors.accentText,
         },
         filterChipText: {
             fontWeight: '600',

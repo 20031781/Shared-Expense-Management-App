@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SplitExpenses.Api.Models;
 using SplitExpenses.Api.Repositories;
+using SplitExpenses.Api.Services;
 
 #endregion
 
@@ -13,7 +14,7 @@ namespace SplitExpenses.Api.Controllers;
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class ListsController(IListRepository listRepository) : ControllerBase
+public class ListsController(IListRepository listRepository, INotificationService notificationService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetUserLists()
@@ -90,6 +91,8 @@ public class ListsController(IListRepository listRepository) : ControllerBase
             IsValidator = request.IsValidator,
             Status = MemberStatus.Pending
         });
+
+        await notificationService.SendMemberAddedNotificationAsync(id, member.Id);
 
         return Ok(member);
     }

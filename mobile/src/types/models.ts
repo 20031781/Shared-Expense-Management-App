@@ -8,6 +8,15 @@ export interface User {
     isAdmin?: boolean;
     createdAt: string;
     updatedAt: string;
+    notificationPreferences?: NotificationPreferences;
+}
+
+export interface NotificationPreferences {
+    newExpense: boolean;
+    memberAdded: boolean;
+    validationRequest: boolean;
+    validationResult: boolean;
+    newReimbursement: boolean;
 }
 
 export interface List {

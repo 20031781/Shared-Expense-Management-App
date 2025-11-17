@@ -1,7 +1,7 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {Button, Card, Input, Loading} from '@/components';
+import {Button, Card, Input, Loading, OnboardingChecklist} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {List} from '@/types';
 import {useNavigation} from '@react-navigation/native';
@@ -34,13 +34,13 @@ export const ListsScreen: React.FC = () => {
         setRefreshing(false);
     };
 
-    const handleCreateList = () => {
+    const handleCreateList = useCallback(() => {
         navigation.navigate('CreateList');
-    };
+    }, [navigation]);
 
-    const handleListPress = (list: List) => {
+    const handleListPress = useCallback((list: List) => {
         navigation.navigate('ListDetails', {listId: list.id});
-    };
+    }, [navigation]);
 
     const handleJoinList = () => {
         setJoinError(undefined);
@@ -114,11 +114,62 @@ export const ListsScreen: React.FC = () => {
         </Card>
     );
 
+    const firstListId = lists[0]?.id;
+
+    const goToFirstListDetails = useCallback(() => {
+        if (firstListId) {
+            navigation.navigate('ListDetails', {listId: firstListId});
+        }
+    }, [firstListId, navigation]);
+
+    const goToFirstExpense = useCallback(() => {
+        if (firstListId) {
+            navigation.navigate('CreateExpense', {listId: firstListId});
+        }
+    }, [firstListId, navigation]);
+
+    const onboardingSteps = useMemo(() => ([
+        {
+            id: 'create',
+            title: t('lists.onboardingStepCreateTitle'),
+            description: t('lists.onboardingStepCreateDescription'),
+            actionLabel: t('lists.onboardingStepCreateAction'),
+            onPress: handleCreateList,
+            completed: lists.length > 0,
+        },
+        {
+            id: 'invite',
+            title: t('lists.onboardingStepInviteTitle'),
+            description: t('lists.onboardingStepInviteDescription'),
+            actionLabel: t('lists.onboardingStepInviteAction'),
+            onPress: firstListId ? goToFirstListDetails : undefined,
+            disabled: !firstListId,
+            hint: t('lists.onboardingStepInviteHint'),
+        },
+        {
+            id: 'expense',
+            title: t('lists.onboardingStepExpenseTitle'),
+            description: t('lists.onboardingStepExpenseDescription'),
+            actionLabel: t('lists.onboardingStepExpenseAction'),
+            onPress: firstListId ? goToFirstExpense : undefined,
+            disabled: !firstListId,
+            hint: t('lists.onboardingStepExpenseHint'),
+        },
+    ]), [firstListId, goToFirstExpense, goToFirstListDetails, handleCreateList, lists.length, t]);
+
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>📋</Text>
             <Text style={styles.emptyTitle}>{t('lists.emptyTitle')}</Text>
             <Text style={styles.emptyText}>{t('lists.emptySubtitle')}</Text>
+            <View style={styles.onboardingWrapper}>
+                <OnboardingChecklist
+                    title={t('lists.onboardingTitle')}
+                    subtitle={t('lists.onboardingSubtitle')}
+                    helper={t('lists.onboardingHelper')}
+                    steps={onboardingSteps}
+                />
+            </View>
             <Button
                 title={t('lists.createList')}
                 onPress={handleCreateList}
@@ -253,6 +304,10 @@ const createStyles = (colors: AppColors) =>
             fontSize: 16,
             color: colors.secondaryText,
             textAlign: 'center',
+            marginBottom: 24,
+        },
+        onboardingWrapper: {
+            width: '100%',
             marginBottom: 24,
         },
         emptyButton: {

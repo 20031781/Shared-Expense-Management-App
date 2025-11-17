@@ -104,10 +104,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     updateProfile: async (updates: Partial<User>) => {
         try {
             set({isLoading: true, error: null});
-            set((state) => ({
-                user: state.user ? {...state.user, ...updates} : null,
-                isLoading: false
-            }));
+            const user = await authService.updateProfile(updates);
+            set({user, isLoading: false});
         } catch (error: any) {
             set({
                 error: error.message || 'Update failed',
