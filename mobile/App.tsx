@@ -60,19 +60,47 @@ const AppContent = () => {
 
     useEffect(() => {
         if (!isAuthenticated || !pendingInvite) return;
-        const action = pendingInvite.type === 'accept' ? acceptInviteByCode : joinList;
-        const successMessage = pendingInvite.type === 'accept' ? t('lists.acceptSuccess') : t('lists.joinSuccess');
-        const errorMessage = pendingInvite.type === 'accept' ? t('lists.acceptError') : t('lists.joinError');
-        const code = pendingInvite.code;
+
+        const {type, code} = pendingInvite;
         setPendingInvite(null);
 
-        action(code)
-            .then(() => {
-                Alert.alert(t('common.success'), successMessage);
-            })
-            .catch((error: any) => {
-                Alert.alert(t('common.error'), error.message || errorMessage);
-            });
+        const successMessages = {
+            accept: t('lists.acceptSuccess'),
+            join: t('lists.joinSuccess')
+        } as const;
+
+        const errorMessages = {
+            accept: t('lists.acceptError'),
+            join: t('lists.joinError')
+        } as const;
+
+        const executeAction = async () => {
+            try {
+                if (type === 'accept') {
+                    await acceptInviteByCode(code);
+                } else {
+                    await joinList(code);
+                }
+                Alert.alert(t('common.success'), successMessages[type]);
+            } catch (error: any) {
+                if (type === 'accept') {
+                    const isNotFoundError = error?.statusCode === 404 || /invitation not found/i.test(error?.message || '');
+                    if (isNotFoundError) {
+                        try {
+                            await joinList(code);
+                            Alert.alert(t('common.success'), successMessages.join);
+                            return;
+                        } catch (joinError: any) {
+                            Alert.alert(t('common.error'), joinError.message || errorMessages.join);
+                            return;
+                        }
+                    }
+                }
+                Alert.alert(t('common.error'), error.message || errorMessages[type]);
+            }
+        };
+
+        executeAction();
     }, [isAuthenticated, pendingInvite, joinList, acceptInviteByCode, t]);
 
     if (isLoading) {
