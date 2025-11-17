@@ -35,7 +35,9 @@ export const CreateExpenseScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
-    useEffect(() => navigation.setOptions({title: t(isEditing ? 'expenses.editTitle' : 'expenses.newExpense')}), [navigation, t, isEditing]);
+    useEffect(() => {
+        navigation.setOptions({title: t(isEditing ? 'expenses.editTitle' : 'expenses.newExpense')});
+    }, [navigation, t, isEditing]);
 
     const {
         createExpense,
@@ -315,12 +317,7 @@ export const CreateExpenseScreen: React.FC = () => {
         </TouchableOpacity>;
     };
 
-    if (!prefillReady) {
-        return <Loading/>;
-    }
-
-    const hasReceipt = !!receiptUri || !!existingReceiptUrl;
-    const locale = language === 'it' ? 'it-IT' : 'en-US';
+    const locale = useMemo(() => language === 'it' ? 'it-IT' : 'en-US', [language]);
     const formattedExpenseDate = useMemo(() => new Intl.DateTimeFormat(locale, {
         weekday: 'long',
         day: 'numeric',
@@ -355,6 +352,12 @@ export const CreateExpenseScreen: React.FC = () => {
         setShowDatePicker(false);
     };
     const handleOpenDatePicker = () => setShowDatePicker(true);
+
+    if (!prefillReady) {
+        return <Loading/>;
+    }
+
+    const hasReceipt = !!receiptUri || !!existingReceiptUrl;
 
     return <KeyboardAvoidingView
         style={styles.container}

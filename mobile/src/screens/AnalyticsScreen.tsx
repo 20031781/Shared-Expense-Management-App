@@ -21,6 +21,7 @@ import expensesService from '@/services/expenses.service';
 import listsService from '@/services/lists.service';
 import {useFocusEffect} from '@react-navigation/native';
 import {buildSplitSummary} from '@/lib/split';
+import {VictoryArea, VictoryAxis, VictoryBar, VictoryChart, VictoryPie, VictoryTheme, VictoryTooltip} from 'victory-native';
 
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
@@ -108,6 +109,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [listInsightsLoading, setListInsightsLoading] = useState(false);
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [memberChartMode, setMemberChartMode] = useState<'bar' | 'pie' | 'trend'>('bar');
 
     useEffect(() => {
         if (customError) {
@@ -122,6 +124,12 @@ export const AnalyticsScreen: React.FC = () => {
         'all': t('lists.filterAll'),
         'custom': t('analytics.filterCustom'),
     }), [t]);
+
+    const chartModeOptions = useMemo(() => [
+        {key: 'bar', label: t('analytics.chartModeBar')},
+        {key: 'pie', label: t('analytics.chartModePie')},
+        {key: 'trend', label: t('analytics.chartModeTrend')},
+    ] as const, [t]);
 
     const selectedList = useMemo(() => lists.find(list => list.id === selectedListId), [lists, selectedListId]);
 
@@ -237,6 +245,8 @@ export const AnalyticsScreen: React.FC = () => {
 
     const visibleExpenses = useMemo(() => selectedListId === ALL_LISTS_OPTION ? userExpenses : listInsights.expenses, [selectedListId, userExpenses, listInsights.expenses]);
 
+    const currency = useMemo(() => visibleExpenses[0]?.currency || 'EUR', [visibleExpenses]);
+
     const memberMap = useMemo(() => {
         const map = new Map<string, ListMember>();
         listInsights.members.forEach(member => map.set(member.id, member));
@@ -303,6 +313,61 @@ export const AnalyticsScreen: React.FC = () => {
     }, [selectedListId, listInsights.expenses]);
 
     const memberChartMax = memberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
+    const totalMemberAmount = useMemo(() => memberBreakdown.reduce((sum, item) => sum + item.amount, 0), [memberBreakdown]);
+
+    const memberChartColors = useMemo(() => [
+        colors.accent,
+        colors.success,
+        colors.warning,
+        colors.danger,
+        colors.secondaryText,
+    ], [colors]);
+
+    const memberChartData = useMemo(() => memberBreakdown.map(item => {
+        const label = getMemberLabel(memberMap.get(item.memberId));
+        return {
+            x: label,
+            y: item.amount,
+            label: `${label}\n${currency} ${item.amount.toFixed(2)}`,
+        };
+    }), [memberBreakdown, memberMap, getMemberLabel, currency]);
+
+    const memberPieData = useMemo(() => memberChartData.map(datum => ({
+        ...datum,
+        percentage: totalMemberAmount === 0 ? 0 : Math.round((datum.y / totalMemberAmount) * 100),
+    })), [memberChartData, totalMemberAmount]);
+
+    const memberTrendData = useMemo(() => {
+        if (selectedListId === ALL_LISTS_OPTION) {
+            return [];
+        }
+        const map = new Map<string, number>();
+        listInsights.expenses.forEach(expense => {
+            const date = new Date(expense.expenseDate);
+            const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+            map.set(key, (map.get(key) ?? 0) + expense.amount);
+        });
+        return Array.from(map.entries())
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([key, amount]) => {
+                const [year, month, day] = key.split('-').map(Number);
+                const date = Date.UTC(year, (month ?? 1) - 1, day ?? 1);
+                return {x: date, y: amount};
+            });
+    }, [selectedListId, listInsights.expenses]);
+
+    const trendTickFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, {
+        month: 'short',
+        day: 'numeric'
+    }), []);
+
+    useEffect(() => {
+        if ((memberChartMode === 'bar' || memberChartMode === 'pie') && memberBreakdown.length === 0 && memberTrendData.length > 0) {
+            setMemberChartMode('trend');
+        } else if (memberChartMode === 'trend' && memberTrendData.length === 0 && memberBreakdown.length > 0) {
+            setMemberChartMode('bar');
+        }
+    }, [memberChartMode, memberBreakdown.length, memberTrendData.length]);
 
     const splitSummary = useMemo(() => {
         if (selectedListId === ALL_LISTS_OPTION) {
@@ -329,8 +394,6 @@ export const AnalyticsScreen: React.FC = () => {
         });
         return best;
     }, [dailyTotals]);
-
-    const currency = visibleExpenses[0]?.currency || 'EUR';
 
     if (isInitialLoading) {
         return <Loading/>;
@@ -533,6 +596,121 @@ export const AnalyticsScreen: React.FC = () => {
 
                 {!isCustomRangeMissing && !listInsightsLoading && !listInsightsError && <>
                     <Card style={styles.card}>
+                        <Text style={styles.sectionTitle}>{t('analytics.memberChartModesTitle')}</Text>
+                        <Text style={styles.chartModeHelper}>{t('analytics.chartModeHelper')}</Text>
+                        <View style={styles.chartModeSelector}>
+                            {chartModeOptions.map(option => {
+                                const isActive = memberChartMode === option.key;
+                                return <TouchableOpacity
+                                    key={option.key}
+                                    style={[styles.chartModeChip, isActive && styles.chartModeChipActive]}
+                                    onPress={() => setMemberChartMode(option.key)}
+                                >
+                                    <Text
+                                        style={[styles.chartModeChipLabel, isActive && styles.chartModeChipLabelActive]}
+                                    >
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>;
+                            })}
+                        </View>
+                        <View style={styles.chartCanvas}>
+                            {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
+                                style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
+                                animate={{duration: 500}}
+                                theme={VictoryTheme.material}
+                                domainPadding={{x: 24, y: 12}}
+                                padding={{top: 16, bottom: 48, left: 120, right: 24}}
+                                height={260}
+                            >
+                                <VictoryAxis
+                                    style={{
+                                        axis: {stroke: colors.surfaceSecondary},
+                                        tickLabels: {fill: colors.secondaryText, fontSize: 12},
+                                        grid: {stroke: 'transparent'},
+                                    }}
+                                />
+                                <VictoryAxis
+                                    dependentAxis
+                                    tickFormat={value => `${currency} ${value.toFixed(0)}`}
+                                    style={{
+                                        axis: {stroke: colors.surfaceSecondary},
+                                        tickLabels: {fill: colors.secondaryText, fontSize: 12},
+                                        grid: {stroke: colors.surfaceSecondary, opacity: 0.2},
+                                    }}
+                                />
+                                <VictoryBar
+                                    data={memberChartData}
+                                    horizontal
+                                    barRatio={0.8}
+                                    labels={({datum}) => datum.label}
+                                    style={{
+                                        data: {
+                                            fill: ({index}) => memberChartColors[index % memberChartColors.length],
+                                            stroke: colors.background,
+                                            strokeWidth: 1,
+                                        },
+                                        labels: {fill: colors.text, fontSize: 12},
+                                    }}
+                                    labelComponent={<VictoryTooltip
+                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                        style={{fontSize: 12, fill: colors.text}}
+                                        constrainToVisibleArea
+                                    />}
+                                />
+                            </VictoryChart>)}
+                            {memberChartMode === 'pie' && (memberPieData.length === 0 ? <Text
+                                style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryPie
+                                data={memberPieData}
+                                colorScale={memberChartColors}
+                                innerRadius={70}
+                                padAngle={1.5}
+                                height={260}
+                                labels={({datum}) => `${datum.x}\n${currency} ${datum.y.toFixed(2)} (${datum.percentage}%)`}
+                                style={{
+                                    labels: {fill: colors.text, fontSize: 12},
+                                }}
+                            />)}
+                            {memberChartMode === 'trend' && (memberTrendData.length === 0 ? <Text
+                                style={styles.emptyText}>{t('analytics.memberTrendEmpty')}</Text> : <VictoryChart
+                                theme={VictoryTheme.material}
+                                animate={{duration: 500}}
+                                padding={{top: 16, bottom: 56, left: 70, right: 24}}
+                                height={260}
+                                domainPadding={{x: 10, y: 16}}
+                            >
+                                <VictoryAxis
+                                    tickFormat={value => trendTickFormatter.format(new Date(value))}
+                                    style={{
+                                        axis: {stroke: colors.surfaceSecondary},
+                                        tickLabels: {fill: colors.secondaryText, fontSize: 12, angle: -25, padding: 20},
+                                    }}
+                                />
+                                <VictoryAxis
+                                    dependentAxis
+                                    tickFormat={value => `${currency} ${value.toFixed(0)}`}
+                                    style={{
+                                        axis: {stroke: colors.surfaceSecondary},
+                                        tickLabels: {fill: colors.secondaryText, fontSize: 12},
+                                        grid: {stroke: colors.surfaceSecondary, opacity: 0.2},
+                                    }}
+                                />
+                                <VictoryArea
+                                    data={memberTrendData}
+                                    interpolation="monotoneX"
+                                    style={{
+                                        data: {
+                                            fill: colors.accentSoft,
+                                            stroke: colors.accent,
+                                            strokeWidth: 2,
+                                        },
+                                    }}
+                                />
+                            </VictoryChart>)}
+                        </View>
+                    </Card>
+
+                    <Card style={styles.card}>
                         <Text style={styles.sectionTitle}>{t('analytics.memberBreakdownTitle')}</Text>
                         {memberBreakdown.length === 0 ? <Text
                             style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : memberBreakdown.map(item =>
@@ -711,6 +889,37 @@ const createStyles = (colors: AppColors) =>
             marginBottom: 16,
             gap: 6,
         },
+        chartModeHelper: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            marginBottom: 12,
+        },
+        chartModeSelector: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+            marginBottom: 12,
+        },
+        chartModeChip: {
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 16,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.surfaceSecondary,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        chartModeChipActive: {
+            backgroundColor: colors.accent,
+            borderColor: colors.accent,
+        },
+        chartModeChipLabel: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: colors.secondaryText,
+        },
+        chartModeChipLabelActive: {
+            color: colors.accentText,
+        },
         chartLabelWrapper: {
             flexDirection: 'row',
             justifyContent: 'space-between',
@@ -734,6 +943,9 @@ const createStyles = (colors: AppColors) =>
             height: '100%',
             borderRadius: 4,
             backgroundColor: colors.accent,
+        },
+        chartCanvas: {
+            minHeight: 220,
         },
         summaryRow: {
             flexDirection: 'row',
