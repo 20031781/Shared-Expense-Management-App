@@ -446,7 +446,25 @@ export const ListDetailsScreen: React.FC = () => {
                                 </View>
                             ) : (
                                 <>
-                                    <Text style={styles.statusLegend}>{t('members.statusLegend')}</Text>
+                                    <View style={styles.statusLegendCard}>
+                                        <Text style={styles.statusLegendTitle}>{t('members.statusLegendTitle')}</Text>
+                                        <View style={styles.statusLegendRow}>
+                                            <View style={styles.statusLegendItem}>
+                                                <View style={[styles.statusDot, styles.activeStatus]}/>
+                                                <View style={styles.statusLegendCopy}>
+                                                    <Text style={styles.legendLabel}>{t('members.statusActiveShort')}</Text>
+                                                    <Text style={styles.legendDescription}>{t('members.statusLegendActive')}</Text>
+                                                </View>
+                                            </View>
+                                            <View style={styles.statusLegendItem}>
+                                                <View style={[styles.statusDot, styles.pendingStatus]}/>
+                                                <View style={styles.statusLegendCopy}>
+                                                    <Text style={styles.legendLabel}>{t('members.statusPendingShort')}</Text>
+                                                    <Text style={styles.legendDescription}>{t('members.statusLegendPending')}</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    </View>
                                     {!isAdmin && (
                                         <Text style={styles.membersReadOnly}>{t('members.readOnlyNotice')}</Text>
                                     )}
@@ -716,17 +734,43 @@ const createStyles = (colors: AppColors) =>
             gap: 8,
             marginTop: 4,
         },
-        statusLegend: {
+        statusLegendCard: {
+            padding: 12,
+            borderRadius: 12,
+            backgroundColor: colors.surfaceSecondary,
+            marginBottom: 12,
+            marginHorizontal: 16,
+            gap: 12,
+        },
+        statusLegendTitle: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        statusLegendRow: {
+            gap: 10,
+        },
+        statusLegendItem: {
+            flexDirection: 'row',
+            gap: 10,
+            alignItems: 'flex-start',
+        },
+        statusLegendCopy: {
+            flex: 1,
+        },
+        legendLabel: {
+            fontWeight: '600',
+            color: colors.text,
+        },
+        legendDescription: {
             fontSize: 12,
             color: colors.secondaryText,
-            marginBottom: 8,
-            marginLeft: 16,
         },
         membersReadOnly: {
             fontSize: 12,
             color: colors.warning,
             marginBottom: 8,
-            marginLeft: 16,
+            marginHorizontal: 16,
         },
         memberSplit: {
             fontSize: 12,

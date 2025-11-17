@@ -1,10 +1,11 @@
-import React, {useMemo, useState} from 'react';
-import {Alert, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useEffect, useMemo, useState} from 'react';
+import {Alert, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {availableLanguages, useTranslation} from '@i18n';
 import {AppColors, ThemePreference, useAppTheme} from '@theme';
 import {Button} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
+import {NotificationPreferences} from '@/types';
 
 const themeOptions: { value: ThemePreference; icon: string; labelKey: string }[] = [
     {value: 'light', icon: 'sunny-outline', labelKey: 'settings.themeLight'},
@@ -12,12 +13,65 @@ const themeOptions: { value: ThemePreference; icon: string; labelKey: string }[]
     {value: 'system', icon: 'phone-portrait-outline', labelKey: 'settings.themeSystem'},
 ];
 
+const defaultNotificationPreferences: NotificationPreferences = {
+    newExpense: true,
+    memberAdded: true,
+    validationRequest: true,
+    validationResult: true,
+    newReimbursement: true,
+};
+
 export const SettingsScreen: React.FC = () => {
     const {language, setLanguage, t} = useTranslation();
     const {colors, preference, setPreference} = useAppTheme();
-    const {logout} = useAuthStore();
+    const {logout, updateProfile, user} = useAuthStore();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
+        ...defaultNotificationPreferences,
+        ...(user?.notificationPreferences ?? {}),
+    });
+    const [savingPreference, setSavingPreference] = useState<keyof NotificationPreferences | null>(null);
     const styles = useMemo(() => createStyles(colors), [colors]);
+
+    useEffect(() => {
+        setNotificationPrefs({
+            ...defaultNotificationPreferences,
+            ...(user?.notificationPreferences ?? {}),
+        });
+    }, [user?.notificationPreferences]);
+
+    const preferenceOptions = useMemo(() => ([
+        {
+            key: 'newExpense',
+            icon: 'wallet-outline',
+            titleKey: 'settings.notifyNewExpense',
+            descriptionKey: 'settings.notifyNewExpenseDescription'
+        },
+        {
+            key: 'memberAdded',
+            icon: 'person-add-outline',
+            titleKey: 'settings.notifyMemberAdded',
+            descriptionKey: 'settings.notifyMemberAddedDescription'
+        },
+        {
+            key: 'validationRequest',
+            icon: 'shield-checkmark-outline',
+            titleKey: 'settings.notifyValidationRequest',
+            descriptionKey: 'settings.notifyValidationRequestDescription'
+        },
+        {
+            key: 'validationResult',
+            icon: 'notifications-outline',
+            titleKey: 'settings.notifyValidationResult',
+            descriptionKey: 'settings.notifyValidationResultDescription'
+        },
+        {
+            key: 'newReimbursement',
+            icon: 'swap-horizontal-outline',
+            titleKey: 'settings.notifyReimbursement',
+            descriptionKey: 'settings.notifyReimbursementDescription'
+        },
+    ] satisfies { key: keyof NotificationPreferences; icon: string; titleKey: string; descriptionKey: string }[]), [t]);
 
     const performLogout = async () => {
         try {
@@ -45,19 +99,20 @@ export const SettingsScreen: React.FC = () => {
         );
     };
 
-    const handleSwitchAccount = () => {
-        Alert.alert(
-            t('settings.switchTitle'),
-            t('settings.switchDescription'),
-            [
-                {text: t('common.cancel'), style: 'cancel'},
-                {
-                    text: t('settings.switchConfirm'),
-                    style: 'default',
-                    onPress: performLogout,
-                },
-            ]
-        );
+    const handleTogglePreference = async (key: keyof NotificationPreferences) => {
+        const current = notificationPrefs;
+        const nextValue = !current[key];
+        const updated = {...current, [key]: nextValue};
+        setNotificationPrefs(updated);
+        setSavingPreference(key);
+        try {
+            await updateProfile({notificationPreferences: updated});
+        } catch (error: any) {
+            setNotificationPrefs(current);
+            Alert.alert(t('common.error'), error?.message || t('common.genericError'));
+        } finally {
+            setSavingPreference(null);
+        }
     };
 
     return (
@@ -114,6 +169,40 @@ export const SettingsScreen: React.FC = () => {
             </View>
 
             <View style={styles.sectionWrapper}>
+                <Text style={styles.header}>{t('settings.notificationsTitle')}</Text>
+                <Text style={styles.description}>{t('settings.notificationsDescription')}</Text>
+                <View style={styles.section}>
+                    {preferenceOptions.map(({key, icon, titleKey, descriptionKey}, index) => {
+                        const value = notificationPrefs[key];
+                        const isLast = index === preferenceOptions.length - 1;
+                        return (
+                            <View
+                                key={key}
+                                style={[styles.preferenceRow, isLast && styles.preferenceRowLast]}
+                            >
+                                <View style={styles.preferenceInfo}>
+                                    <View style={styles.preferenceIcon}>
+                                        <Ionicons name={icon as any} size={18} color={colors.accent}/>
+                                    </View>
+                                    <View style={styles.preferenceCopy}>
+                                        <Text style={styles.preferenceTitle}>{t(titleKey)}</Text>
+                                        <Text style={styles.preferenceDescription}>{t(descriptionKey)}</Text>
+                                    </View>
+                                </View>
+                                <Switch
+                                    value={value}
+                                    onValueChange={() => handleTogglePreference(key)}
+                                    trackColor={{false: colors.surfaceSecondary, true: colors.accentSoft}}
+                                    thumbColor={value ? colors.accent : colors.surface}
+                                    disabled={savingPreference === key || isLoggingOut}
+                                />
+                            </View>
+                        );
+                    })}
+                </View>
+            </View>
+
+            <View style={styles.sectionWrapper}>
                 <Text style={styles.header}>{t('settings.accountTitle')}</Text>
                 <Text style={styles.description}>{t('settings.logoutDescription')}</Text>
                 <View style={styles.logoutButtons}>
@@ -124,12 +213,6 @@ export const SettingsScreen: React.FC = () => {
                         loading={isLoggingOut}
                         style={styles.logoutPrimary}
                     />
-                    <TouchableOpacity style={styles.logoutSecondary} onPress={handleSwitchAccount}
-                                      disabled={isLoggingOut}>
-                        <Ionicons name="log-out-outline" size={18} color={colors.accent}/>
-                        <Text style={styles.logoutSecondaryText}>{t('settings.logoutSecondary')}</Text>
-                    </TouchableOpacity>
-                    <Text style={styles.switchInfo}>{t('settings.switchInfo')}</Text>
                 </View>
             </View>
         </View>
@@ -193,23 +276,43 @@ const createStyles = (colors: AppColors) =>
         logoutPrimary: {
             width: '100%',
         },
-        logoutSecondary: {
+        preferenceRow: {
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
-            justifyContent: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 16,
             paddingVertical: 12,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: colors.accent,
+            borderBottomWidth: StyleSheet.hairlineWidth,
+            borderBottomColor: colors.surfaceSecondary,
+            gap: 16,
         },
-        logoutSecondaryText: {
-            color: colors.accent,
+        preferenceRowLast: {
+            borderBottomWidth: 0,
+        },
+        preferenceInfo: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            flex: 1,
+            gap: 12,
+        },
+        preferenceIcon: {
+            width: 32,
+            height: 32,
+            borderRadius: 16,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.surfaceSecondary,
+        },
+        preferenceCopy: {
+            flex: 1,
+        },
+        preferenceTitle: {
+            fontSize: 16,
             fontWeight: '600',
+            color: colors.text,
         },
-        switchInfo: {
-            fontSize: 12,
+        preferenceDescription: {
+            fontSize: 13,
             color: colors.secondaryText,
-            textAlign: 'center',
         },
     });

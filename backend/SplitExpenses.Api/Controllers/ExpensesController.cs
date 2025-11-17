@@ -65,6 +65,8 @@ public class ExpensesController(
 
         expense = await expenseRepository.CreateAsync(expense);
 
+        await notificationService.SendNewExpenseNotificationAsync(expense.Id);
+
         return CreatedAtAction(nameof(GetExpense), new { id = expense.Id }, expense);
     }
 
@@ -112,8 +114,6 @@ public class ExpensesController(
         // Invia notifiche ai validatori
         foreach (var validator in activeValidators)
             await notificationService.SendValidationRequestNotificationAsync(id, validator.UserId!.Value);
-
-        await notificationService.SendNewExpenseNotificationAsync(id);
 
         return Ok(expense);
     }

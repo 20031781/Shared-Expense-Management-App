@@ -18,6 +18,7 @@ public class User
 public class NotificationPreferences
 {
     public bool NewExpense { get; set; } = true;
+    public bool MemberAdded { get; set; } = true;
     public bool ValidationRequest { get; set; } = true;
     public bool ValidationResult { get; set; } = true;
     public bool NewReimbursement { get; set; } = true;

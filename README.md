@@ -11,6 +11,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - **[SETUP_LOCALE.md](SETUP_LOCALE.md)** - Setup rapido per test locale
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Come funziona il sistema
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Problemi comuni
+- **[NOTIFICATIONS.md](docs/NOTIFICATIONS.md)** - Preferenze e test delle notifiche push
 
 ## 🏗️ Stack Tecnologico
 
@@ -35,10 +36,12 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Ruoli Admin/Validatore con approvazione delle spese prima della conferma
 - ✅ Percentuali di ripartizione modificabili dagli amministratori in ogni momento con bilanciamento automatico del resto
 - ✅ Notifiche push
+- ✅ Preferenze notifiche granulari + endpoint di test
 - ✅ Sincronizzazione offline
 - ✅ App mobile iOS/Android
 - ✅ Impostazioni multilingua (Italiano/Inglese)
 - ✅ Tema chiaro/scuro/sistema configurabile dall'app mobile
+- ✅ Onboarding guidato con checklist interattiva
 
 ## 🚀 Quick Start
 
