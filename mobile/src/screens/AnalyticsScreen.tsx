@@ -107,6 +107,7 @@ export const AnalyticsScreen: React.FC = () => {
     });
     const [listInsightsLoading, setListInsightsLoading] = useState(false);
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         if (customError) {
@@ -212,15 +213,20 @@ export const AnalyticsScreen: React.FC = () => {
         setAppliedCustomRange({from: trimmedFrom, to: trimmedTo});
     };
 
-    const handleRefresh = async () => {
+    const handleRefresh = useCallback(async () => {
         if (isCustomRangeMissing) {
             return;
         }
-        const range = await loadExpenses(timeframe, timeframe === 'custom' ? appliedCustomRange : undefined);
-        if (selectedListId !== ALL_LISTS_OPTION) {
-            await fetchListInsights(selectedListId, range);
+        setIsRefreshing(true);
+        try {
+            const range = await loadExpenses(timeframe, timeframe === 'custom' ? appliedCustomRange : undefined);
+            if (selectedListId !== ALL_LISTS_OPTION) {
+                await fetchListInsights(selectedListId, range);
+            }
+        } finally {
+            setIsRefreshing(false);
         }
-    };
+    }, [isCustomRangeMissing, loadExpenses, timeframe, appliedCustomRange, selectedListId, fetchListInsights]);
 
     const handleRetryListInsights = () => {
         if (selectedListId === ALL_LISTS_OPTION || isCustomRangeMissing) {
@@ -391,8 +397,7 @@ export const AnalyticsScreen: React.FC = () => {
         </Modal>
         <ScrollView
             contentContainerStyle={styles.container}
-            refreshControl={<RefreshControl refreshing={userExpensesLoading && userExpenses.length > 0}
-                                            onRefresh={handleRefresh}/>}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh}/>}
         >
             <View style={styles.header}>
                 <Text style={styles.title}>{t('analytics.title')}</Text>

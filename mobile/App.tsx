@@ -9,6 +9,7 @@ import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {Alert, Platform} from 'react-native';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 
 import {AuthNavigator, MainNavigator} from '@navigation/AppNavigator';
 import {useAuthStore} from '@store/auth.store';
@@ -70,7 +71,8 @@ const AppContent = () => {
                 if (finalStatus !== 'granted' || cancelled) {
                     return;
                 }
-                const token = await Notifications.getDevicePushTokenAsync();
+                const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+                const token = await Notifications.getDevicePushTokenAsync(projectId ? {projectId} : undefined);
                 if (!token.data || cancelled) {
                     return;
                 }

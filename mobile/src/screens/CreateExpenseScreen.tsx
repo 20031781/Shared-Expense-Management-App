@@ -67,7 +67,9 @@ export const CreateExpenseScreen: React.FC = () => {
     const [prefillReady, setPrefillReady] = useState(!isEditing);
     const [showDatePicker, setShowDatePicker] = useState(false);
 
-    useEffect(() => fetchMembers(listId), [listId]);
+    useEffect(() => {
+        fetchMembers(listId);
+    }, [listId, fetchMembers]);
 
     useEffect(() => {
         if (expenseId) {

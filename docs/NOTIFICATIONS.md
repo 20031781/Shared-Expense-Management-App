@@ -7,6 +7,7 @@ Questa pagina riepiloga come personalizzare e testare le notifiche push tra app 
 1. Apri **Impostazioni → Notifiche** nell'app mobile.
 2. Abilita/disabilita i toggle per:
     - **Nuova spesa**
+    - **Spesa eliminata**
     - **Nuovo membro**
     - **Richiesta di validazione**
     - **Esito validazione**
@@ -20,9 +21,9 @@ Questa pagina riepiloga come personalizzare e testare le notifiche push tra app 
 
 L'app mobile ora richiede automaticamente i permessi di notifica e registra il token FCM tramite
 `/api/auth/device-token`
-ogni volta che effettui il login. Dopo il primo avvio puoi già trovare i token associati nella tabella `device_tokens`
-del
-database (colonne `token` e `platform`).
+ogni volta che effettui il login (o riapri l'app dopo un logout). Dopo il primo avvio puoi già trovare i token associati
+nella tabella `device_tokens` del database (colonne `token` e `platform`). Non è necessario generare manualmente un token
+dal portale Firebase: l'app ottiene il valore direttamente da Firebase Cloud Messaging e lo salva per te.
 
 Se vuoi forzare o testare la registrazione manuale puoi comunque usare:
 
@@ -33,8 +34,8 @@ curl -X POST http://localhost:5000/api/auth/device-token `
   -d '{"token":"<FCM_TOKEN>","platform":"android"}'
 ```
 
-> Nota: Sostituisci `<FCM_TOKEN>` con il token reale ottenuto da Firebase (vedi sezione successiva) e imposta `platform`
-> a `ios` se stai testando su iPhone/iPad.
+> Nota: Sostituisci `<FCM_TOKEN>` con il token reale generato da Firebase Cloud Messaging e visibile nella tabella
+> `device_tokens` (vedi sezione successiva). Imposta `platform` a `ios` se stai testando su iPhone/iPad.
 
 ## Recuperare i token per gli endpoint di test
 
