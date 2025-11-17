@@ -1,6 +1,5 @@
 #region
 
-using System.Linq;
 using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
@@ -62,7 +61,6 @@ public class NotificationService : INotificationService
             .Distinct();
 
         foreach (var userId in recipients)
-        {
             await SendMessageAsync(
                 userId,
                 prefs => prefs.NewExpense,
@@ -74,7 +72,6 @@ public class NotificationService : INotificationService
                     { "expense_id", expenseId.ToString() },
                     { "list_id", expense.ListId.ToString() }
                 });
-        }
     }
 
     public async Task SendMemberAddedNotificationAsync(Guid listId, Guid memberId)
@@ -93,7 +90,6 @@ public class NotificationService : INotificationService
             .Where(id => !member.UserId.HasValue || id != member.UserId.Value);
 
         foreach (var userId in recipients)
-        {
             await SendMessageAsync(
                 userId,
                 prefs => prefs.MemberAdded,
@@ -105,7 +101,6 @@ public class NotificationService : INotificationService
                     { "list_id", listId.ToString() },
                     { "member_id", memberId.ToString() }
                 });
-        }
     }
 
     public async Task SendValidationRequestNotificationAsync(Guid expenseId, Guid validatorId)

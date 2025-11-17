@@ -4,11 +4,11 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🚀 INIZIA QUI
 
-**Vuoi provare l'app?** → Leggi **[SETUP_LOCALE.md](SETUP_LOCALE.md)** (5 minuti)
+**Vuoi provare l'app?** → Leggi **[SETUP_LOCALE.md](GUIDA_SETUP_COMPLETO.md)** (5 minuti)
 
 ## 📚 Documentazione
 
-- **[SETUP_LOCALE.md](SETUP_LOCALE.md)** - Setup rapido per test locale
+- **[SETUP_LOCALE.md](GUIDA_SETUP_COMPLETO.md)** - Setup rapido per test locale
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Come funziona il sistema
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Problemi comuni
 - **[NOTIFICATIONS.md](docs/NOTIFICATIONS.md)** - Preferenze e test delle notifiche push
@@ -46,7 +46,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🚀 Quick Start
 
-Vedi **[SETUP_LOCALE.md](SETUP_LOCALE.md)** per istruzioni dettagliate.
+Vedi **[SETUP_LOCALE.md](GUIDA_SETUP_COMPLETO.md)** per istruzioni dettagliate.
 
 ```bash
 # Backend
