@@ -56,6 +56,22 @@ npm start
 # Scansiona QR con Expo Go
 ```
 
+## 🧹 Pulizia delle dipendenze (`node_modules`)
+
+Per mantenere il repository leggero, **non committare mai le cartelle `node_modules`** (già escluse via `.gitignore`). Se hai bisogno di rimuoverle manualmente:
+
+```bash
+# dalla root del progetto
+rm -rf mobile/node_modules
+```
+
+Successivamente reinstalla i pacchetti solo quando necessario:
+
+```bash
+cd mobile
+npm install
+```
+
 ## 🏗️ Struttura Progetto
 
 ```
