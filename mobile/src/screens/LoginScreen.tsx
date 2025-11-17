@@ -1,16 +1,17 @@
 import React, {useMemo, useState} from 'react';
-import {Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View,} from 'react-native';
+import {Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Button, Input, Loading} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {Language} from '@i18n/translations';
 
 export const LoginScreen: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const {login, signUp, isLoading} = useAuthStore();
-    const {t} = useTranslation();
+    const {t, language, setLanguage} = useTranslation();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -36,6 +37,12 @@ export const LoginScreen: React.FC = () => {
         return <Loading/>;
     }
 
+    const handleLanguageChange = async (nextLanguage: Language) => {
+        if (language !== nextLanguage) {
+            await setLanguage(nextLanguage);
+        }
+    };
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -43,6 +50,22 @@ export const LoginScreen: React.FC = () => {
         >
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.content}>
+                    <View style={styles.languageToggle}>
+                        <Text style={styles.languageLabel}>{t('common.language')}</Text>
+                        <View style={styles.languageOptions}>
+                            {(['it', 'en'] as Language[]).map((option) => (
+                                <TouchableOpacity
+                                    key={option}
+                                    style={[styles.languageChip, language === option && styles.languageChipActive]}
+                                    onPress={() => handleLanguageChange(option)}
+                                >
+                                    <Text style={[styles.languageChipText, language === option && styles.languageChipTextActive]}>
+                                        {option.toUpperCase()}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
                     <View style={styles.logoContainer}>
                         <Text style={styles.logo}>💰</Text>
                         <Text style={styles.title}>{t('auth.title')}</Text>
@@ -103,6 +126,37 @@ const createStyles = (colors: AppColors) =>
             flex: 1,
             justifyContent: 'space-between',
             padding: 24,
+        },
+        languageToggle: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 16,
+        },
+        languageLabel: {
+            fontSize: 14,
+            color: colors.secondaryText,
+        },
+        languageOptions: {
+            flexDirection: 'row',
+            gap: 8,
+        },
+        languageChip: {
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 16,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        languageChipActive: {
+            backgroundColor: colors.accent,
+        },
+        languageChipText: {
+            fontSize: 12,
+            fontWeight: '600',
+            color: colors.secondaryText,
+        },
+        languageChipTextActive: {
+            color: colors.accentText,
         },
         logoContainer: {
             alignItems: 'center',
