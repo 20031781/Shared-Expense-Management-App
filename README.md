@@ -30,6 +30,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Tab Insights con selezione lista, filtri temporali e grafici per lista e membro
 - ✅ Menù a tendina negli Insights per scegliere velocemente le liste e riepilogo paganti migliorato
 - ✅ Grafici dinamici (barre, torta, trend) con animazioni fluide per confrontare rapidamente i membri
+- ✅ Nuovo selettore della velocità delle animazioni con tick automatici sull'asse per evitare sovrapposizioni
 - ✅ Selezione del pagatore e tracciamento della data di inserimento
 - ✅ Modifica spese con data reale, metodo di pagamento e destinatari personalizzati
 - ✅ Calcolo rimborsi ottimizzati
@@ -45,6 +46,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Impostazioni multilingua (Italiano/Inglese)
 - ✅ Tema chiaro/scuro/sistema configurabile dall'app mobile
 - ✅ Onboarding guidato con checklist interattiva
+- ✅ Dialoghi personalizzati coerenti con il tema per conferme, errori e successi
 
 ## 🚀 Quick Start
 
@@ -69,6 +71,14 @@ dev client personalizzato (`npx expo run:android --variant development`, `npx ex
 development`). Quando generi una build reale (development/preview/production) l'app gira come binario nativo: il login
 registra automaticamente il token FCM/APNS e il backend può inviare notifiche esattamente come in produzione e sugli
 store. Ulteriori dettagli in **[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md)**.
+
+### 📎 Gestione ricevute
+
+- Le foto vengono salvate dal backend in `wwwroot/receipts` e servite automaticamente come file statici.
+- L'endpoint `POST /api/expenses/{id}/receipt` accetta `multipart/form-data` (`receipt`) e restituisce subito l'URL
+  pubblico (`http://<host>:5000/receipts/<nomefile>`), riutilizzato dall'app mobile.
+- Puoi ripulire i file cancellando la cartella `backend/SplitExpenses.Api/wwwroot/receipts` (verranno rigenerate alla
+  prossima upload).
 
 ## 🧹 Pulizia delle dipendenze (`node_modules`)
 

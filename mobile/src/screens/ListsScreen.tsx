@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Alert, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import {FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {Button, Card, Input, Loading, OnboardingChecklist} from '@/components';
+import {Button, Card, Input, Loading, OnboardingChecklist, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {List} from '@/types';
 import {useNavigation} from '@react-navigation/native';
@@ -17,6 +17,7 @@ export const ListsScreen: React.FC = () => {
     const [joinError, setJoinError] = useState<string | undefined>();
     const [joining, setJoining] = useState(false);
     const {t} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -60,35 +61,47 @@ export const ListsScreen: React.FC = () => {
         try {
             setJoining(true);
             await joinList(trimmed.toUpperCase());
-            Alert.alert(t('common.success'), t('lists.joinSuccess'));
+            showDialog({
+                title: t('common.success'),
+                message: t('lists.joinSuccess'),
+            });
             closeJoinModal();
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('lists.joinError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('lists.joinError'),
+            });
         } finally {
             setJoining(false);
         }
     };
 
     const handleDeleteList = (list: List) =>
-        Alert.alert(
-            t('lists.deleteTitle'),
-            t('lists.deleteBody', {name: list.name}),
-            [
-                {text: t('common.cancel'), style: 'cancel'},
+        showDialog({
+            title: t('lists.deleteTitle'),
+            message: t('lists.deleteBody', {name: list.name}),
+            actions: [
+                {label: t('common.cancel'), variant: 'ghost'},
                 {
-                    text: t('common.confirm'),
-                    style: 'destructive',
+                    label: t('common.confirm'),
+                    variant: 'danger',
                     onPress: async () => {
                         try {
                             await deleteList(list.id);
-                            Alert.alert(t('common.success'), t('lists.deleteSuccess'));
+                            showDialog({
+                                title: t('common.success'),
+                                message: t('lists.deleteSuccess'),
+                            });
                         } catch (error: any) {
-                            Alert.alert(t('common.error'), error.message ?? t('lists.deleteError'));
+                            showDialog({
+                                title: t('common.error'),
+                                message: error.message ?? t('lists.deleteError'),
+                            });
                         }
                     },
                 },
-            ]
-        );
+            ],
+        });
 
     const renderList = ({item}: { item: List }) => <Card onPress={() => handleListPress(item)}>
         <View style={styles.listItem}>

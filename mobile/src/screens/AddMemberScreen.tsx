@@ -1,13 +1,14 @@
 import React, {useMemo, useState} from 'react';
-import {Alert, ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
+import {ScrollView, StyleSheet, Switch, Text, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {Button, Input} from '@/components';
+import {Button, Input, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 
 export const AddMemberScreen: React.FC = () => {
     const {t} = useTranslation();
+    const {showDialog} = useDialog();
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const {listId} = route.params;
@@ -34,11 +35,16 @@ export const AddMemberScreen: React.FC = () => {
         if (!validate()) return;
         try {
             await addMember(listId, email.trim(), displayName.trim() || undefined, isValidator);
-            Alert.alert(t('common.success'), t('members.successBody'), [
-                {text: t('common.ok'), onPress: () => navigation.goBack()},
-            ]);
+            showDialog({
+                title: t('common.success'),
+                message: t('members.successBody'),
+                actions: [{label: t('common.ok'), variant: 'primary', onPress: () => navigation.goBack()}],
+            });
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('common.genericError'),
+            });
         }
     };
 

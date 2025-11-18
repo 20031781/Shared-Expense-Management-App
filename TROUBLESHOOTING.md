@@ -211,6 +211,15 @@ progetto sbagliato o hai ancora un ambiente MAUI aperto. Chiudi tutto e avvia `c
    la build (non Expo Go) e consenti i permessi.
 4. Riprova gli endpoint di test descritti in [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md).
 
+> ⚠️ Messaggio ricorrente su Expo Go
+>
+> ````
+> ERROR  expo-notifications: Android Push notifications ... were removed from Expo Go with the release of SDK 53
+> ````
+>
+> È previsto: Expo Go non supporta più le push remote e mostrerà sempre l'errore/warning. Chiudi il popup e continua lo
+> sviluppo solo per l'anteprima, ma ricordati di usare una development build per testare le notifiche reali.
+
 ```bash
 dotnet workload install maui
 ```

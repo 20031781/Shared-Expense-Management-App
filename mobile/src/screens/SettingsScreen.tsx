@@ -1,9 +1,9 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
+import {ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {availableLanguages, useTranslation} from '@i18n';
 import {AppColors, ThemePreference, useAppTheme} from '@theme';
-import {Button} from '@/components';
+import {Button, useDialog} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 import {NotificationPreferences} from '@/types';
 
@@ -24,6 +24,7 @@ const defaultNotificationPreferences: NotificationPreferences = {
 
 export const SettingsScreen: React.FC = () => {
     const {language, setLanguage, t} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors, preference, setPreference} = useAppTheme();
     const {logout, updateProfile, user} = useAuthStore();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -84,25 +85,25 @@ export const SettingsScreen: React.FC = () => {
             setIsLoggingOut(true);
             await logout();
         } catch (error: any) {
-            Alert.alert(t('common.error'), error?.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error?.message || t('common.genericError'),
+            });
         } finally {
             setIsLoggingOut(false);
         }
     };
 
-    const handleLogout = () =>
-        Alert.alert(
-            t('settings.logoutTitle'),
-            t('settings.logoutDescription'),
-            [
-                {text: t('common.cancel'), style: 'cancel'},
-                {
-                    text: t('settings.logoutConfirm'),
-                    style: 'destructive',
-                    onPress: performLogout,
-                },
-            ]
-        );
+    const handleLogout = () => {
+        showDialog({
+            title: t('settings.logoutTitle'),
+            message: t('settings.logoutDescription'),
+            actions: [
+                {label: t('common.cancel'), variant: 'ghost'},
+                {label: t('settings.logoutConfirm'), variant: 'danger', onPress: performLogout},
+            ],
+        });
+    };
 
     const handleTogglePreference = async (key: keyof NotificationPreferences) => {
         const current = notificationPrefs;
@@ -114,7 +115,10 @@ export const SettingsScreen: React.FC = () => {
             await updateProfile({notificationPreferences: updated});
         } catch (error: any) {
             setNotificationPrefs(current);
-            Alert.alert(t('common.error'), error?.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error?.message || t('common.genericError'),
+            });
         } finally {
             setSavingPreference(null);
         }

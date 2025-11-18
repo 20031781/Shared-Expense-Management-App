@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     ActivityIndicator,
-    Alert,
     Linking,
     RefreshControl,
     ScrollView,
@@ -11,7 +10,7 @@ import {
     View,
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
-import {Button, Card, Loading} from '@/components';
+import {Button, Card, Loading, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useAuthStore} from '@/store/auth.store';
@@ -30,6 +29,7 @@ export const ListDetailsScreen: React.FC = () => {
     const route = useRoute<any>();
     const {listId} = route.params;
     const {t} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -165,9 +165,15 @@ export const ListDetailsScreen: React.FC = () => {
         try {
             setDeletingId(expense.id);
             await deleteExpense(expense.id);
-            Alert.alert(t('common.success'), t('expenses.deleteSuccess'));
+            showDialog({
+                title: t('common.success'),
+                message: t('expenses.deleteSuccess'),
+            });
         } catch (error: any) {
-            Alert.alert(t('common.error'), error?.message || t('expenses.deleteError'));
+            showDialog({
+                title: t('common.error'),
+                message: error?.message || t('expenses.deleteError'),
+            });
         } finally {
             setDeletingId(null);
         }
@@ -175,18 +181,14 @@ export const ListDetailsScreen: React.FC = () => {
 
     const handleDeleteExpense = (expense: Expense) => {
         closeSwipe(expense.id);
-        Alert.alert(
-            t('expenses.deleteTitle'),
-            t('expenses.deleteBody', {title: expense.title}),
-            [
-                {text: t('common.cancel'), style: 'cancel'},
-                {
-                    text: t('expenses.deleteConfirm'),
-                    style: 'destructive',
-                    onPress: () => performDelete(expense),
-                },
-            ]
-        );
+        showDialog({
+            title: t('expenses.deleteTitle'),
+            message: t('expenses.deleteBody', {title: expense.title}),
+            actions: [
+                {label: t('common.cancel'), variant: 'ghost'},
+                {label: t('expenses.deleteConfirm'), variant: 'danger', onPress: () => performDelete(expense)},
+            ],
+        });
     };
 
     const renderExpense = (expense: Expense) => {
@@ -317,13 +319,16 @@ export const ListDetailsScreen: React.FC = () => {
             if (canOpen) {
                 await Linking.openURL(whatsappUrl);
             } else {
-                Alert.alert(
-                    t('lists.inviteFallbackTitle'),
-                    t('lists.inviteFallbackBody', {code: currentList.inviteCode})
-                );
+                showDialog({
+                    title: t('lists.inviteFallbackTitle'),
+                    message: t('lists.inviteFallbackBody', {code: currentList.inviteCode}),
+                });
             }
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('lists.inviteShareError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('lists.inviteShareError'),
+            });
         }
     };
 
