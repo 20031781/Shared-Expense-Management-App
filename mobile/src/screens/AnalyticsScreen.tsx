@@ -1,6 +1,8 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     ActivityIndicator,
+    Animated,
+    Easing,
     Modal,
     RefreshControl,
     ScrollView,
@@ -110,6 +112,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [memberChartMode, setMemberChartMode] = useState<'bar' | 'pie' | 'trend'>('bar');
+    const chartFade = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
         if (customError) {
@@ -369,6 +372,17 @@ export const AnalyticsScreen: React.FC = () => {
         }
     }, [memberChartMode, memberBreakdown.length, memberTrendData.length]);
 
+    useEffect(() => {
+        chartFade.stopAnimation();
+        chartFade.setValue(0.1);
+        Animated.timing(chartFade, {
+            toValue: 1,
+            duration: 250,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+        }).start();
+    }, [memberChartMode, chartFade]);
+
     const splitSummary = useMemo(() => {
         if (selectedListId === ALL_LISTS_OPTION) {
             return {rows: [], settlements: [], reason: 'no-expenses' as const};
@@ -614,10 +628,10 @@ export const AnalyticsScreen: React.FC = () => {
                                 </TouchableOpacity>;
                             })}
                         </View>
-                        <View style={styles.chartCanvas}>
+                        <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}>
                             {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
                                 style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
-                                animate={{duration: 500}}
+                                animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
                                 theme={VictoryTheme.material}
                                 domainPadding={{x: 24, y: 12}}
                                 padding={{top: 16, bottom: 48, left: 120, right: 24}}
@@ -640,10 +654,12 @@ export const AnalyticsScreen: React.FC = () => {
                                     }}
                                 />
                                 <VictoryBar
+                                    animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
                                     data={memberChartData}
                                     horizontal
                                     barRatio={0.8}
                                     labels={({datum}) => datum.label}
+                                    cornerRadius={{top: 6, bottom: 6}}
                                     style={{
                                         data: {
                                             fill: ({index}) => memberChartColors[index % memberChartColors.length],
@@ -666,6 +682,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 innerRadius={70}
                                 padAngle={1.5}
                                 height={260}
+                                animate={{duration: 1600, easing: 'quadInOut'}}
                                 labels={({datum}) => `${datum.x}\n${currency} ${datum.y.toFixed(2)} (${datum.percentage}%)`}
                                 style={{
                                     labels: {fill: colors.text, fontSize: 12},
@@ -674,7 +691,7 @@ export const AnalyticsScreen: React.FC = () => {
                             {memberChartMode === 'trend' && (memberTrendData.length === 0 ? <Text
                                 style={styles.emptyText}>{t('analytics.memberTrendEmpty')}</Text> : <VictoryChart
                                 theme={VictoryTheme.material}
-                                animate={{duration: 500}}
+                                animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
                                 padding={{top: 16, bottom: 56, left: 70, right: 24}}
                                 height={260}
                                 domainPadding={{x: 10, y: 16}}
@@ -696,6 +713,7 @@ export const AnalyticsScreen: React.FC = () => {
                                     }}
                                 />
                                 <VictoryArea
+                                    animate={{duration: 1600, easing: 'quadInOut'}}
                                     data={memberTrendData}
                                     interpolation="monotoneX"
                                     style={{
@@ -707,7 +725,7 @@ export const AnalyticsScreen: React.FC = () => {
                                     }}
                                 />
                             </VictoryChart>)}
-                        </View>
+                        </Animated.View>
                     </Card>
 
                     <Card style={styles.card}>

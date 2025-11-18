@@ -37,14 +37,17 @@ curl -X POST http://localhost:5000/api/auth/device-token `
 > Nota: Sostituisci `<FCM_TOKEN>` con il token reale generato da Firebase Cloud Messaging e visibile nella tabella
 > `device_tokens` (vedi sezione successiva). Imposta `platform` a `ios` se stai testando su iPhone/iPad.
 
-### Expo Go non supporta le push remote
+### Expo Go vs build reali
 
 - Dalla SDK 53 Expo Go ha **rimosso** il supporto alle notifiche remote Android/iOS. I permessi vengono comunque richiesti,
   ma nessun token viene restituito e il backend non potrà mai inviare notifiche.
 - Usa una development build o il dev client Expo (`npx expo run:android --variant development`, `npx expo run:ios`) per
   ottenere un vero token FCM/APNS. In alternativa, crea un build EAS con `eas build --profile development`.
-- L'app mobile mostra automaticamente un banner in **Impostazioni → Notifiche** quando rileva Expo Go/web e fornisce il link
-  diretto a questa guida.
+- Le build native (development/preview/production) create con `npx expo run:* --variant release` oppure `eas build --profile`
+  `preview|production` hanno il supporto completo a FCM/APNS: l'app registra automaticamente il token dopo il login e il
+  backend può inviare notifiche anche nelle versioni pubblicate sugli store senza dover cambiare codice.
+- In Expo Go o nel browser la registrazione viene saltata appositamente per evitare errori e log inutili: passa a una build
+  dedicata quando vuoi verificare le push.
 
 ## Recuperare i token per gli endpoint di test
 

@@ -26,6 +26,23 @@ const normalizeDate = (value: Date = new Date()) => {
     return normalized;
 };
 
+const normalizePaymentMethod = (value?: ExpensePaymentMethod | string | null): ExpensePaymentMethod => {
+    if (!value) {
+        return ExpensePaymentMethod.Card;
+    }
+    const normalized = value.toString().toLowerCase();
+    switch (normalized) {
+    case ExpensePaymentMethod.Cash:
+        return ExpensePaymentMethod.Cash;
+    case ExpensePaymentMethod.Transfer:
+        return ExpensePaymentMethod.Transfer;
+    case ExpensePaymentMethod.Other:
+        return ExpensePaymentMethod.Other;
+    default:
+        return ExpensePaymentMethod.Card;
+    }
+};
+
 export const CreateExpenseScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
@@ -160,7 +177,7 @@ export const CreateExpenseScreen: React.FC = () => {
         setSelectedMemberId(currentExpense.paidByMemberId ?? null);
         const parsedDate = new Date(currentExpense.expenseDate);
         setExpenseDate(normalizeDate(parsedDate));
-        setPaymentMethod(currentExpense.paymentMethod ?? ExpensePaymentMethod.Card);
+        setPaymentMethod(normalizePaymentMethod(currentExpense.paymentMethod));
         setBeneficiaryIds(currentExpense.beneficiaryMemberIds?.length
             ? currentExpense.beneficiaryMemberIds
             : members.map(member => member.id));

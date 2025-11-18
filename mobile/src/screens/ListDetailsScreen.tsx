@@ -66,7 +66,13 @@ export const ListDetailsScreen: React.FC = () => {
 
     const handleEditMember = (member: ListMember) => navigation.navigate('EditMember', {listId, memberId: member.id});
 
-    const handleExpensePress = (expense: Expense) => navigation.navigate('ExpenseDetails', {expenseId: expense.id});
+    const orderedExpenseIds = useMemo(() => expenses.map(expense => expense.id), [expenses]);
+
+    const handleExpensePress = useCallback((expense: Expense) => navigation.navigate('ExpenseDetails', {
+        expenseId: expense.id,
+        listId,
+        expenseIds: orderedExpenseIds,
+    }), [navigation, listId, orderedExpenseIds]);
 
     const handleEditExpense = (expense: Expense) => {
         closeSwipe(expense.id);
@@ -400,7 +406,7 @@ export const ListDetailsScreen: React.FC = () => {
                         <Text style={styles.emptyIcon}>💸</Text>
                         <Text style={styles.emptyText}>{t('lists.emptyExpenses')}</Text>
                         <Button title={t('lists.addExpense')} onPress={handleAddExpense}/>
-                    </View> : expenses.map(renderExpense)}
+                    </View> : expenses.map(expense => renderExpense(expense))}
                 </> : <>
                     {members.length === 0 ? <View style={styles.empty}>
                         <Text style={styles.emptyIcon}>👥</Text>

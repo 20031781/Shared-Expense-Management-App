@@ -1,13 +1,11 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, Linking, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
+import {Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {availableLanguages, useTranslation} from '@i18n';
 import {AppColors, ThemePreference, useAppTheme} from '@theme';
 import {Button} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 import {NotificationPreferences} from '@/types';
-import {useEnvironmentStore} from '@/store/environment.store';
-import {getLimitationDocumentationUrl} from '@/lib/pushNotifications';
 
 const themeOptions: { value: ThemePreference; icon: string; labelKey: string }[] = [
     {value: 'light', icon: 'sunny-outline', labelKey: 'settings.themeLight'},
@@ -28,7 +26,6 @@ export const SettingsScreen: React.FC = () => {
     const {language, setLanguage, t} = useTranslation();
     const {colors, preference, setPreference} = useAppTheme();
     const {logout, updateProfile, user} = useAuthStore();
-    const pushLimitation = useEnvironmentStore(state => state.pushLimitation);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
         ...defaultNotificationPreferences,
@@ -123,13 +120,6 @@ export const SettingsScreen: React.FC = () => {
         }
     };
 
-    const pushLimitationCopy = pushLimitation ? t(`settings.pushLimitation.${pushLimitation}` as const) : null;
-    const handleOpenPushDocs = () => {
-        if (!pushLimitation) return;
-        const url = getLimitationDocumentationUrl(pushLimitation);
-        Linking.openURL(url).catch(() => undefined);
-    };
-
     return <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
         <View style={styles.sectionWrapper}>
             <Text style={styles.header}>{t('settings.languageLabel')}</Text>
@@ -177,16 +167,6 @@ export const SettingsScreen: React.FC = () => {
         <View style={styles.sectionWrapper}>
             <Text style={styles.header}>{t('settings.notificationsTitle')}</Text>
             <Text style={styles.description}>{t('settings.notificationsDescription')}</Text>
-            {pushLimitation && <View style={styles.pushWarning}>
-                <Ionicons name="warning-outline" size={20} color={colors.warning}/>
-                <View style={styles.pushWarningTextWrapper}>
-                    <Text style={styles.pushWarningTitle}>{t('settings.pushLimitationTitle')}</Text>
-                    <Text style={styles.pushWarningText}>{pushLimitationCopy}</Text>
-                    <TouchableOpacity onPress={handleOpenPushDocs}>
-                        <Text style={styles.pushWarningLink}>{t('settings.pushLimitationCta')}</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>}
             <View style={styles.section}>
                 {preferenceOptions.map(({key, icon, titleKey, descriptionKey}, index) => {
                     const value = notificationPrefs[key];
@@ -329,31 +309,5 @@ const createStyles = (colors: AppColors) =>
         preferenceDescription: {
             fontSize: 13,
             color: colors.secondaryText,
-        },
-        pushWarning: {
-            flexDirection: 'row',
-            gap: 12,
-            padding: 12,
-            borderRadius: 12,
-            backgroundColor: colors.warningBackground,
-            marginTop: 8,
-        },
-        pushWarningTextWrapper: {
-            flex: 1,
-            gap: 4,
-        },
-        pushWarningTitle: {
-            fontSize: 14,
-            fontWeight: '700',
-            color: colors.warning,
-        },
-        pushWarningText: {
-            fontSize: 13,
-            color: colors.text,
-        },
-        pushWarningLink: {
-            fontSize: 13,
-            fontWeight: '600',
-            color: colors.warning,
         },
     });
