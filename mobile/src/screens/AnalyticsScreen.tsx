@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback,
     View,
+    useWindowDimensions,
 } from 'react-native';
 
 import {Button, Card, Input, Loading} from '@/components';
@@ -91,6 +92,8 @@ export const AnalyticsScreen: React.FC = () => {
     const styles = useMemo(() => createStyles(colors), [colors]);
     const {fetchUserExpenses, userExpenses, userExpensesLoading} = useExpensesStore();
     const {lists, fetchLists} = useListsStore();
+    const {width: windowWidth} = useWindowDimensions();
+    const chartWidth = useMemo(() => Math.max(320, windowWidth - 48), [windowWidth]);
 
     const [timeframe, setTimeframe] = useState<Timeframe>('30');
     const [customRange, setCustomRange] = useState<DateRangeInput>({from: '', to: ''});
@@ -633,8 +636,10 @@ export const AnalyticsScreen: React.FC = () => {
                                 style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
                                 animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
                                 theme={VictoryTheme.material}
-                                domainPadding={{x: 24, y: 12}}
-                                padding={{top: 16, bottom: 48, left: 120, right: 24}}
+                                minDomain={{x: 0}}
+                                width={chartWidth}
+                                domainPadding={{x: [12, 36], y: 8}}
+                                padding={{top: 16, bottom: 48, left: 88, right: 32}}
                                 height={260}
                             >
                                 <VictoryAxis
@@ -657,7 +662,7 @@ export const AnalyticsScreen: React.FC = () => {
                                     animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
                                     data={memberChartData}
                                     horizontal
-                                    barRatio={0.8}
+                                    barWidth={22}
                                     labels={({datum}) => datum.label}
                                     cornerRadius={{top: 6, bottom: 6}}
                                     style={{
@@ -672,6 +677,7 @@ export const AnalyticsScreen: React.FC = () => {
                                         flyoutStyle={{fill: colors.surface, stroke: colors.border}}
                                         style={{fontSize: 12, fill: colors.text}}
                                         constrainToVisibleArea
+                                        renderInPortal={false}
                                     />}
                                 />
                             </VictoryChart>)}
@@ -682,6 +688,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 innerRadius={70}
                                 padAngle={1.5}
                                 height={260}
+                                width={chartWidth}
                                 animate={{duration: 1600, easing: 'quadInOut'}}
                                 labels={({datum}) => `${datum.x}\n${currency} ${datum.y.toFixed(2)} (${datum.percentage}%)`}
                                 style={{
@@ -692,9 +699,10 @@ export const AnalyticsScreen: React.FC = () => {
                                 style={styles.emptyText}>{t('analytics.memberTrendEmpty')}</Text> : <VictoryChart
                                 theme={VictoryTheme.material}
                                 animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
-                                padding={{top: 16, bottom: 56, left: 70, right: 24}}
+                                padding={{top: 16, bottom: 56, left: 56, right: 32}}
                                 height={260}
-                                domainPadding={{x: 10, y: 16}}
+                                width={chartWidth}
+                                domainPadding={{x: 16, y: 16}}
                             >
                                 <VictoryAxis
                                     tickFormat={value => trendTickFormatter.format(new Date(value))}
