@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
-    Alert,
     Animated,
     Easing,
     Linking,
@@ -15,7 +14,7 @@ import {
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Ionicons} from '@expo/vector-icons';
 
-import {Button, Card, Loading} from '@/components';
+import {Button, Card, Loading, useDialog} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useListsStore} from '@/store/lists.store';
 import {useAuthStore} from '@/store/auth.store';
@@ -28,6 +27,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const {expenseId, listId, expenseIds: routeExpenseIds} = route.params ?? {};
     const {t} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading, expenses} = useExpensesStore();
@@ -168,32 +168,47 @@ export const ExpenseDetailsScreen: React.FC = () => {
         }
     };
 
-    const handleDelete = () => {
+    const handleConfirmDelete = useCallback(async () => {
         if (!currentExpense) return;
-        Alert.alert(
-            t('expenses.deleteTitle'),
-            t('expenses.deleteBody', {title: currentExpense.title}),
-            [
-                {text: t('common.cancel'), style: 'cancel'},
-                {
-                    text: t('expenses.deleteConfirm'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            setIsDeleting(true);
-                            await deleteExpense(currentExpense.id);
-                            Alert.alert(t('common.success'), t('expenses.deleteSuccess'));
+        try {
+            setIsDeleting(true);
+            await deleteExpense(currentExpense.id);
+            showDialog({
+                title: t('common.success'),
+                message: t('expenses.deleteSuccess'),
+                actions: [{
+                    label: t('common.ok'),
+                    variant: 'primary',
+                    onPress: () => {
+                        if (!navigation.canGoBack()) {
+                            navigation.navigate('Lists');
+                        } else {
                             navigation.goBack();
-                        } catch (error: any) {
-                            Alert.alert(t('common.error'), error?.message || t('expenses.deleteError'));
-                        } finally {
-                            setIsDeleting(false);
                         }
                     }
-                }
-            ]
-        );
-    };
+                }],
+            });
+        } catch (error: any) {
+            showDialog({
+                title: t('common.error'),
+                message: error?.message || t('expenses.deleteError'),
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    }, [currentExpense, deleteExpense, navigation, showDialog, t]);
+
+    const handleDelete = useCallback(() => {
+        if (!currentExpense) return;
+        showDialog({
+            title: t('expenses.deleteTitle'),
+            message: t('expenses.deleteBody', {title: currentExpense.title}),
+            actions: [
+                {label: t('common.cancel'), variant: 'ghost'},
+                {label: t('expenses.deleteConfirm'), variant: 'danger', onPress: handleConfirmDelete},
+            ],
+        });
+    }, [currentExpense, handleConfirmDelete, showDialog, t]);
 
     const isListAdmin = useMemo(() => {
         if (!currentExpense) {

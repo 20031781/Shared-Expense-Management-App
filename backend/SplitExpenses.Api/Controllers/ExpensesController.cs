@@ -1,7 +1,10 @@
 #region
 
+using System;
 using System.Security.Claims;
+using System.Threading;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using SplitExpenses.Api.Models;
@@ -18,7 +21,8 @@ namespace SplitExpenses.Api.Controllers;
 public class ExpensesController(
     IExpenseRepository expenseRepository,
     INotificationService notificationService,
-    IListRepository listRepository)
+    IListRepository listRepository,
+    IReceiptStorage receiptStorage)
     : ControllerBase
 {
     [HttpGet("list/{listId:guid}")]
@@ -207,6 +211,33 @@ public class ExpensesController(
         await expenseRepository.DeleteAsync(id);
         return NoContent();
     }
+
+    [HttpPost("{id:guid}/receipt")]
+    [RequestSizeLimit(5_000_000)]
+    public async Task<IActionResult> UploadReceipt(Guid id, IFormFile? receipt, CancellationToken cancellationToken)
+    {
+        if (receipt == null || receipt.Length == 0)
+        {
+            return BadRequest(new { message = "Receipt file is required" });
+        }
+
+        var expense = await expenseRepository.GetByIdAsync(id);
+        if (expense == null) return NotFound();
+
+        if (!TryGetCurrentUserId(out var userId)) return Unauthorized("Missing user identifier");
+        if (expense.AuthorId != userId) return Forbid();
+
+        var relativePath = await receiptStorage.SaveAsync(id, receipt, cancellationToken);
+        var baseUrl = $"{Request.Scheme}://{Request.Host}".TrimEnd('/');
+        var url = relativePath.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? relativePath
+            : $"{baseUrl}{relativePath}";
+        expense.ReceiptUrl = url;
+        await expenseRepository.UpdateAsync(expense);
+
+        return Ok(new { url });
+    }
+
 
     private bool TryGetCurrentUserId(out Guid userId)
     {

@@ -1,6 +1,5 @@
 import React, {useMemo, useState} from 'react';
 import {
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -9,7 +8,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import {Button, Input, Loading} from '@/components';
+import {Button, Input, Loading, useDialog} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
@@ -21,24 +20,34 @@ export const LoginScreen: React.FC = () => {
     const [isSignUp, setIsSignUp] = useState(false);
     const {login, signUp, isLoading, isInitializing} = useAuthStore();
     const {t, language, setLanguage} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const handleSubmit = async () => {
         if (!email || !password) {
-            Alert.alert(t('common.error'), t('auth.missingFields'));
+            showDialog({
+                title: t('common.error'),
+                message: t('auth.missingFields'),
+            });
             return;
         }
 
         try {
             if (isSignUp) {
                 await signUp(email, password);
-                Alert.alert(t('common.success'), t('auth.signUpSuccess'));
+                showDialog({
+                    title: t('common.success'),
+                    message: t('auth.signUpSuccess'),
+                });
             } else {
                 await login(email, password);
             }
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('common.genericError'),
+            });
         }
     };
 

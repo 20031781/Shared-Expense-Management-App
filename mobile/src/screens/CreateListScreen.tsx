@@ -1,6 +1,6 @@
 import React, {useMemo, useState} from 'react';
-import {Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View,} from 'react-native';
-import {Button, Input} from '@/components';
+import {KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View,} from 'react-native';
+import {Button, Input, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useNavigation} from '@react-navigation/native';
 import {useTranslation} from '@i18n';
@@ -10,6 +10,7 @@ export const CreateListScreen: React.FC = () => {
     const navigation = useNavigation<any>();
     const {createList, isLoading} = useListsStore();
     const {t} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [name, setName] = useState('');
@@ -23,11 +24,16 @@ export const CreateListScreen: React.FC = () => {
 
         try {
             const list = await createList(name.trim());
-            Alert.alert(t('common.success'), t('lists.createSuccess'), [
-                {text: t('common.ok'), onPress: () => navigation.navigate('ListDetails', {listId: list.id})},
-            ]);
+            showDialog({
+                title: t('common.success'),
+                message: t('lists.createSuccess'),
+                actions: [{label: t('common.ok'), variant: 'primary', onPress: () => navigation.navigate('ListDetails', {listId: list.id})}],
+            });
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('lists.createError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('lists.createError'),
+            });
         }
     };
 

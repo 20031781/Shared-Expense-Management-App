@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
-    Alert,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -12,7 +11,7 @@ import {
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import {Button, Input, Loading} from '@/components';
+import {Button, Input, Loading, useDialog} from '@/components';
 import {useExpensesStore} from '@/store/expenses.store';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {useListsStore} from '@/store/lists.store';
@@ -49,6 +48,7 @@ export const CreateExpenseScreen: React.FC = () => {
     const {listId, expenseId} = route.params;
     const isEditing = Boolean(expenseId);
     const {t, language} = useTranslation();
+    const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -157,6 +157,12 @@ export const CreateExpenseScreen: React.FC = () => {
         setShowDatePicker(false);
     };
 
+    const isQuickDateSelected = useCallback((offsetDays: number) => {
+        const target = normalizeDate();
+        target.setDate(target.getDate() - offsetDays);
+        return target.toDateString() === expenseDate.toDateString();
+    }, [expenseDate]);
+
     const toggleBeneficiary = (memberId: string) => {
         setBeneficiaryIds(prev => prev.includes(memberId)
             ? prev.filter(id => id !== memberId)
@@ -216,7 +222,10 @@ export const CreateExpenseScreen: React.FC = () => {
         const {status} = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
         if (status !== 'granted') {
-            Alert.alert(t('common.error'), t('expenses.permissionPhotos'));
+            showDialog({
+                title: t('common.error'),
+                message: t('expenses.permissionPhotos'),
+            });
             return;
         }
 
@@ -236,7 +245,10 @@ export const CreateExpenseScreen: React.FC = () => {
         const {status} = await ImagePicker.requestCameraPermissionsAsync();
 
         if (status !== 'granted') {
-            Alert.alert(t('common.error'), t('expenses.permissionCamera'));
+            showDialog({
+                title: t('common.error'),
+                message: t('expenses.permissionCamera'),
+            });
             return;
         }
 
@@ -285,14 +297,16 @@ export const CreateExpenseScreen: React.FC = () => {
                 await uploadReceipt(expense.id, receiptUri);
             }
 
-            Alert.alert(t('common.success'), isEditing ? t('expenses.updatedSuccess') : t('expenses.createdSuccess'), [
-                {
-                    text: t('common.ok'),
-                    onPress: () => navigation.goBack(),
-                },
-            ]);
+            showDialog({
+                title: t('common.success'),
+                message: isEditing ? t('expenses.updatedSuccess') : t('expenses.createdSuccess'),
+                actions: [{label: t('common.ok'), variant: 'primary', onPress: () => navigation.goBack()}],
+            });
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('common.genericError'),
+            });
         }
     };
 
@@ -419,12 +433,18 @@ export const CreateExpenseScreen: React.FC = () => {
                 </TouchableOpacity>
             </View>
             <View style={styles.dateQuickActions}>
-                <TouchableOpacity style={[styles.dateChip, styles.dateChipPrimary]} onPress={() => handleQuickDate(0)}>
-                    <Text style={[styles.dateChipText, styles.dateChipPrimaryText]}>{t('expenses.dateToday')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.dateChip} onPress={() => handleQuickDate(1)}>
-                    <Text style={styles.dateChipText}>{t('expenses.dateYesterday')}</Text>
-                </TouchableOpacity>
+                {([0, 1] as const).map(offset => {
+                    const isActive = isQuickDateSelected(offset);
+                    return <TouchableOpacity
+                        key={offset}
+                        style={[styles.dateChip, isActive && styles.dateChipActive]}
+                        onPress={() => handleQuickDate(offset)}
+                    >
+                        <Text style={[styles.dateChipText, isActive && styles.dateChipActiveText]}>
+                            {offset === 0 ? t('expenses.dateToday') : t('expenses.dateYesterday')}
+                        </Text>
+                    </TouchableOpacity>;
+                })}
             </View>
 
             <View style={styles.paymentSection}>
@@ -720,7 +740,7 @@ const createStyles = (colors: AppColors) =>
             borderRadius: 16,
             backgroundColor: colors.surfaceSecondary,
         },
-        dateChipPrimary: {
+        dateChipActive: {
             backgroundColor: colors.accent,
         },
         dateChipText: {
@@ -728,7 +748,7 @@ const createStyles = (colors: AppColors) =>
             fontWeight: '600',
             color: colors.secondaryText,
         },
-        dateChipPrimaryText: {
+        dateChipActiveText: {
             color: colors.accentText,
         },
         errorText: {

@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Alert, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
+import {ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
-import {Button, Input, Loading} from '@/components';
+import {Button, Input, Loading, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
@@ -11,6 +11,7 @@ const STATUS_OPTIONS: MemberStatus[] = [MemberStatus.Active, MemberStatus.Pendin
 
 export const EditMemberScreen: React.FC = () => {
     const {t} = useTranslation();
+    const {showDialog} = useDialog();
     const route = useRoute<any>();
     const navigation = useNavigation<any>();
     const {listId, memberId} = route.params;
@@ -98,35 +99,45 @@ export const EditMemberScreen: React.FC = () => {
                 clearDisplayName: trimmedDisplayName ? undefined : true,
             });
             await rebalanceOtherSplits(targetSplit);
-            Alert.alert(t('common.success'), t('members.editSuccess'), [
-                {text: t('common.ok'), onPress: () => navigation.goBack()},
-            ]);
+            showDialog({
+                title: t('common.success'),
+                message: t('members.editSuccess'),
+                actions: [{label: t('common.ok'), variant: 'primary', onPress: () => navigation.goBack()}],
+            });
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('common.genericError'),
+            });
         }
     };
 
     const confirmRemove = () => {
         if (!member) return;
-        Alert.alert(
-            t('members.removeTitle'),
-            t('members.removeBody', {email: member.email}),
-            [
-                {text: t('common.cancel'), style: 'cancel'},
-                {text: t('members.removeConfirm'), style: 'destructive', onPress: handleRemove},
-            ]
-        );
+        showDialog({
+            title: t('members.removeTitle'),
+            message: t('members.removeBody', {email: member.email}),
+            actions: [
+                {label: t('common.cancel'), variant: 'ghost'},
+                {label: t('members.removeConfirm'), variant: 'danger', onPress: handleRemove},
+            ],
+        });
     };
 
     const handleRemove = async () => {
         if (!member) return;
         try {
             await removeMember(listId, member.id);
-            Alert.alert(t('common.success'), t('members.removeSuccess'), [
-                {text: t('common.ok'), onPress: () => navigation.goBack()},
-            ]);
+            showDialog({
+                title: t('common.success'),
+                message: t('members.removeSuccess'),
+                actions: [{label: t('common.ok'), variant: 'primary', onPress: () => navigation.goBack()}],
+            });
         } catch (error: any) {
-            Alert.alert(t('common.error'), error.message || t('common.genericError'));
+            showDialog({
+                title: t('common.error'),
+                message: error.message || t('common.genericError'),
+            });
         }
     };
 

@@ -6,7 +6,7 @@ import {StatusBar} from 'expo-status-bar';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
-import {Alert, Platform} from 'react-native';
+import {Platform} from 'react-native';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
@@ -14,7 +14,7 @@ import Constants from 'expo-constants';
 import {AuthNavigator, MainNavigator} from '@navigation/AppNavigator';
 import {useAuthStore} from '@store/auth.store';
 import {useListsStore} from '@store/lists.store';
-import {Loading} from '@/components';
+import {DialogProvider, Loading, useDialog} from '@/components';
 import {LanguageProvider, useTranslation} from '@i18n';
 import {ThemeProvider, useAppTheme} from '@theme';
 import {LanguageSelectionScreen} from '@/screens/LanguageSelectionScreen';
@@ -46,6 +46,7 @@ const AppContent = () => {
     const {navigationTheme, statusBarStyle, colors} = useAppTheme();
     const {t} = useTranslation();
     const [pendingInvite, setPendingInvite] = useState<PendingInviteAction | null>(null);
+    const {showDialog} = useDialog();
     const hasRegisteredPushToken = useRef(false);
 
     useEffect(() => {
@@ -141,22 +142,34 @@ const AppContent = () => {
                 } else {
                     await joinList(code);
                 }
-                Alert.alert(t('common.success'), successMessages[type]);
+                showDialog({
+                    title: t('common.success'),
+                    message: successMessages[type],
+                });
             } catch (error: any) {
                 if (type === 'accept') {
                     const isNotFoundError = error?.statusCode === 404 || /invitation not found/i.test(error?.message || '');
                     if (isNotFoundError) {
                         try {
                             await joinList(code);
-                            Alert.alert(t('common.success'), successMessages.join);
+                            showDialog({
+                                title: t('common.success'),
+                                message: successMessages.join,
+                            });
                             return;
                         } catch (joinError: any) {
-                            Alert.alert(t('common.error'), joinError.message || errorMessages.join);
+                            showDialog({
+                                title: t('common.error'),
+                                message: joinError.message || errorMessages.join,
+                            });
                             return;
                         }
                     }
                 }
-                Alert.alert(t('common.error'), error.message || errorMessages[type]);
+                showDialog({
+                    title: t('common.error'),
+                    message: error.message || errorMessages[type],
+                });
             }
         };
 
@@ -192,9 +205,11 @@ const LanguageGate: React.FC<{ children: React.ReactNode }> = ({children}) => {
 export default function App() {
     return <ThemeProvider>
         <LanguageProvider>
-            <LanguageGate>
-                <AppContent/>
-            </LanguageGate>
+            <DialogProvider>
+                <LanguageGate>
+                    <AppContent/>
+                </LanguageGate>
+            </DialogProvider>
         </LanguageProvider>
     </ThemeProvider>;
 }

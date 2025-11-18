@@ -3,3 +3,4 @@ export {Card} from './Card';
 export {Input} from './Input';
 export {Loading} from './Loading';
 export {OnboardingChecklist} from './OnboardingChecklist';
+export {DialogProvider, useDialog} from './DialogProvider';

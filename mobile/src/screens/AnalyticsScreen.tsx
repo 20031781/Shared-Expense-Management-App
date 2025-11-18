@@ -29,8 +29,43 @@ import {VictoryArea, VictoryAxis, VictoryBar, VictoryChart, VictoryPie, VictoryT
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
 type DateRangeInput = { from?: string; to?: string };
+type ChartSpeed = 'fast' | 'medium' | 'slow';
+
+const CHART_SPEED_DURATION: Record<ChartSpeed, number> = {
+    fast: 900,
+    medium: 1500,
+    slow: 2200,
+};
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const buildCurrencyTicks = (maxValue: number): number[] => {
+    const safeMax = Math.max(0, maxValue);
+    if (safeMax === 0) {
+        return [0, 1];
+    }
+    const desiredTicks = 4;
+    const baseStep = Math.max(safeMax / desiredTicks, 0.1);
+    const magnitude = Math.pow(10, Math.floor(Math.log10(baseStep)));
+    const normalized = baseStep / magnitude;
+    let step: number;
+    if (normalized >= 5) {
+        step = 5 * magnitude;
+    } else if (normalized >= 2) {
+        step = 2 * magnitude;
+    } else {
+        step = magnitude;
+    }
+    const ticks: number[] = [0];
+    for (let value = step; value < safeMax * 1.05; value += step) {
+        ticks.push(Number(value.toFixed(2)));
+    }
+    const roundedMax = Number(safeMax.toFixed(2));
+    if (ticks[ticks.length - 1] < roundedMax) {
+        ticks.push(roundedMax);
+    }
+    return ticks;
+};
 
 const parseDateInput = (value?: string): Date | undefined => {
     if (!value) return undefined;
@@ -115,6 +150,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [memberChartMode, setMemberChartMode] = useState<'bar' | 'pie' | 'trend'>('bar');
+    const [chartAnimationSpeed, setChartAnimationSpeed] = useState<ChartSpeed>('fast');
     const chartFade = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
@@ -136,6 +172,23 @@ export const AnalyticsScreen: React.FC = () => {
         {key: 'pie', label: t('analytics.chartModePie')},
         {key: 'trend', label: t('analytics.chartModeTrend')},
     ] as const, [t]);
+
+    const chartSpeedOptions = useMemo(() => [
+        {key: 'fast' as ChartSpeed, label: t('analytics.chartSpeedFast')},
+        {key: 'medium' as ChartSpeed, label: t('analytics.chartSpeedMedium')},
+        {key: 'slow' as ChartSpeed, label: t('analytics.chartSpeedSlow')},
+    ], [t]);
+
+    const chartAnimationDuration = CHART_SPEED_DURATION[chartAnimationSpeed];
+    const chartContainerAnimation = useMemo(() => ({
+        duration: chartAnimationDuration,
+        easing: 'quadInOut',
+        onLoad: {duration: chartAnimationDuration},
+    }), [chartAnimationDuration]);
+    const chartSeriesAnimation = useMemo(() => ({
+        duration: chartAnimationDuration,
+        easing: 'quadInOut',
+    }), [chartAnimationDuration]);
 
     const selectedList = useMemo(() => lists.find(list => list.id === selectedListId), [lists, selectedListId]);
 
@@ -319,6 +372,7 @@ export const AnalyticsScreen: React.FC = () => {
     }, [selectedListId, listInsights.expenses]);
 
     const memberChartMax = memberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
+    const memberAxisTicks = useMemo(() => buildCurrencyTicks(memberChartMax), [memberChartMax]);
     const totalMemberAmount = useMemo(() => memberBreakdown.reduce((sum, item) => sum + item.amount, 0), [memberBreakdown]);
 
     const memberChartColors = useMemo(() => [
@@ -361,6 +415,8 @@ export const AnalyticsScreen: React.FC = () => {
                 return {x: date, y: amount};
             });
     }, [selectedListId, listInsights.expenses]);
+    const memberTrendMax = useMemo(() => memberTrendData.reduce((max, point) => Math.max(max, point.y), 0), [memberTrendData]);
+    const trendAxisTicks = useMemo(() => buildCurrencyTicks(memberTrendMax), [memberTrendMax]);
 
     const trendTickFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, {
         month: 'short',
@@ -380,11 +436,11 @@ export const AnalyticsScreen: React.FC = () => {
         chartFade.setValue(0.1);
         Animated.timing(chartFade, {
             toValue: 1,
-            duration: 250,
+            duration: Math.max(220, Math.round(chartAnimationDuration * 0.6)),
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
         }).start();
-    }, [memberChartMode, chartFade]);
+    }, [memberChartMode, chartFade, chartAnimationDuration]);
 
     const splitSummary = useMemo(() => {
         if (selectedListId === ALL_LISTS_OPTION) {
@@ -631,10 +687,31 @@ export const AnalyticsScreen: React.FC = () => {
                                 </TouchableOpacity>;
                             })}
                         </View>
+                        <View style={styles.chartSpeedHeader}>
+                            <Text style={styles.chartSpeedTitle}>{t('analytics.chartSpeedTitle')}</Text>
+                            <Text style={styles.chartSpeedHelper}>{t('analytics.chartSpeedHelper')}</Text>
+                        </View>
+                        <View style={styles.chartSpeedSelector}>
+                            {chartSpeedOptions.map(option => {
+                                const isActive = chartAnimationSpeed === option.key;
+                                return <TouchableOpacity
+                                    key={option.key}
+                                    style={styles.chartSpeedOption}
+                                    onPress={() => setChartAnimationSpeed(option.key)}
+                                >
+                                    <View style={[styles.chartSpeedDot, isActive && styles.chartSpeedDotActive]}/>
+                                    <Text
+                                        style={[styles.chartSpeedLabel, isActive && styles.chartSpeedLabelActive]}
+                                    >
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>;
+                            })}
+                        </View>
                         <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}>
                             {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
                                 style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
-                                animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
+                                animate={chartContainerAnimation}
                                 theme={VictoryTheme.material}
                                 minDomain={{x: 0}}
                                 width={chartWidth}
@@ -651,6 +728,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 />
                                 <VictoryAxis
                                     dependentAxis
+                                    tickValues={memberAxisTicks}
                                     tickFormat={value => `${currency} ${value.toFixed(0)}`}
                                     style={{
                                         axis: {stroke: colors.surfaceSecondary},
@@ -659,7 +737,7 @@ export const AnalyticsScreen: React.FC = () => {
                                     }}
                                 />
                                 <VictoryBar
-                                    animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
+                                    animate={chartSeriesAnimation}
                                     data={memberChartData}
                                     horizontal
                                     barWidth={22}
@@ -689,7 +767,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 padAngle={1.5}
                                 height={260}
                                 width={chartWidth}
-                                animate={{duration: 1600, easing: 'quadInOut'}}
+                                animate={chartSeriesAnimation}
                                 labels={({datum}) => `${datum.x}\n${currency} ${datum.y.toFixed(2)} (${datum.percentage}%)`}
                                 style={{
                                     labels: {fill: colors.text, fontSize: 12},
@@ -698,7 +776,7 @@ export const AnalyticsScreen: React.FC = () => {
                             {memberChartMode === 'trend' && (memberTrendData.length === 0 ? <Text
                                 style={styles.emptyText}>{t('analytics.memberTrendEmpty')}</Text> : <VictoryChart
                                 theme={VictoryTheme.material}
-                                animate={{duration: 1600, easing: 'quadInOut', onLoad: {duration: 1600}}}
+                                animate={chartContainerAnimation}
                                 padding={{top: 16, bottom: 56, left: 56, right: 32}}
                                 height={260}
                                 width={chartWidth}
@@ -713,6 +791,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 />
                                 <VictoryAxis
                                     dependentAxis
+                                    tickValues={trendAxisTicks}
                                     tickFormat={value => `${currency} ${value.toFixed(0)}`}
                                     style={{
                                         axis: {stroke: colors.surfaceSecondary},
@@ -721,7 +800,7 @@ export const AnalyticsScreen: React.FC = () => {
                                     }}
                                 />
                                 <VictoryArea
-                                    animate={{duration: 1600, easing: 'quadInOut'}}
+                                    animate={chartSeriesAnimation}
                                     data={memberTrendData}
                                     interpolation="monotoneX"
                                     style={{
@@ -925,6 +1004,45 @@ const createStyles = (colors: AppColors) =>
             flexWrap: 'wrap',
             gap: 8,
             marginBottom: 12,
+        },
+        chartSpeedHeader: {
+            marginTop: 8,
+            marginBottom: 4,
+        },
+        chartSpeedTitle: {
+            fontSize: 14,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        chartSpeedHelper: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        chartSpeedSelector: {
+            flexDirection: 'row',
+            gap: 16,
+            marginBottom: 12,
+        },
+        chartSpeedOption: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+        },
+        chartSpeedDot: {
+            width: 12,
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: colors.surfaceSecondary,
+        },
+        chartSpeedDotActive: {
+            backgroundColor: colors.accent,
+        },
+        chartSpeedLabel: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        chartSpeedLabelActive: {
+            color: colors.accent,
         },
         chartModeChip: {
             paddingHorizontal: 12,
