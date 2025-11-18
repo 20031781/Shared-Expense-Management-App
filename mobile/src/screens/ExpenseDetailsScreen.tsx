@@ -1,5 +1,17 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Alert, Linking, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+    Alert,
+    Animated,
+    Easing,
+    Linking,
+    PanResponder,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    useWindowDimensions,
+} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Ionicons} from '@expo/vector-icons';
 
@@ -24,6 +36,9 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [activeExpenseId, setActiveExpenseId] = useState<string | null>(expenseId ?? null);
     const [expenseSequence, setExpenseSequence] = useState<string[]>(routeExpenseIds ?? []);
+    const swipeTranslate = useRef(new Animated.Value(0)).current;
+    const swipeOpacity = useRef(new Animated.Value(1)).current;
+    const {width: windowWidth} = useWindowDimensions();
 
     useEffect(() => {
         if (expenseId && expenseId !== activeExpenseId) {
@@ -65,23 +80,87 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const handleNavigateRelative = useCallback((direction: 'previous' | 'next') => {
         const targetId = direction === 'next' ? navigationContext.next : navigationContext.previous;
         if (!targetId || targetId === activeExpenseId) {
-            return;
+            return false;
         }
         setActiveExpenseId(targetId);
         navigation.setParams({expenseId: targetId});
+        return true;
     }, [navigationContext, activeExpenseId, navigation]);
+
+    const resetSwipePosition = useCallback(() => {
+        Animated.parallel([
+            Animated.spring(swipeTranslate, {
+                toValue: 0,
+                useNativeDriver: true,
+                bounciness: 6,
+            }),
+            Animated.timing(swipeOpacity, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, [swipeTranslate, swipeOpacity]);
+
+    const runSwipeTransition = useCallback((direction: 'previous' | 'next') => {
+        const exitOffset = direction === 'next' ? -windowWidth : windowWidth;
+        Animated.parallel([
+            Animated.timing(swipeTranslate, {
+                toValue: exitOffset,
+                duration: 200,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+            Animated.timing(swipeOpacity, {
+                toValue: 0.25,
+                duration: 200,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+        ]).start(() => {
+            const didNavigate = handleNavigateRelative(direction);
+            swipeTranslate.setValue(-exitOffset * 0.35);
+            Animated.parallel([
+                Animated.timing(swipeTranslate, {
+                    toValue: 0,
+                    duration: 200,
+                    easing: Easing.out(Easing.quad),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(swipeOpacity, {
+                    toValue: 1,
+                    duration: 200,
+                    easing: Easing.out(Easing.quad),
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                if (!didNavigate) {
+                    resetSwipePosition();
+                }
+            });
+        });
+    }, [handleNavigateRelative, swipeOpacity, swipeTranslate, windowWidth, resetSwipePosition]);
 
     const panResponder = useMemo(() => PanResponder.create({
         onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
             && Math.abs(gestureState.dx) > 24,
+        onPanResponderMove: (_, gestureState) => {
+            swipeTranslate.setValue(gestureState.dx);
+            const fade = Math.max(0.35, 1 - Math.abs(gestureState.dx) / windowWidth);
+            swipeOpacity.setValue(fade);
+        },
         onPanResponderRelease: (_, gestureState) => {
-            if (gestureState.dx < -40) {
-                handleNavigateRelative('next');
-            } else if (gestureState.dx > 40) {
-                handleNavigateRelative('previous');
+            const threshold = 60;
+            if (gestureState.dx < -threshold && navigationContext.next) {
+                runSwipeTransition('next');
+            } else if (gestureState.dx > threshold && navigationContext.previous) {
+                runSwipeTransition('previous');
+            } else {
+                resetSwipePosition();
             }
         },
-    }), [handleNavigateRelative]);
+        onPanResponderTerminate: resetSwipePosition,
+    }), [navigationContext.next, navigationContext.previous, resetSwipePosition, runSwipeTransition, swipeTranslate, swipeOpacity, windowWidth]);
 
     const handleOpenReceipt = async () => {
         if (currentExpense?.receiptUrl) {
@@ -186,7 +265,10 @@ export const ExpenseDetailsScreen: React.FC = () => {
         expenseId: currentExpense.id
     });
 
-    return <View style={styles.swipeContainer} {...panResponder.panHandlers}>
+    return <Animated.View
+        style={[styles.swipeContainer, {transform: [{translateX: swipeTranslate}], opacity: swipeOpacity}]}
+        {...panResponder.panHandlers}
+    >
         <ScrollView contentContainerStyle={styles.container}>
             <Card style={styles.heroCard}>
                 <Text style={styles.title}>{currentExpense.title}</Text>
@@ -228,7 +310,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
             />
         </View>
     </ScrollView>
-    </View>;
+    </Animated.View>;
 };
 
 const createStyles = (colors: AppColors) =>

@@ -173,6 +173,43 @@ Vedrai un QR code nel terminale.
 2. Scansiona il **QR code**
 3. Aspetta che l'app si carichi
 
+#### Creare un *Development Build* (necessario per `expo-notifications`)
+
+Con l'SDK 53 Expo ha rimosso dal client **Expo Go** il supporto alle notifiche push remote. Per testare correttamente
+`expo-notifications` serve quindi un *development build* personalizzato (*Expo Dev Client*), che sfrutta il codice nativo del
+progetto.
+
+1. Installa le dipendenze native e il Dev Client (una sola volta):
+
+   ```bash
+   cd mobile
+   npx expo install expo-dev-client
+   ```
+
+2. Collega il dispositivo Android via USB (o avvia un emulatore) e genera il build di sviluppo:
+
+   ```bash
+   npx expo run:android --variant development
+   ```
+
+   Per iOS (serve Xcode su macOS):
+
+   ```bash
+   npx expo run:ios --configuration Debug
+   ```
+
+3. Una volta completato il build il dispositivo installerà l'app **Split Expenses Dev**. Da ora in poi, quando esegui `npm
+   start`, scegli "a" o "i" per aprire il *dev client* invece di Expo Go: il runtime userà il codice nativo compilato e le
+   notifiche push funzioneranno senza gli avvisi bloccanti.
+
+4. Se vuoi condividere il dev client con altri collaboratori senza cavo, puoi anche generare un pacchetto dedicato via EAS:
+
+   ```bash
+   npx eas build -p android --profile development
+   ```
+
+   (Su iOS usa `--platform ios`). Il build risultante può essere installato con `adb install` (Android) o TestFlight (iOS).
+
 #### Condividere l'invito via WhatsApp
 
 - Nella schermata **Dettaglio lista** tocca l'icona di condivisione (in alto a destra) per generare un messaggio
