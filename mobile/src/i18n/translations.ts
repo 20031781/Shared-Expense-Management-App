@@ -223,12 +223,6 @@ export const translations = {
             themeSystem: 'Match system',
             notificationsTitle: 'Notifications',
             notificationsDescription: 'Choose which push notifications you want to receive.',
-            pushLimitationTitle: 'Push unavailable on this build',
-            pushLimitation: {
-                'expo-go': 'Expo Go removed remote push notifications starting with SDK 53. Create a development build to keep receiving alerts.',
-                web: 'Push notifications are disabled when the app runs inside a browser.',
-            },
-            pushLimitationCta: 'Open the setup guide',
             notifyNewExpense: 'New expense',
             notifyNewExpenseDescription: 'Alerts you whenever someone adds an expense in your lists.',
             notifyExpenseDeleted: 'Expense deleted',
@@ -303,13 +297,7 @@ export const translations = {
             chartModeTrend: 'Trend',
             memberTrendEmpty: 'We need a few expenses to plot the trend for this list.',
         },
-        notifications: {
-            unsupportedTitle: 'Push notifications unavailable',
-            unsupported: {
-                'expo-go': 'Expo Go no longer supports remote push notifications. Install a development build to restore alerts.',
-                web: 'Push notifications are not available from the browser.',
-            },
-        },
+        notifications: {},
     },
     it: {
         common: {
@@ -533,12 +521,6 @@ export const translations = {
             themeSystem: 'Come il sistema',
             notificationsTitle: 'Notifiche',
             notificationsDescription: 'Scegli quali notifiche push ricevere.',
-            pushLimitationTitle: 'Push non disponibile qui',
-            pushLimitation: {
-                'expo-go': 'Expo Go ha rimosso il supporto alle push remote da SDK 53. Crea una development build per continuare a ricevere avvisi.',
-                web: 'Le notifiche push non funzionano dal browser.',
-            },
-            pushLimitationCta: 'Apri la guida',
             notifyNewExpense: 'Nuova spesa',
             notifyNewExpenseDescription: 'Ti avvisa quando qualcuno aggiunge una spesa nelle tue liste.',
             notifyExpenseDeleted: 'Spesa eliminata',
@@ -613,13 +595,7 @@ export const translations = {
             chartModeTrend: 'Trend',
             memberTrendEmpty: 'Servono più spese per disegnare questo grafico.',
         },
-        notifications: {
-            unsupportedTitle: 'Push non disponibili',
-            unsupported: {
-                'expo-go': 'Expo Go non supporta più le notifiche push remote. Installa una development build per riattivarle.',
-                web: 'Le notifiche push non funzionano dal browser.',
-            },
-        },
+        notifications: {},
     },
 };
 

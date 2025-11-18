@@ -1,5 +1,5 @@
-import React, {useEffect, useMemo, useState} from 'react';
-import {Alert, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {Alert, Linking, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 import {useNavigation, useRoute} from '@react-navigation/native';
 import {Ionicons} from '@expo/vector-icons';
 
@@ -14,19 +14,74 @@ import {ExpensePaymentMethod, ListMember} from '@/types';
 export const ExpenseDetailsScreen: React.FC = () => {
     const route = useRoute<any>();
     const navigation = useNavigation<any>();
-    const {expenseId} = route.params;
+    const {expenseId, listId, expenseIds: routeExpenseIds} = route.params ?? {};
     const {t} = useTranslation();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
-    const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading} = useExpensesStore();
+    const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading, expenses} = useExpensesStore();
     const {members, lists} = useListsStore();
     const {user} = useAuthStore();
     const [isDeleting, setIsDeleting] = useState(false);
+    const [activeExpenseId, setActiveExpenseId] = useState<string | null>(expenseId ?? null);
+    const [expenseSequence, setExpenseSequence] = useState<string[]>(routeExpenseIds ?? []);
 
     useEffect(() => {
-        fetchExpenseById(expenseId);
-        return () => setCurrentExpense(null);
-    }, [expenseId, fetchExpenseById, setCurrentExpense]);
+        if (expenseId && expenseId !== activeExpenseId) {
+            setActiveExpenseId(expenseId);
+        }
+    }, [expenseId, activeExpenseId]);
+
+    useEffect(() => {
+        if (!activeExpenseId) return;
+        fetchExpenseById(activeExpenseId);
+    }, [activeExpenseId, fetchExpenseById]);
+
+    useEffect(() => () => setCurrentExpense(null), [setCurrentExpense]);
+
+    useEffect(() => {
+        if (routeExpenseIds?.length) {
+            setExpenseSequence(routeExpenseIds);
+            return;
+        }
+        const targetListId = listId || currentExpense?.listId;
+        if (!targetListId) {
+            return;
+        }
+        const ids = expenses.filter(expense => expense.listId === targetListId).map(expense => expense.id);
+        if (ids.length > 0) {
+            setExpenseSequence(ids);
+        }
+    }, [routeExpenseIds, expenses, listId, currentExpense?.listId]);
+
+    const navigationContext = useMemo(() => {
+        const index = expenseSequence.findIndex(id => id === activeExpenseId);
+        return {
+            index,
+            previous: index > 0 ? expenseSequence[index - 1] : null,
+            next: index >= 0 && index < expenseSequence.length - 1 ? expenseSequence[index + 1] : null,
+        };
+    }, [expenseSequence, activeExpenseId]);
+
+    const handleNavigateRelative = useCallback((direction: 'previous' | 'next') => {
+        const targetId = direction === 'next' ? navigationContext.next : navigationContext.previous;
+        if (!targetId || targetId === activeExpenseId) {
+            return;
+        }
+        setActiveExpenseId(targetId);
+        navigation.setParams({expenseId: targetId});
+    }, [navigationContext, activeExpenseId, navigation]);
+
+    const panResponder = useMemo(() => PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
+            && Math.abs(gestureState.dx) > 24,
+        onPanResponderRelease: (_, gestureState) => {
+            if (gestureState.dx < -40) {
+                handleNavigateRelative('next');
+            } else if (gestureState.dx > 40) {
+                handleNavigateRelative('previous');
+            }
+        },
+    }), [handleNavigateRelative]);
 
     const handleOpenReceipt = async () => {
         if (currentExpense?.receiptUrl) {
@@ -131,9 +186,10 @@ export const ExpenseDetailsScreen: React.FC = () => {
         expenseId: currentExpense.id
     });
 
-    return <ScrollView contentContainerStyle={styles.container}>
-        <Card style={styles.heroCard}>
-            <Text style={styles.title}>{currentExpense.title}</Text>
+    return <View style={styles.swipeContainer} {...panResponder.panHandlers}>
+        <ScrollView contentContainerStyle={styles.container}>
+            <Card style={styles.heroCard}>
+                <Text style={styles.title}>{currentExpense.title}</Text>
             <Text style={styles.amount}>{currentExpense.currency} {currentExpense.amount.toFixed(2)}</Text>
             <View style={styles.badge}>
                 <Text style={styles.badgeText}>{statusLabel}</Text>
@@ -171,11 +227,15 @@ export const ExpenseDetailsScreen: React.FC = () => {
                 loading={isDeleting}
             />
         </View>
-    </ScrollView>;
+    </ScrollView>
+    </View>;
 };
 
 const createStyles = (colors: AppColors) =>
     StyleSheet.create({
+        swipeContainer: {
+            flex: 1,
+        },
         container: {
             padding: 16,
             gap: 16,

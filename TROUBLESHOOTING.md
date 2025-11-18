@@ -205,8 +205,8 @@ progetto sbagliato o hai ancora un ambiente MAUI aperto. Chiudi tutto e avvia `c
 
 1. Se usi **Expo Go**, le notifiche remote sono disattivate da SDK 53. Passa a una development build (`eas build --profile
    development`) o crea un dev client con `npx expo run:android/ios`.
-2. Apri l'app → Impostazioni → Notifiche e verifica il banner giallo: se presente significa che non esiste un token valido
-   e il backend ignorerà gli eventi.
+2. Apri l'app → Impostazioni → Notifiche e assicurati che i permessi siano concessi e i toggle attivi. Su Expo Go non verrà
+   registrato alcun token finché non installi una build di sviluppo/anteprima reale.
 3. Controlla che la tabella `device_tokens` contenga almeno un record per il tuo `user_id`. In caso contrario, reinstallare
    la build (non Expo Go) e consenti i permessi.
 4. Riprova gli endpoint di test descritti in [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md).
