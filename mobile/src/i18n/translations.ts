@@ -15,6 +15,7 @@ export const translations = {
             language: 'Language',
             comingSoon: 'Coming soon',
             retry: 'Retry',
+            connectionError: 'We can’t reach the server. Check your connection and try again.',
         },
         navigation: {
             lists: 'Lists',
@@ -198,6 +199,11 @@ export const translations = {
             removeBody: ({email}: { email: string }) => `Remove ${email} from this list?`,
             removeConfirm: 'Remove',
             removeSuccess: 'Member removed',
+            removeBlockedTitle: 'Member locked',
+            removeBlockedBody: ({count}: { count: number }) => count === 1
+                ? 'This member is linked to one expense. Reassign it before removing them.'
+                : `This member is linked to ${count} expenses. Reassign them before removing the member.`,
+            removeBlockedHelper: 'Move or reassign the expenses to another member to unlock the removal.',
             statusLabel: 'Status',
             statusHint: 'Only administrators can change this field.',
             statusActive: 'Active',
@@ -221,6 +227,11 @@ export const translations = {
             themeLight: 'Light',
             themeDark: 'Dark',
             themeSystem: 'Match system',
+            animationTitle: 'Chart animation speed',
+            animationDescription: 'Choose how lively Insights charts and transitions should feel.',
+            animationFast: 'Fast',
+            animationMedium: 'Balanced',
+            animationSlow: 'Relaxed',
             notificationsTitle: 'Notifications',
             notificationsDescription: 'Choose which push notifications you want to receive.',
             notifyNewExpense: 'New expense',
@@ -318,6 +329,7 @@ export const translations = {
             language: 'Lingua',
             comingSoon: 'Prossimamente',
             retry: 'Riprova',
+            connectionError: 'Connessione assente. Controlla la rete e riprova.',
         },
         navigation: {
             lists: 'Liste',
@@ -501,6 +513,11 @@ export const translations = {
             removeBody: ({email}: { email: string }) => `Vuoi rimuovere ${email} dalla lista?`,
             removeConfirm: 'Rimuovi',
             removeSuccess: 'Membro rimosso',
+            removeBlockedTitle: 'Impossibile rimuovere',
+            removeBlockedBody: ({count}: { count: number }) => count === 1
+                ? 'Questo membro ha una spesa assegnata. Riassegna la spesa prima di eliminarlo.'
+                : `Questo membro ha ${count} spese assegnate. Riassegna tutte le spese prima di eliminarlo.`,
+            removeBlockedHelper: 'Sposta o riassegna le spese su un altro membro per poterlo rimuovere.',
             statusLabel: 'Stato',
             statusHint: "Solo l'amministratore può modificare questo campo.",
             statusActive: 'Attivo',
@@ -524,6 +541,11 @@ export const translations = {
             themeLight: 'Chiaro',
             themeDark: 'Scuro',
             themeSystem: 'Come il sistema',
+            animationTitle: 'Velocità animazioni grafici',
+            animationDescription: 'Scegli quanto veloci devono essere le animazioni degli Insights.',
+            animationFast: 'Veloce',
+            animationMedium: 'Equilibrata',
+            animationSlow: 'Rilassata',
             notificationsTitle: 'Notifiche',
             notificationsDescription: 'Scegli quali notifiche push ricevere.',
             notifyNewExpense: 'Nuova spesa',

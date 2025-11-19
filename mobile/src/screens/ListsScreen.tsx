@@ -7,6 +7,7 @@ import {List} from '@/types';
 import {useNavigation} from '@react-navigation/native';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 export const ListsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -69,7 +70,7 @@ export const ListsScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('lists.joinError'),
+                message: getFriendlyErrorMessage(error, t('lists.joinError'), t),
             });
         } finally {
             setJoining(false);
@@ -95,7 +96,7 @@ export const ListsScreen: React.FC = () => {
                         } catch (error: any) {
                             showDialog({
                                 title: t('common.error'),
-                                message: error.message ?? t('lists.deleteError'),
+                                message: getFriendlyErrorMessage(error, t('lists.deleteError'), t),
                             });
                         }
                     },

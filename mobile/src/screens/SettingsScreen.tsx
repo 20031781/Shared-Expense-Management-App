@@ -6,6 +6,8 @@ import {AppColors, ThemePreference, useAppTheme} from '@theme';
 import {Button, useDialog} from '@/components';
 import {useAuthStore} from '@/store/auth.store';
 import {NotificationPreferences} from '@/types';
+import {useSettingsStore, ChartAnimationSpeed} from '@/store/settings.store';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 const themeOptions: { value: ThemePreference; icon: string; labelKey: string }[] = [
     {value: 'light', icon: 'sunny-outline', labelKey: 'settings.themeLight'},
@@ -27,6 +29,7 @@ export const SettingsScreen: React.FC = () => {
     const {showDialog} = useDialog();
     const {colors, preference, setPreference} = useAppTheme();
     const {logout, updateProfile, user} = useAuthStore();
+    const {chartAnimationSpeed, setChartAnimationSpeed} = useSettingsStore();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>({
         ...defaultNotificationPreferences,
@@ -87,7 +90,7 @@ export const SettingsScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error?.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         } finally {
             setIsLoggingOut(false);
@@ -117,12 +120,18 @@ export const SettingsScreen: React.FC = () => {
             setNotificationPrefs(current);
             showDialog({
                 title: t('common.error'),
-                message: error?.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         } finally {
             setSavingPreference(null);
         }
     };
+
+    const animationOptions = useMemo(() => [
+        {key: 'fast' as ChartAnimationSpeed, label: t('settings.animationFast')},
+        {key: 'medium' as ChartAnimationSpeed, label: t('settings.animationMedium')},
+        {key: 'slow' as ChartAnimationSpeed, label: t('settings.animationSlow')},
+    ], [t]);
 
     return <ScrollView contentContainerStyle={styles.scrollContent} style={styles.container}>
         <View style={styles.sectionWrapper}>
@@ -163,6 +172,26 @@ export const SettingsScreen: React.FC = () => {
                             </Text>
                         </View>
                         {isActive && <Ionicons name="checkmark-circle" size={20} color={colors.success}/>}
+                    </TouchableOpacity>;
+                })}
+            </View>
+        </View>
+
+        <View style={styles.sectionWrapper}>
+            <Text style={styles.header}>{t('settings.animationTitle')}</Text>
+            <Text style={styles.description}>{t('settings.animationDescription')}</Text>
+            <View style={styles.section}>
+                {animationOptions.map(option => {
+                    const isActive = chartAnimationSpeed === option.key;
+                    return <TouchableOpacity
+                        key={option.key}
+                        style={[styles.option, isActive && styles.optionActive]}
+                        onPress={() => setChartAnimationSpeed(option.key)}
+                    >
+                        <Text style={[styles.optionLabel, isActive && styles.optionLabelActive]}>
+                            {option.label}
+                        </Text>
+                        <View style={[styles.speedDot, isActive && styles.speedDotActive]}/>
                     </TouchableOpacity>;
                 })}
             </View>
@@ -313,5 +342,16 @@ const createStyles = (colors: AppColors) =>
         preferenceDescription: {
             fontSize: 13,
             color: colors.secondaryText,
+        },
+        speedDot: {
+            width: 14,
+            height: 14,
+            borderRadius: 7,
+            borderWidth: 2,
+            borderColor: colors.surfaceSecondary,
+        },
+        speedDotActive: {
+            borderColor: colors.accent,
+            backgroundColor: colors.accent,
         },
     });

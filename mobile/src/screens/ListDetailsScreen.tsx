@@ -21,6 +21,7 @@ import {AppColors, useAppTheme} from '@theme';
 import listsService from '@/services/lists.service';
 import {Swipeable} from 'react-native-gesture-handler';
 import {buildSplitSummary} from '@/lib/split';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 type SummaryFilter = '7' | '30' | '90' | 'all';
 
@@ -41,7 +42,30 @@ export const ListDetailsScreen: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'expenses' | 'members'>('expenses');
     const [summaryRange, setSummaryRange] = useState<SummaryFilter>('30');
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [, setOpenSwipeId] = useState<string | null>(null);
     const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
+
+    const closeSwipe = useCallback((id: string) => {
+        const ref = swipeableRefs.current[id];
+        if (ref) {
+            ref.close();
+        }
+        setOpenSwipeId(current => current === id ? null : current);
+    }, []);
+
+    const handleSwipeableOpen = useCallback((id: string) => {
+        setOpenSwipeId(previous => {
+            if (previous && previous !== id) {
+                const ref = swipeableRefs.current[previous];
+                ref?.close();
+            }
+            return id;
+        });
+    }, []);
+
+    const handleSwipeableClose = useCallback((id: string) => {
+        setOpenSwipeId(current => current === id ? null : current);
+    }, []);
 
     const loadData = useCallback(async () =>
         await Promise.all([
@@ -154,13 +178,6 @@ export const ListDetailsScreen: React.FC = () => {
     const isAdmin = currentList.adminId === user?.id || !!user?.isAdmin;
     const currency = expenses[0]?.currency ?? 'EUR';
 
-    const closeSwipe = (id: string) => {
-        const ref = swipeableRefs.current[id];
-        if (ref) {
-            ref.close();
-        }
-    };
-
     const performDelete = async (expense: Expense) => {
         try {
             setDeletingId(expense.id);
@@ -172,7 +189,7 @@ export const ListDetailsScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error?.message || t('expenses.deleteError'),
+                message: getFriendlyErrorMessage(error, t('expenses.deleteError'), t),
             });
         } finally {
             setDeletingId(null);
@@ -209,6 +226,8 @@ export const ListDetailsScreen: React.FC = () => {
                         delete swipeableRefs.current[expense.id];
                     }
                 }}
+                onSwipeableOpen={() => handleSwipeableOpen(expense.id)}
+                onSwipeableClose={() => handleSwipeableClose(expense.id)}
                 renderLeftActions={canEditExpense ? () => <TouchableOpacity
                     style={styles.editAction}
                     onPress={() => handleEditExpense(expense)}
@@ -327,7 +346,7 @@ export const ListDetailsScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('lists.inviteShareError'),
+                message: getFriendlyErrorMessage(error, t('lists.inviteShareError'), t),
             });
         }
     };

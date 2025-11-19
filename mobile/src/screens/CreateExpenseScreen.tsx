@@ -18,6 +18,7 @@ import {useListsStore} from '@/store/lists.store';
 import {ExpensePaymentMethod, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 const normalizeDate = (value: Date = new Date()) => {
     const normalized = new Date(value);
@@ -305,7 +306,7 @@ export const CreateExpenseScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         }
     };
