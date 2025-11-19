@@ -34,3 +34,4 @@ publish/
 .env
 appsettings.Development.json
 appsettings.Local.json
+/wwwroot/receipts/*
