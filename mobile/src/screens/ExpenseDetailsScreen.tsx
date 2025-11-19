@@ -21,6 +21,7 @@ import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import {ExpensePaymentMethod, ListMember} from '@/types';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 export const ExpenseDetailsScreen: React.FC = () => {
     const route = useRoute<any>();
@@ -191,7 +192,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error?.message || t('expenses.deleteError'),
+                message: getFriendlyErrorMessage(error, t('expenses.deleteError'), t),
             });
         } finally {
             setIsDeleting(false);

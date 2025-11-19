@@ -5,6 +5,7 @@ import {useListsStore} from '@/store/lists.store';
 import {useNavigation} from '@react-navigation/native';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 export const CreateListScreen: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -27,12 +28,22 @@ export const CreateListScreen: React.FC = () => {
             showDialog({
                 title: t('common.success'),
                 message: t('lists.createSuccess'),
-                actions: [{label: t('common.ok'), variant: 'primary', onPress: () => navigation.navigate('ListDetails', {listId: list.id})}],
+                actions: [{
+                    label: t('common.ok'),
+                    variant: 'primary',
+                    onPress: () => navigation.reset({
+                        index: 1,
+                        routes: [
+                            {name: 'Lists'},
+                            {name: 'ListDetails', params: {listId: list.id}},
+                        ],
+                    })
+                }],
             });
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('lists.createError'),
+                message: getFriendlyErrorMessage(error, t('lists.createError'), t),
             });
         }
     };

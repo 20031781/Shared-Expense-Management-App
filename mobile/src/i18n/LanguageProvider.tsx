@@ -1,7 +1,7 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {Language, translate} from './translations';
-import {Loading} from '@/components';
+import {Loading} from '@components/Loading';
 
 interface LanguageContextValue {
     language: Language;

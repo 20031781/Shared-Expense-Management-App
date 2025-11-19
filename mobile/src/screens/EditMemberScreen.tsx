@@ -6,6 +6,8 @@ import {useListsStore} from '@/store/lists.store';
 import {MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {useExpensesStore} from '@/store/expenses.store';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 const STATUS_OPTIONS: MemberStatus[] = [MemberStatus.Active, MemberStatus.Pending];
 
@@ -19,6 +21,7 @@ export const EditMemberScreen: React.FC = () => {
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     const {members, fetchMembers, updateMember, removeMember, isLoading} = useListsStore();
+    const {expenses: listExpenses, fetchListExpenses} = useExpensesStore();
     const member = members.find(m => m.id === memberId);
     const formatSplit = (value?: number) => (value ?? 0).toFixed(2);
     const otherMembers = useMemo(() => members.filter(m => m.id !== memberId), [members, memberId]);
@@ -44,6 +47,10 @@ export const EditMemberScreen: React.FC = () => {
     }, [member, fetchMembers, listId]);
 
     useEffect(() => {
+        fetchListExpenses(listId);
+    }, [fetchListExpenses, listId]);
+
+    useEffect(() => {
         if (member) {
             setDisplayName(member.displayName ?? '');
             setSplit(formatSplit(member.splitPercentage));
@@ -51,6 +58,15 @@ export const EditMemberScreen: React.FC = () => {
             setStatus(member.status);
         }
     }, [memberId, member]);
+
+    const assignedExpenseCount = useMemo(() => listExpenses
+        .filter(expense => expense.listId === listId)
+        .filter(expense =>
+            expense.paidByMemberId === memberId
+            || expense.paidByMember?.id === memberId
+            || expense.beneficiaryMemberIds?.includes(memberId)
+            || expense.splits?.some(split => split.memberId === memberId)
+        ).length, [listExpenses, listId, memberId]);
 
     const validate = () => {
         const nextErrors: { split?: string } = {};
@@ -107,13 +123,21 @@ export const EditMemberScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         }
     };
 
     const confirmRemove = () => {
         if (!member) return;
+        if (assignedExpenseCount > 0) {
+            showDialog({
+                title: t('members.removeBlockedTitle'),
+                message: t('members.removeBlockedBody', {count: assignedExpenseCount}),
+                actions: [{label: t('common.ok'), variant: 'primary'}],
+            });
+            return;
+        }
         showDialog({
             title: t('members.removeTitle'),
             message: t('members.removeBody', {email: member.email}),
@@ -136,7 +160,7 @@ export const EditMemberScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         }
     };
@@ -215,6 +239,9 @@ export const EditMemberScreen: React.FC = () => {
             variant="danger"
             disabled={isLoading}
         />
+        {assignedExpenseCount > 0 && <Text style={styles.blockedHelper}>
+            {t('members.removeBlockedHelper')}
+        </Text>}
     </ScrollView>;
 };
 
@@ -269,6 +296,10 @@ const createStyles = (colors: AppColors) =>
             color: colors.text,
         },
         sectionHint: {
+            fontSize: 12,
+            color: colors.secondaryText,
+        },
+        blockedHelper: {
             fontSize: 12,
             color: colors.secondaryText,
         },

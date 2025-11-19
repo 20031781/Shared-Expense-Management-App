@@ -13,6 +13,7 @@ import {useAuthStore} from '@/store/auth.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import {Language} from '@i18n/translations';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 export const LoginScreen: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -46,7 +47,7 @@ export const LoginScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         }
     };

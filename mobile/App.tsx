@@ -19,6 +19,7 @@ import {LanguageProvider, useTranslation} from '@i18n';
 import {ThemeProvider, useAppTheme} from '@theme';
 import {LanguageSelectionScreen} from '@/screens/LanguageSelectionScreen';
 import authService from '@/services/auth.service';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -160,7 +161,7 @@ const AppContent = () => {
                         } catch (joinError: any) {
                             showDialog({
                                 title: t('common.error'),
-                                message: joinError.message || errorMessages.join,
+                                message: getFriendlyErrorMessage(joinError, errorMessages.join, t),
                             });
                             return;
                         }
@@ -168,7 +169,7 @@ const AppContent = () => {
                 }
                 showDialog({
                     title: t('common.error'),
-                    message: error.message || errorMessages[type],
+                    message: getFriendlyErrorMessage(error, errorMessages[type], t),
                 });
             }
         };

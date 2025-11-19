@@ -5,6 +5,7 @@ import {Button, Input, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
+import {getFriendlyErrorMessage} from '@/lib/errors';
 
 export const AddMemberScreen: React.FC = () => {
     const {t} = useTranslation();
@@ -43,7 +44,7 @@ export const AddMemberScreen: React.FC = () => {
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
-                message: error.message || t('common.genericError'),
+                message: getFriendlyErrorMessage(error, t('common.genericError'), t),
             });
         }
     };

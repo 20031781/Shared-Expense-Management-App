@@ -25,16 +25,17 @@ import listsService from '@/services/lists.service';
 import {useFocusEffect} from '@react-navigation/native';
 import {buildSplitSummary} from '@/lib/split';
 import {VictoryArea, VictoryAxis, VictoryBar, VictoryChart, VictoryPie, VictoryTheme, VictoryTooltip} from 'victory-native';
+import {getFriendlyErrorMessage} from '@/lib/errors';
+import {useSettingsStore, ChartAnimationSpeed} from '@/store/settings.store';
 
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
 type DateRangeInput = { from?: string; to?: string };
-type ChartSpeed = 'fast' | 'medium' | 'slow';
 
-const CHART_SPEED_DURATION: Record<ChartSpeed, number> = {
-    fast: 900,
-    medium: 1500,
-    slow: 2200,
+const CHART_SPEED_DURATION: Record<ChartAnimationSpeed, number> = {
+    fast: 600,
+    medium: 1100,
+    slow: 1700,
 };
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -73,6 +74,17 @@ const parseDateInput = (value?: string): Date | undefined => {
     if (!year || !month || !day) return undefined;
     const date = new Date(Date.UTC(year, month - 1, day));
     return isNaN(date.getTime()) ? undefined : date;
+};
+
+const formatDateInput = (value: string): string => {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 4) {
+        return digits;
+    }
+    if (digits.length <= 6) {
+        return `${digits.slice(0, 4)}-${digits.slice(4)}`;
+    }
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6)}`;
 };
 
 const resolveRange = (range: Timeframe, custom?: DateRangeInput) => {
@@ -129,6 +141,7 @@ export const AnalyticsScreen: React.FC = () => {
     const {lists, fetchLists} = useListsStore();
     const {width: windowWidth} = useWindowDimensions();
     const chartWidth = useMemo(() => Math.max(320, windowWidth - 48), [windowWidth]);
+    const baseTrendTickCount = useMemo(() => Math.max(3, Math.floor(chartWidth / 90)), [chartWidth]);
 
     const [timeframe, setTimeframe] = useState<Timeframe>('30');
     const [customRange, setCustomRange] = useState<DateRangeInput>({from: '', to: ''});
@@ -150,7 +163,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [memberChartMode, setMemberChartMode] = useState<'bar' | 'pie' | 'trend'>('bar');
-    const [chartAnimationSpeed, setChartAnimationSpeed] = useState<ChartSpeed>('fast');
+    const chartAnimationSpeed = useSettingsStore(state => state.chartAnimationSpeed);
     const chartFade = useRef(new Animated.Value(1)).current;
 
     useEffect(() => {
@@ -172,12 +185,6 @@ export const AnalyticsScreen: React.FC = () => {
         {key: 'pie', label: t('analytics.chartModePie')},
         {key: 'trend', label: t('analytics.chartModeTrend')},
     ] as const, [t]);
-
-    const chartSpeedOptions = useMemo(() => [
-        {key: 'fast' as ChartSpeed, label: t('analytics.chartSpeedFast')},
-        {key: 'medium' as ChartSpeed, label: t('analytics.chartSpeedMedium')},
-        {key: 'slow' as ChartSpeed, label: t('analytics.chartSpeedSlow')},
-    ], [t]);
 
     const chartAnimationDuration = CHART_SPEED_DURATION[chartAnimationSpeed];
     const chartContainerAnimation = useMemo(() => ({
@@ -246,7 +253,7 @@ export const AnalyticsScreen: React.FC = () => {
             ]);
             setListInsights({members: membersData, expenses: expensesData});
         } catch (error: any) {
-            setListInsightsError(error?.message || t('common.genericError'));
+            setListInsightsError(getFriendlyErrorMessage(error, t('common.genericError'), t));
         } finally {
             setListInsightsLoading(false);
         }
@@ -417,6 +424,7 @@ export const AnalyticsScreen: React.FC = () => {
     }, [selectedListId, listInsights.expenses]);
     const memberTrendMax = useMemo(() => memberTrendData.reduce((max, point) => Math.max(max, point.y), 0), [memberTrendData]);
     const trendAxisTicks = useMemo(() => buildCurrencyTicks(memberTrendMax), [memberTrendMax]);
+    const trendAxisTickCount = useMemo(() => Math.min(baseTrendTickCount, Math.max(2, memberTrendData.length)), [baseTrendTickCount, memberTrendData.length]);
 
     const trendTickFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, {
         month: 'short',
@@ -558,17 +566,19 @@ export const AnalyticsScreen: React.FC = () => {
                     label={t('analytics.customFrom')}
                     placeholder="YYYY-MM-DD"
                     value={customRange.from}
-                    onChangeText={text => setCustomRange(prev => ({...prev, from: text}))}
+                    onChangeText={text => setCustomRange(prev => ({...prev, from: formatDateInput(text)}))}
                     autoCapitalize="none"
-                    keyboardType="numbers-and-punctuation"
+                    keyboardType="number-pad"
+                    maxLength={10}
                 />
                 <Input
                     label={t('analytics.customTo')}
                     placeholder="YYYY-MM-DD"
                     value={customRange.to}
-                    onChangeText={text => setCustomRange(prev => ({...prev, to: text}))}
+                    onChangeText={text => setCustomRange(prev => ({...prev, to: formatDateInput(text)}))}
                     autoCapitalize="none"
-                    keyboardType="numbers-and-punctuation"
+                    keyboardType="number-pad"
+                    maxLength={10}
                 />
                 {customError && <Text style={styles.error}>{customError}</Text>}
                 <Button
@@ -687,27 +697,6 @@ export const AnalyticsScreen: React.FC = () => {
                                 </TouchableOpacity>;
                             })}
                         </View>
-                        <View style={styles.chartSpeedHeader}>
-                            <Text style={styles.chartSpeedTitle}>{t('analytics.chartSpeedTitle')}</Text>
-                            <Text style={styles.chartSpeedHelper}>{t('analytics.chartSpeedHelper')}</Text>
-                        </View>
-                        <View style={styles.chartSpeedSelector}>
-                            {chartSpeedOptions.map(option => {
-                                const isActive = chartAnimationSpeed === option.key;
-                                return <TouchableOpacity
-                                    key={option.key}
-                                    style={styles.chartSpeedOption}
-                                    onPress={() => setChartAnimationSpeed(option.key)}
-                                >
-                                    <View style={[styles.chartSpeedDot, isActive && styles.chartSpeedDotActive]}/>
-                                    <Text
-                                        style={[styles.chartSpeedLabel, isActive && styles.chartSpeedLabelActive]}
-                                    >
-                                        {option.label}
-                                    </Text>
-                                </TouchableOpacity>;
-                            })}
-                        </View>
                         <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}>
                             {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
                                 style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
@@ -720,6 +709,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 height={260}
                             >
                                 <VictoryAxis
+                                    fixLabelOverlap
                                     style={{
                                         axis: {stroke: colors.surfaceSecondary},
                                         tickLabels: {fill: colors.secondaryText, fontSize: 12},
@@ -728,6 +718,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 />
                                 <VictoryAxis
                                     dependentAxis
+                                    fixLabelOverlap
                                     tickValues={memberAxisTicks}
                                     tickFormat={value => `${currency} ${value.toFixed(0)}`}
                                     style={{
@@ -783,6 +774,8 @@ export const AnalyticsScreen: React.FC = () => {
                                 domainPadding={{x: 16, y: 16}}
                             >
                                 <VictoryAxis
+                                    fixLabelOverlap
+                                    tickCount={trendAxisTickCount}
                                     tickFormat={value => trendTickFormatter.format(new Date(value))}
                                     style={{
                                         axis: {stroke: colors.surfaceSecondary},
@@ -791,6 +784,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 />
                                 <VictoryAxis
                                     dependentAxis
+                                    fixLabelOverlap
                                     tickValues={trendAxisTicks}
                                     tickFormat={value => `${currency} ${value.toFixed(0)}`}
                                     style={{
@@ -1004,45 +998,6 @@ const createStyles = (colors: AppColors) =>
             flexWrap: 'wrap',
             gap: 8,
             marginBottom: 12,
-        },
-        chartSpeedHeader: {
-            marginTop: 8,
-            marginBottom: 4,
-        },
-        chartSpeedTitle: {
-            fontSize: 14,
-            fontWeight: '600',
-            color: colors.text,
-        },
-        chartSpeedHelper: {
-            fontSize: 12,
-            color: colors.secondaryText,
-        },
-        chartSpeedSelector: {
-            flexDirection: 'row',
-            gap: 16,
-            marginBottom: 12,
-        },
-        chartSpeedOption: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 6,
-        },
-        chartSpeedDot: {
-            width: 12,
-            height: 12,
-            borderRadius: 6,
-            backgroundColor: colors.surfaceSecondary,
-        },
-        chartSpeedDotActive: {
-            backgroundColor: colors.accent,
-        },
-        chartSpeedLabel: {
-            fontSize: 12,
-            color: colors.secondaryText,
-        },
-        chartSpeedLabelActive: {
-            color: colors.accent,
         },
         chartModeChip: {
             paddingHorizontal: 12,
