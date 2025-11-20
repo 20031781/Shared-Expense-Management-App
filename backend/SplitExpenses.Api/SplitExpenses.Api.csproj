@@ -37,6 +37,9 @@
       <Content Include="..\..\docs\TROUBLESHOOTING.md">
         <Link>docs\TROUBLESHOOTING.md</Link>
       </Content>
+      <Content Include="..\.env">
+        <Link>.env</Link>
+      </Content>
       <Content Include="..\docker-compose.db.yml">
         <Link>docker-compose.db.yml</Link>
       </Content>
