@@ -22,7 +22,8 @@ Questa pagina riepiloga come personalizzare e testare le notifiche push tra app 
 L'app mobile ora richiede automaticamente i permessi di notifica e registra il token FCM tramite
 `/api/auth/device-token`
 ogni volta che effettui il login (o riapri l'app dopo un logout). Dopo il primo avvio puoi già trovare i token associati
-nella tabella `device_tokens` del database (colonne `token` e `platform`). Non è necessario generare manualmente un token
+nella tabella `device_tokens` del database (colonne `token` e `platform`). Non è necessario generare manualmente un
+token
 dal portale Firebase: l'app ottiene il valore direttamente da Firebase Cloud Messaging e lo salva per te.
 
 Se vuoi forzare o testare la registrazione manuale puoi comunque usare:
@@ -39,21 +40,26 @@ curl -X POST http://localhost:5000/api/auth/device-token `
 
 ### Expo Go vs build reali
 
-- Dalla SDK 53 Expo Go ha **rimosso** il supporto alle notifiche remote Android/iOS. I permessi vengono comunque richiesti,
-  ma nessun token viene restituito e il backend non potrà mai inviare notifiche.
+- Dalla SDK 53 Expo Go ha **rimosso** il supporto alle notifiche remote Android/iOS. I permessi vengono comunque
+  richiesti, ma nessun token viene restituito e il backend non potrà mai inviare notifiche.
 - Usa una development build o il dev client Expo (`npx expo run:android --variant development`, `npx expo run:ios`) per
   ottenere un vero token FCM/APNS. In alternativa, crea un build EAS con `eas build --profile development`.
-- Le build native (development/preview/production) create con `npx expo run:* --variant release` oppure `eas build --profile`
+- Le build native (development/preview/production) create con `npx expo run:* --variant release` oppure
+  `eas build --profile`
   `preview|production` hanno il supporto completo a FCM/APNS: l'app registra automaticamente il token dopo il login e il
   backend può inviare notifiche anche nelle versioni pubblicate sugli store senza dover cambiare codice.
-- In Expo Go o nel browser la registrazione viene saltata appositamente per evitare errori e log inutili: passa a una build
+- In Expo Go o nel browser la registrazione viene saltata appositamente per evitare errori e log inutili: passa a una
+  build
   dedicata quando vuoi verificare le push.
+
+### Esempio di build EAS (testato)
+
+> eas build -p android --profile production
 
 ## Recuperare i token per gli endpoint di test
 
 Gli endpoint descritti sotto richiedono sia un access token JWT valido sia almeno un token FCM registrato. Puoi
-recuperarli
-così:
+recuperarli così:
 
 ### Access token
 

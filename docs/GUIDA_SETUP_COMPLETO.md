@@ -528,3 +528,16 @@ Ora che tutto funziona, puoi:
 ---
 
 **Domande?** Consulta `TROUBLESHOOTING.md` o `ARCHITECTURE.md`
+
+# TEMP
+
+Creare immagine API:
+
+```
+docker compose build api
+```
+
+Avvio:
+```
+docker compose up -d
+```
