@@ -46,7 +46,8 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "expo-font"
     ],
     "scheme": "splitexpenses",
     "extra": {

@@ -189,7 +189,7 @@ progetto.
 2. Collega il dispositivo Android via USB (o avvia un emulatore) e genera il build di sviluppo:
 
    ```bash
-   npx expo run:android --variant development
+   npx expo run:android
    ```
 
    Per iOS (serve Xcode su macOS):
@@ -498,31 +498,6 @@ docker-compose up -d
 cd mobile
 npm start
 ```
-
----
-
-## 📝 File Importanti
-
-### Backend
-
-- `Program.cs` - Configurazione app
-- `Controllers/AuthController.cs` - Endpoint auth
-- `Controllers/ListsController.cs` - Endpoint liste
-- `Services/AuthService.cs` - Logica auth
-- `appsettings.json` - Configurazione
-
-### Mobile
-
-- `App.tsx` - Entry point
-- `src/screens/LoginScreen.tsx` - Schermata login
-- `src/screens/ListsScreen.tsx` - Lista liste
-- `src/services/auth.service.ts` - Chiamate auth
-- `src/services/lists.service.ts` - Chiamate liste
-- `src/store/auth.store.ts` - State auth
-
-### Database
-
-- `backend/migrations/*.sql` - Schema database PostgreSQL locale
 
 ---
 
