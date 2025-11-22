@@ -1,0 +1,47 @@
+﻿services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: splitexpenses-postgres
+    environment:
+      - POSTGRES_DB=split_expenses
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+#    ports:
+#      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - splitexpenses-network
+
+  api:
+    image: loreappe/shared-expense-api:latest
+    container_name: splitexpenses-api
+    depends_on:
+      - postgres
+    ports:
+      - "5050:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=split_expenses;Username=postgres;Password=postgres
+      - Jwt__Key=${JWT_SECRET_KEY}
+      - Jwt__Issuer=SplitExpensesApi
+      - Jwt__Audience=SplitExpensesApp
+      - Jwt__ExpiryMinutes=60
+      - Jwt__RefreshTokenExpiryDays=30
+      - Google__ClientId=${GOOGLE_CLIENT_ID}
+      - Google__ClientSecret=${GOOGLE_CLIENT_SECRET}
+      - Firebase__ProjectId=${FIREBASE_PROJECT_ID}
+      - Firebase__CredentialsPath=/app/firebase-credentials.json
+    restart: unless-stopped
+    networks:
+      - splitexpenses-network
+
+networks:
+  splitexpenses-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

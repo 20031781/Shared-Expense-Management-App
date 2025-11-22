@@ -194,36 +194,6 @@ SELECT * FROM calculate_optimized_reimbursements('list-uuid');
 
 ## Mobile App (React Native)
 
-### Errore: "Workload 'maui' not installed"
-
-**Soluzione:**
-
-Questo repository usa Expo/React Native. Se visualizzi ancora messaggi legati a MAUI significa che stai lanciando il
-progetto sbagliato o hai ancora un ambiente MAUI aperto. Chiudi tutto e avvia `cd mobile && npm start`.
-
-### Ricevo "New expense notification dispatched" ma nessuna push sul telefono
-
-1. Se usi **Expo Go**, le notifiche remote sono disattivate da SDK 53. Passa a una development build (`eas build --profile
-   development`) o crea un dev client con `npx expo run:android/ios`.
-2. Apri l'app → Impostazioni → Notifiche e assicurati che i permessi siano concessi e i toggle attivi. Su Expo Go non verrà
-   registrato alcun token finché non installi una build di sviluppo/anteprima reale.
-3. Controlla che la tabella `device_tokens` contenga almeno un record per il tuo `user_id`. In caso contrario, reinstallare
-   la build (non Expo Go) e consenti i permessi.
-4. Riprova gli endpoint di test descritti in [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md).
-
-> ⚠️ Messaggio ricorrente su Expo Go
->
-> ````
-> ERROR  expo-notifications: Android Push notifications ... were removed from Expo Go with the release of SDK 53
-> ````
->
-> È previsto: Expo Go non supporta più le push remote e mostrerà sempre l'errore/warning. Chiudi il popup e continua lo
-> sviluppo solo per l'anteprima, ma ricordati di usare una development build per testare le notifiche reali.
-
-```bash
-dotnet workload install maui
-```
-
 ### Errore build Android
 
 **Verifica:**
