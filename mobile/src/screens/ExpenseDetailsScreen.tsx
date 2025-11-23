@@ -126,25 +126,27 @@ export const ExpenseDetailsScreen: React.FC = () => {
             }),
         ]).start(() => {
             const didNavigate = handleNavigateRelative(direction);
-            swipeTranslate.setValue(-exitOffset * 0.35);
+            if (!didNavigate) {
+                resetSwipePosition();
+                return;
+            }
+            const entryOffset = -exitOffset;
+            swipeTranslate.setValue(entryOffset);
+            swipeOpacity.setValue(0.35);
             Animated.parallel([
                 Animated.timing(swipeTranslate, {
                     toValue: 0,
-                    duration: 200,
+                    duration: 220,
                     easing: Easing.out(Easing.quad),
                     useNativeDriver: true,
                 }),
                 Animated.timing(swipeOpacity, {
                     toValue: 1,
-                    duration: 200,
+                    duration: 220,
                     easing: Easing.out(Easing.quad),
                     useNativeDriver: true,
                 }),
-            ]).start(() => {
-                if (!didNavigate) {
-                    resetSwipePosition();
-                }
-            });
+            ]).start();
         });
     }, [handleNavigateRelative, swipeOpacity, swipeTranslate, windowWidth, resetSwipePosition]);
 

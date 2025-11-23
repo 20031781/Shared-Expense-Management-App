@@ -28,18 +28,6 @@ Modifica `.env` e configura:
 - `EXPO_PUBLIC_API_URL` - L'URL della tua API backend
 - Gli ID client di Google OAuth (ottienili dalla Google Cloud Console)
 
-### 2bis. Branding rapido (senza binari nel repo)
-
-Esegui una volta per ricreare icone e splash screen localmente (PNG escluse dal repository):
-
-```bash
-cd mobile
-./scripts/restore-assets.sh
-```
-
-I file generati saranno in `src/assets/` (`icon.png`, `adaptive-icon.png`, `notification-icon.png`, `favicon.png`,
-`splash.png`). Sostituiscili con le tue varianti mantenendo i nomi per build coerenti.
-
 ### 3. Configurare Google OAuth
 
 1. Vai alla [Google Cloud Console](https://console.cloud.google.com/)

@@ -29,6 +29,7 @@ import {
     VictoryAxis,
     VictoryBar,
     VictoryChart,
+    VictoryCursorContainer,
     VictoryPie,
     VictoryScatter,
     VictoryTheme,
@@ -50,14 +51,14 @@ const CHART_SPEED_DURATION: Record<ChartAnimationSpeed, number> = {
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-const buildCurrencyTicks = (maxValue: number): number[] => {
+const buildCurrencyTicks = (maxValue: number, maxTicks: number): number[] => {
     const safeMax = Math.max(0, maxValue);
     if (safeMax === 0) {
         return [0, 1];
     }
-    const desiredTicks = 4;
-    const maxTicks = 6;
-    const baseStep = Math.max(safeMax / desiredTicks, 0.1);
+    const safeMaxTicks = Math.max(2, Math.min(maxTicks, 8));
+    const desiredTicks = Math.max(3, safeMaxTicks);
+    const baseStep = Math.max(safeMax / Math.max(1, desiredTicks - 1), 0.1);
     const magnitude = Math.pow(10, Math.floor(Math.log10(baseStep)));
     const normalized = baseStep / magnitude;
     let step: number;
@@ -69,7 +70,7 @@ const buildCurrencyTicks = (maxValue: number): number[] => {
         step = magnitude;
     }
     const ticks: number[] = [0];
-    for (let value = step; value < safeMax * 1.05 && ticks.length < maxTicks; value += step) {
+    for (let value = step; value < safeMax * 1.05 && ticks.length < safeMaxTicks; value += step) {
         ticks.push(Number(value.toFixed(2)));
     }
     const roundedMax = Number(safeMax.toFixed(2));
@@ -156,6 +157,7 @@ export const AnalyticsScreen: React.FC = () => {
     const {lists, fetchLists} = useListsStore();
     const {width: windowWidth} = useWindowDimensions();
     const chartWidth = useMemo(() => Math.max(320, windowWidth - 48), [windowWidth]);
+    const maxCurrencyTicks = useMemo(() => Math.max(3, Math.min(7, Math.floor((chartWidth - 120) / 70))), [chartWidth]);
     const baseTrendTickCount = useMemo(() => Math.max(3, Math.floor(chartWidth / 90)), [chartWidth]);
 
     const [timeframe, setTimeframe] = useState<Timeframe>('30');
@@ -178,6 +180,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [memberChartMode, setMemberChartMode] = useState<'bar' | 'pie' | 'trend'>('bar');
+    const [activeBarIndex, setActiveBarIndex] = useState<number | null>(null);
     const [activeTrendPoint, setActiveTrendPoint] = useState<{ x: number; y: number } | null>(null);
     const chartAnimationSpeed = useSettingsStore(state => state.chartAnimationSpeed);
     const chartFade = useRef(new Animated.Value(1)).current;
@@ -395,7 +398,7 @@ export const AnalyticsScreen: React.FC = () => {
     }, [selectedListId, listInsights.expenses]);
 
     const memberChartMax = memberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
-    const memberAxisTicks = useMemo(() => buildCurrencyTicks(memberChartMax), [memberChartMax]);
+    const memberAxisTicks = useMemo(() => buildCurrencyTicks(memberChartMax, maxCurrencyTicks), [memberChartMax, maxCurrencyTicks]);
     const totalMemberAmount = useMemo(() => memberBreakdown.reduce((sum, item) => sum + item.amount, 0), [memberBreakdown]);
 
     const memberChartColors = useMemo(() => [
@@ -439,7 +442,7 @@ export const AnalyticsScreen: React.FC = () => {
             });
     }, [selectedListId, listInsights.expenses]);
     const memberTrendMax = useMemo(() => memberTrendData.reduce((max, point) => Math.max(max, point.y), 0), [memberTrendData]);
-    const trendAxisTicks = useMemo(() => buildCurrencyTicks(memberTrendMax), [memberTrendMax]);
+    const trendAxisTicks = useMemo(() => buildCurrencyTicks(memberTrendMax, maxCurrencyTicks), [memberTrendMax, maxCurrencyTicks]);
     const trendAxisTickCount = useMemo(() => Math.min(baseTrendTickCount, Math.max(2, memberTrendData.length)), [baseTrendTickCount, memberTrendData.length]);
 
     const trendTickFormatter = useMemo(() => new Intl.DateTimeFormat(undefined, {
@@ -458,6 +461,28 @@ export const AnalyticsScreen: React.FC = () => {
     useEffect(() => {
         setActiveTrendPoint(null);
     }, [memberTrendData]);
+
+    const resolveNearestTrendPoint = useCallback((x: number | null) => {
+        if (x === null || memberTrendData.length === 0) {
+            return null;
+        }
+        return memberTrendData.reduce<{point: { x: number; y: number } | null; distance: number}>((closest, point) => {
+            const distance = Math.abs(point.x - x);
+            if (!closest.point || distance < closest.distance) {
+                return {point, distance};
+            }
+            return closest;
+        }, {point: null, distance: Number.POSITIVE_INFINITY}).point;
+    }, [memberTrendData]);
+
+    const handleTrendCursorChange = useCallback((value: number | null) => {
+        setActiveTrendPoint(resolveNearestTrendPoint(value ?? null));
+    }, [resolveNearestTrendPoint]);
+
+    const trendCursorLabel = useCallback((value: number | null) => {
+        const point = resolveNearestTrendPoint(value);
+        return point ? `${currency} ${point.y.toFixed(2)}` : '';
+    }, [currency, resolveNearestTrendPoint]);
 
     useEffect(() => {
         chartFade.stopAnimation();
@@ -717,7 +742,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 </TouchableOpacity>;
                             })}
                         </View>
-                        <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}>
+                        <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}> 
                             {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
                                 style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
                                 animate={chartContainerAnimation}
@@ -727,6 +752,23 @@ export const AnalyticsScreen: React.FC = () => {
                                 domainPadding={{x: [12, 36], y: 8}}
                                 padding={{top: 16, bottom: 48, left: 88, right: 32}}
                                 height={260}
+                                containerComponent={<VictoryVoronoiContainer
+                                    voronoiDimension="y"
+                                    activateData
+                                    labels={({datum}) => datum.label}
+                                    labelComponent={<VictoryTooltip
+                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                        style={{fontSize: 12, fill: colors.text}}
+                                        constrainToVisibleArea
+                                        renderInPortal={false}
+                                        activateOnPressIn
+                                        activateOnTouchStart
+                                        activateOnPressOut={false}
+                                        activateOnTouchEnd={false}
+                                    />}
+                                    onActivated={points => setActiveBarIndex(points[0]?.index ?? null)}
+                                    onDeactivated={() => setActiveBarIndex(null)}
+                                />}
                             >
                                 <VictoryAxis
                                     fixLabelOverlap
@@ -759,19 +801,10 @@ export const AnalyticsScreen: React.FC = () => {
                                             fill: ({index}) => memberChartColors[index % memberChartColors.length],
                                             stroke: colors.background,
                                             strokeWidth: 1,
+                                            opacity: ({index}) => activeBarIndex === null || activeBarIndex === index ? 1 : 0.6,
                                         },
                                         labels: {fill: colors.text, fontSize: 12},
                                     }}
-                                    labelComponent={<VictoryTooltip
-                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
-                                        style={{fontSize: 12, fill: colors.text}}
-                                        constrainToVisibleArea
-                                        renderInPortal={false}
-                                        activateOnPressIn
-                                        activateOnTouchStart
-                                        activateOnPressOut={false}
-                                        activateOnTouchEnd={false}
-                                    />}
                                 />
                             </VictoryChart>)}
                             {memberChartMode === 'pie' && (memberPieData.length === 0 ? <Text
@@ -796,18 +829,19 @@ export const AnalyticsScreen: React.FC = () => {
                                 height={260}
                                 width={chartWidth}
                                 domainPadding={{x: 16, y: 16}}
-                                containerComponent={<VictoryVoronoiContainer
-                                    voronoiDimension="x"
+                                containerComponent={<VictoryCursorContainer
+                                    cursorDimension="x"
                                     activateData
-                                    onActivated={points => setActiveTrendPoint(points[0] ?? null)}
-                                    onDeactivated={() => setActiveTrendPoint(null)}
-                                    labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
-                                    labelComponent={<VictoryTooltip
+                                    allowDrag
+                                    onCursorChange={handleTrendCursorChange}
+                                    cursorLabel={value => trendCursorLabel(typeof value === 'number' ? value : null)}
+                                    cursorLabelComponent={<VictoryTooltip
                                         flyoutStyle={{fill: colors.surface, stroke: colors.border}}
                                         style={{fontSize: 12, fill: colors.text}}
                                         renderInPortal={false}
-                                        activateOnPressIn
-                                        activateOnTouchStart
+                                        pointerLength={0}
+                                        activateOnPressIn={false}
+                                        activateOnTouchStart={false}
                                         activateOnPressOut={false}
                                         activateOnTouchEnd={false}
                                     />}
@@ -861,10 +895,12 @@ export const AnalyticsScreen: React.FC = () => {
                                         flyoutStyle={{fill: colors.surface, stroke: colors.border}}
                                         style={{fontSize: 12, fill: colors.text}}
                                         renderInPortal={false}
-                                        activateOnPressIn
-                                        activateOnTouchStart
+                                        pointerLength={0}
+                                        activateOnPressIn={false}
+                                        activateOnTouchStart={false}
                                         activateOnPressOut={false}
                                         activateOnTouchEnd={false}
+                                        active
                                     />}
                                 />
                             </VictoryChart>)}
