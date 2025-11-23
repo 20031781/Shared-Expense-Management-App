@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-
 namespace SplitExpenses.Api.Services;
 
 public class LocalReceiptStorage(IWebHostEnvironment environment) : IReceiptStorage
@@ -11,16 +6,10 @@ public class LocalReceiptStorage(IWebHostEnvironment environment) : IReceiptStor
 
     public async Task<string> SaveAsync(Guid expenseId, IFormFile file, CancellationToken cancellationToken = default)
     {
-        if (file.Length == 0)
-        {
-            throw new InvalidOperationException("Receipt file is empty");
-        }
+        if (file.Length == 0) throw new InvalidOperationException("Receipt file is empty");
 
         var root = environment.WebRootPath;
-        if (string.IsNullOrWhiteSpace(root))
-        {
-            root = Path.Combine(environment.ContentRootPath, "wwwroot");
-        }
+        if (string.IsNullOrWhiteSpace(root)) root = Path.Combine(environment.ContentRootPath, "wwwroot");
 
         var targetDirectory = Path.Combine(root, FolderName);
         Directory.CreateDirectory(targetDirectory);

@@ -176,7 +176,8 @@ Vedrai un QR code nel terminale.
 #### Creare un *Development Build* (necessario per `expo-notifications`)
 
 Con l'SDK 53 Expo ha rimosso dal client **Expo Go** il supporto alle notifiche push remote. Per testare correttamente
-`expo-notifications` serve quindi un *development build* personalizzato (*Expo Dev Client*), che sfrutta il codice nativo del
+`expo-notifications` serve quindi un *development build* personalizzato (*Expo Dev Client*), che sfrutta il codice
+nativo del
 progetto.
 
 1. Installa le dipendenze native e il Dev Client (una sola volta):
@@ -199,16 +200,19 @@ progetto.
    ```
 
 3. Una volta completato il build il dispositivo installerà l'app **Split Expenses Dev**. Da ora in poi, quando esegui `npm
-   start`, scegli "a" o "i" per aprire il *dev client* invece di Expo Go: il runtime userà il codice nativo compilato e le
+   start`, scegli "a" o "i" per aprire il *dev client* invece di Expo Go: il runtime userà il codice nativo compilato e
+   le
    notifiche push funzioneranno senza gli avvisi bloccanti.
 
-4. Se vuoi condividere il dev client con altri collaboratori senza cavo, puoi anche generare un pacchetto dedicato via EAS:
+4. Se vuoi condividere il dev client con altri collaboratori senza cavo, puoi anche generare un pacchetto dedicato via
+   EAS:
 
    ```bash
    npx eas build -p android --profile development
    ```
 
-   (Su iOS usa `--platform ios`). Il build risultante può essere installato con `adb install` (Android) o TestFlight (iOS).
+   (Su iOS usa `--platform ios`). Il build risultante può essere installato con `adb install` (Android) o TestFlight (
+   iOS).
 
 #### Condividere l'invito via WhatsApp
 
@@ -538,6 +542,7 @@ docker compose build api
 ```
 
 Avvio:
+
 ```
 docker compose up -d
 ```

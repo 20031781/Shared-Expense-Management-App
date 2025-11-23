@@ -1,10 +1,7 @@
 #region
 
-using System;
 using System.Security.Claims;
-using System.Threading;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
 using SplitExpenses.Api.Models;
@@ -216,10 +213,7 @@ public class ExpensesController(
     [RequestSizeLimit(5_000_000)]
     public async Task<IActionResult> UploadReceipt(Guid id, IFormFile? receipt, CancellationToken cancellationToken)
     {
-        if (receipt == null || receipt.Length == 0)
-        {
-            return BadRequest(new { message = "Receipt file is required" });
-        }
+        if (receipt == null || receipt.Length == 0) return BadRequest(new { message = "Receipt file is required" });
 
         var expense = await expenseRepository.GetByIdAsync(id);
         if (expense == null) return NotFound();

@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace SplitExpenses.Api.Services;
 
 public interface IReceiptStorage

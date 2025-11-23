@@ -1,4 +1,5 @@
 ﻿services:
+  # === POSTGRES ===
   postgres:
     image: postgres:16-alpine
     container_name: splitexpenses-postgres
@@ -6,21 +7,19 @@
       - POSTGRES_DB=split_expenses
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-#    ports:
-#      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     networks:
       - splitexpenses-network
 
+
+  # === API ===
   api:
     image: loreappe/shared-expense-api:latest
     container_name: splitexpenses-api
     depends_on:
       - postgres
-    ports:
-      - "5050:5000"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5000
@@ -37,11 +36,63 @@
     restart: unless-stopped
     networks:
       - splitexpenses-network
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sharedexpenseapi.rule=Host(`sharedexpenseapi.loreappe.work`)"
+      - "traefik.http.routers.sharedexpenseapi.entrypoints=websecure"
+      - "traefik.http.routers.sharedexpenseapi.tls=true"
+      - "traefik.http.routers.sharedexpenseapi.tls.certresolver=le"
+      - "traefik.http.services.sharedexpenseapi.loadbalancer.server.port=5000"
 
+
+  # === TRAEFIK ===
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      - "--log.level=INFO"
+      - "--api.dashboard=true"
+
+      # Provider Docker
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+
+      # Let's Encrypt
+      - "--certificatesresolvers.le.acme.email=TUO_EMAIL@DOMINIO.IT"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+
+    ports:
+      - "8080:80"
+      - "8443:443"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+
+    networks:
+      - proxy
+
+
+# === NETWORKS ===
 networks:
   splitexpenses-network:
     driver: bridge
+  proxy:
+    external: true
 
+
+# === VOLUMES ===
 volumes:
   postgres_data:
     driver: local

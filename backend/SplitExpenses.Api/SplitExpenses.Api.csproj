@@ -10,48 +10,48 @@
     <ItemGroup>
         <PackageReference Include="BCrypt.Net-Next" Version="4.0.3"/>
         <PackageReference Include="Dapper" Version="2.1.66"/>
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.11" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.11" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.11"/>
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.11"/>
         <PackageReference Include="Npgsql" Version="9.0.4"/>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1"/>
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0"/>
         <PackageReference Include="FirebaseAdmin" Version="3.4.0"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\..\docs\.env.example">
-        <Link>docs\.env.example</Link>
-      </Content>
-      <Content Include="..\..\docs\ARCHITECTURE.md">
-        <Link>docs\ARCHITECTURE.md</Link>
-      </Content>
-      <Content Include="..\..\docs\archive\CHANGELOG.md">
-        <Link>docs\archive\CHANGELOG.md</Link>
-      </Content>
-      <Content Include="..\..\docs\GUIDA_SETUP_COMPLETO.md">
-        <Link>docs\GUIDA_SETUP_COMPLETO.md</Link>
-      </Content>
-      <Content Include="..\..\docs\NOTIFICATIONS.md">
-        <Link>docs\NOTIFICATIONS.md</Link>
-      </Content>
-      <Content Include="..\..\docs\TROUBLESHOOTING.md">
-        <Link>docs\TROUBLESHOOTING.md</Link>
-      </Content>
-      <Content Include="..\.env">
-        <Link>.env</Link>
-      </Content>
-      <Content Include="..\docker-compose-nas.yml">
-        <Link>docker-compose-nas.yml</Link>
-      </Content>
-      <Content Include="..\docker-compose.db.yml">
-        <Link>docker-compose.db.yml</Link>
-      </Content>
-      <Content Include="..\docker-compose.yml">
-        <Link>docker-compose.yml</Link>
-      </Content>
-      <Content Include="..\Dockerfile">
-        <Link>Dockerfile</Link>
-      </Content>
+        <Content Include="..\..\docs\.env.example">
+            <Link>docs\.env.example</Link>
+        </Content>
+        <Content Include="..\..\docs\ARCHITECTURE.md">
+            <Link>docs\ARCHITECTURE.md</Link>
+        </Content>
+        <Content Include="..\..\docs\archive\CHANGELOG.md">
+            <Link>docs\archive\CHANGELOG.md</Link>
+        </Content>
+        <Content Include="..\..\docs\GUIDA_SETUP_COMPLETO.md">
+            <Link>docs\GUIDA_SETUP_COMPLETO.md</Link>
+        </Content>
+        <Content Include="..\..\docs\NOTIFICATIONS.md">
+            <Link>docs\NOTIFICATIONS.md</Link>
+        </Content>
+        <Content Include="..\..\docs\TROUBLESHOOTING.md">
+            <Link>docs\TROUBLESHOOTING.md</Link>
+        </Content>
+        <Content Include="..\.env">
+            <Link>.env</Link>
+        </Content>
+        <Content Include="..\docker-compose-nas.yml">
+            <Link>docker-compose-nas.yml</Link>
+        </Content>
+        <Content Include="..\docker-compose.db.yml">
+            <Link>docker-compose.db.yml</Link>
+        </Content>
+        <Content Include="..\docker-compose.yml">
+            <Link>docker-compose.yml</Link>
+        </Content>
+        <Content Include="..\Dockerfile">
+            <Link>Dockerfile</Link>
+        </Content>
     </ItemGroup>
 
 </Project>
