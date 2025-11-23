@@ -19,7 +19,7 @@
 - Stored procedures per calcoli complessi
 - Constraint e validazioni dati
 
-#### 2. Backend API ASP.NET Core 8.0
+#### 2. Backend API ASP.NET Core 9.0
 - **Struttura completa** (37 files)
   - 4 Controllers (Auth, Lists, Expenses, Reimbursements)
   - 6 Services (Auth, Notification, Sync, Supabase)
@@ -56,25 +56,22 @@
 #### 5. Documentation
 - **README.md** (350+ righe) - Guida completa
 - **QUICK_START.md** - Avvio rapido 5 minuti
-- **MOBILE_SETUP.md** - Guida setup .NET MAUI dettagliata
+- **MOBILE_SETUP.md** - Guida setup (archivio storico .NET MAUI)
 - **ARCHITECTURE.md** - Diagrammi Mermaid e design
 - **TROUBLESHOOTING.md** - Risoluzione problemi comuni
 
 ### ⏳ Da Completare
 
-#### Mobile App .NET MAUI
-**Status:** Template e guida forniti, implementazione da fare
+#### Mobile App React Native
+**Status:** Implementazione Expo attiva con navigazione, schermate spese e integrazione API in evoluzione.
 
-**Richiede:**
-- Setup Visual Studio con workload MAUI
-- Implementazione ViewModels MVVM
-- UI XAML per tutte le schermate
-- Services (API, Storage, Sync)
-- Google Sign-In integration
-- SQLite offline storage
-- Push notifications handling
+**Focus successivi:**
+- Rifinire flussi di autenticazione Google e gestione sessione
+- Consolidare sincronizzazione offline e cache locale
+- Migliorare UX componenti lista/spesa e caricamento ricevute
+- Rifinire notifiche push e deep link
 
-**Tempo stimato:** 40-60 ore sviluppo
+**Tempo stimato:** 20-30 ore di hardening e rifiniture
 
 #### Testing
 **Status:** Non implementato
