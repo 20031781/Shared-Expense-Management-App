@@ -10,7 +10,7 @@
 dotnet --version
 
 # Se non installato, scarica da:
-# https://dotnet.microsoft.com/download/dotnet/8.0
+# https://dotnet.microsoft.com/download/dotnet/9.0
 ```
 
 ### Errore: "Failed to bind to address"

@@ -175,9 +175,6 @@ App si ricarica automaticamente → Login funziona! ✅
 - **PROJECT_SUMMARY.md** - Statistiche progetto
 - **MOBILE_COMPLETION.md** - Report mobile app
 
-### Archive (non servono)
-- `docs/archive/` - File vecchi archiviati
-
 ---
 
 ## 🐛 Problemi Comuni
@@ -315,4 +312,4 @@ Hai un'app full-stack funzionante:
 
 **Creato**: 2025-10-10
 **Versione**: 1.0.0
-**Tech**: React Native + Expo + ASP.NET Core + PostgreSQL
+**Tech**: React Native + Expo + ASP.NET Core 9 + PostgreSQL

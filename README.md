@@ -14,7 +14,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🏗️ Stack Tecnologico
 
-**Backend:** ASP.NET Core 8.0 + PostgreSQL (Supabase) + Docker
+**Backend:** ASP.NET Core 9.0 + PostgreSQL (Supabase) + Docker
 **Mobile:** React Native + Expo + TypeScript
 **Auth:** Google OAuth + JWT
 **Database:** PostgreSQL con Row Level Security
@@ -45,6 +45,19 @@ npm install
 npm start
 # Scansiona QR con Expo Go
 ```
+
+## 🐳 Build delle Immagini Docker
+
+Per generare immagini aggiornate del backend con .NET 9:
+
+```bash
+cd backend
+docker compose build api
+```
+
+## 🖼️ Icone Expo senza binari nel repository
+
+Le icone/splash della mobile app sono fornite come base64: per ricrearle localmente esegui `./mobile/scripts/restore-assets.sh` (genera i PNG in `mobile/src/assets/`).
 
 ## 🏗️ Struttura Progetto
 
