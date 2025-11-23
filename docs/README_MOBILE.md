@@ -2,6 +2,11 @@
 
 Applicazione mobile React Native + Expo per gestire le spese condivise.
 
+## Aggiornamenti rapidi
+
+- Corrette le animazioni dei grafici Insights per evitare errori runtime legati a domini non validi.
+- Ridimensionati i pulsanti delle azioni swipe nelle liste spese per una presentazione più compatta.
+
 ## Prerequisiti
 
 - Node.js 18+ e npm

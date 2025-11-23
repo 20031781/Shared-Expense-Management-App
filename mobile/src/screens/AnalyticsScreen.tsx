@@ -747,7 +747,7 @@ export const AnalyticsScreen: React.FC = () => {
                                 style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
                                 animate={chartContainerAnimation}
                                 theme={VictoryTheme.material}
-                                minDomain={{x: 0}}
+                                minDomain={{y: 0}}
                                 width={chartWidth}
                                 domainPadding={{x: [12, 36], y: 8}}
                                 padding={{top: 16, bottom: 48, left: 88, right: 32}}
