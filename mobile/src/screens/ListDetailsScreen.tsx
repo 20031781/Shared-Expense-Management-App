@@ -229,23 +229,27 @@ export const ListDetailsScreen: React.FC = () => {
                 }}
                 onSwipeableOpen={() => handleSwipeableOpen(expense.id)}
                 onSwipeableClose={() => handleSwipeableClose(expense.id)}
-                renderLeftActions={canEditExpense ? () => <TouchableOpacity
-                    style={styles.editAction}
-                    onPress={() => handleEditExpense(expense)}
-                >
-                    <Ionicons name="create-outline" size={20} color={colors.accentText}/>
-                    <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
-                </TouchableOpacity> : undefined}
-                renderRightActions={canDeleteExpense ? () => <TouchableOpacity
-                    style={styles.deleteAction}
-                    onPress={() => handleDeleteExpense(expense)}
-                    disabled={deletingId === expense.id}
-                >
-                    {deletingId === expense.id ? <ActivityIndicator color={colors.accentText}/> : <>
-                        <Ionicons name="trash" size={20} color={colors.accentText}/>
-                        <Text style={styles.deleteActionText}>{t('expenses.deleteAction')}</Text>
-                    </>}
-                </TouchableOpacity> : undefined}
+                renderLeftActions={canEditExpense ? () => <View style={styles.swipeActionContainer}>
+                    <TouchableOpacity
+                        style={styles.editAction}
+                        onPress={() => handleEditExpense(expense)}
+                    >
+                        <Ionicons name="create-outline" size={20} color={colors.accentText}/>
+                        <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
+                    </TouchableOpacity>
+                </View> : undefined}
+                renderRightActions={canDeleteExpense ? () => <View style={styles.swipeActionContainer}>
+                    <TouchableOpacity
+                        style={styles.deleteAction}
+                        onPress={() => handleDeleteExpense(expense)}
+                        disabled={deletingId === expense.id}
+                    >
+                        {deletingId === expense.id ? <ActivityIndicator color={colors.accentText}/> : <>
+                            <Ionicons name="trash" size={20} color={colors.accentText}/>
+                            <Text style={styles.deleteActionText}>{t('expenses.deleteAction')}</Text>
+                        </>}
+                    </TouchableOpacity>
+                </View> : undefined}
                 overshootRight={false}
             >
                 <Card
@@ -849,24 +853,30 @@ const createStyles = (colors: AppColors) =>
             shadowRadius: 4,
         },
         deleteAction: {
-            width: 90,
-            marginVertical: 8,
+            width: 96,
+            paddingVertical: 14,
             backgroundColor: colors.danger,
             justifyContent: 'center',
             alignItems: 'center',
             borderRadius: 12,
             flexDirection: 'column',
-            gap: 4,
+            gap: 6,
+            alignSelf: 'stretch',
         },
         editAction: {
-            width: 90,
-            marginVertical: 8,
+            width: 96,
+            paddingVertical: 14,
             backgroundColor: colors.accent,
             justifyContent: 'center',
             alignItems: 'center',
             borderRadius: 12,
             flexDirection: 'column',
-            gap: 4,
+            gap: 6,
+            alignSelf: 'stretch',
+        },
+        swipeActionContainer: {
+            height: '100%',
+            justifyContent: 'center',
         },
         deleteActionText: {
             color: colors.accentText,
