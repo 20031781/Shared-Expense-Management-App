@@ -15,7 +15,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🏗️ Stack Tecnologico
 
-**Backend:** ASP.NET Core 8.0 + PostgreSQL (Docker)
+**Backend:** ASP.NET Core 9.0 + PostgreSQL (Supabase) + Docker
 **Mobile:** React Native + Expo + TypeScript
 **Auth:** Google OAuth + JWT
 **Database:** PostgreSQL self-hosted tramite Docker Compose
@@ -67,38 +67,18 @@ npm start
 # Scansiona QR con Expo Go
 ```
 
-### ⚠️ Notifiche push & Expo Go
+## 🐳 Build delle Immagini Docker
 
-Con SDK 53+ Expo Go non invia più notifiche remote. Se vuoi testarle devi creare una **development build** o usare un
-dev client personalizzato (`npx expo run:android --variant development`, `npx expo run:ios` oppure `eas build --profile
-development`). Quando generi una build reale (development/preview/production) l'app gira come binario nativo: il login
-registra automaticamente il token FCM/APNS e il backend può inviare notifiche esattamente come in produzione e sugli
-store. Ulteriori dettagli in **[docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md)**.
-
-### 📎 Gestione ricevute
-
-- Le foto vengono salvate dal backend in `wwwroot/receipts` e servite automaticamente come file statici.
-- L'endpoint `POST /api/expenses/{id}/receipt` accetta `multipart/form-data` (`receipt`) e restituisce subito l'URL
-  pubblico (`http://<host>:5000/receipts/<nomefile>`), riutilizzato dall'app mobile.
-- Puoi ripulire i file cancellando la cartella `backend/SplitExpenses.Api/wwwroot/receipts` (verranno rigenerate alla
-  prossima upload).
-
-## 🧹 Pulizia delle dipendenze (`node_modules`)
-
-Per mantenere il repository leggero, **non committare mai le cartelle `node_modules`** (già escluse via `.gitignore`).
-Se hai bisogno di rimuoverle manualmente:
+Per generare immagini aggiornate del backend con .NET 9:
 
 ```bash
-# dalla root del progetto
-rm -Recurse -Force "mobile/node_modules"
+cd backend
+docker compose build api
 ```
 
-Successivamente reinstalla i pacchetti solo quando necessario:
+## 🖼️ Icone Expo senza binari nel repository
 
-```bash
-cd mobile
-npm install
-```
+Le icone/splash della mobile app sono fornite come base64: per ricrearle localmente esegui `./mobile/scripts/restore-assets.sh` (genera i PNG in `mobile/src/assets/`).
 
 ## 🏗️ Struttura Progetto
 
