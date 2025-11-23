@@ -4,14 +4,12 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🚀 INIZIA QUI
 
-**Vuoi provare l'app?** → Leggi **[SETUP_LOCALE.md](docs/GUIDA_SETUP_COMPLETO.md)** (5 minuti)
+**Vuoi provare l'app?** → Leggi **[GUIDA SETUP COMPLETO.md](docs/GUIDA_SETUP_COMPLETO.md)** (5 minuti)
 
 ## 📚 Documentazione
 
-- **[SETUP_LOCALE.md](docs/GUIDA_SETUP_COMPLETO.md)** - Setup rapido per test locale
+- **[GUIDA SETUP COMPLETO.md](docs/GUIDA_SETUP_COMPLETO.md)** - Setup rapido per test locale
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Come funziona il sistema
-- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Problemi comuni
-- **[NOTIFICATIONS.md](docs/NOTIFICATIONS.md)** - Preferenze e test delle notifiche push
 
 ## 🏗️ Stack Tecnologico
 
@@ -31,7 +29,8 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Menù a tendina negli Insights per scegliere velocemente le liste e riepilogo paganti migliorato
 - ✅ Grafici dinamici (barre, torta, trend) con animazioni fluide e assi che evitano sovrapposizioni di etichette
 - ✅ Tooltip persistenti su barre e trend con marker interattivo e asse euro ottimizzato
-- ✅ Controllo della velocità delle animazioni (ora nelle Impostazioni) con transizioni più scattanti condivise negli Insights
+- ✅ Controllo della velocità delle animazioni (ora nelle Impostazioni) con transizioni più scattanti condivise negli
+  Insights
 - ✅ Selezione del pagatore e tracciamento della data di inserimento
 - ✅ Modifica spese con data reale, metodo di pagamento e destinatari personalizzati
 - ✅ Calcolo rimborsi ottimizzati
@@ -51,46 +50,17 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Dialoghi personalizzati coerenti con il tema per conferme, errori e successi
 - ✅ Messaggi di errore di connessione localizzati e coerenti in tutte le schermate principali
 
-## 🚀 Quick Start
-
-Vedi **[SETUP_LOCALE.md](docs/GUIDA_SETUP_COMPLETO.md)** per istruzioni dettagliate.
-
-```bash
-# Backend
-cd backend
-docker-compose up -d
-
-# Mobile
-cd mobile
-npm install
-npm start
-# Scansiona QR con Expo Go
-```
-
-## 🐳 Build delle Immagini Docker
-
-Per generare immagini aggiornate del backend con .NET 9:
-
-```bash
-cd backend
-docker compose build api
-```
-
-## 🖼️ Icone Expo senza binari nel repository
-
-Le icone/splash della mobile app sono fornite come base64: per ricrearle localmente esegui `./mobile/scripts/restore-assets.sh` (genera i PNG in `mobile/src/assets/`).
-
 ## 🏗️ Struttura Progetto
 
 ```
 project/
-├── backend/              # ASP.NET Core API + Docker
+├── backend/                # ASP.NET Core API + Docker
 │   ├── SplitExpenses.Api/
-│   └── migrations/       # SQL per PostgreSQL locale
-├── mobile/               # React Native + Expo
-│   └── src/
-├── docs/                # Guide e approfondimenti
-└── SETUP_LOCALE.md      # ← INIZIA QUI
+│   ├── docker-compose      # Docker Compose locale e NAS
+│   └── migrations/         # SQL per PostgreSQL locale
+├── docs/                   # Guide e approfondimenti
+└── mobile/                 # React Native + Expo
+    └── src/
 ```
 
 ## 📄 Licenza

@@ -35,9 +35,6 @@ Dovresti vedere un container con `postgres` in esecuzione.
 
 #### Applica le migrations
 
-**⚠️ IMPORTANTE**: Le migrations in `supabase/migrations/` usano `auth.uid()` che **NON funziona** in PostgreSQL locale
-standalone.
-
 Usa le migrations semplificate per sviluppo locale.
 
 **Con DataGrip (consigliato):**
@@ -50,16 +47,16 @@ Usa le migrations semplificate per sviluppo locale.
     - Password: `postgres`
 
 2. Esegui in ordine i file SQL in `backend/migrations/`:
-    - Apri `001_initial_schema.sql`
-    - Clicca **Execute** (Ctrl+Enter)
-    - Apri `002_stored_procedures.sql`
-    - Clicca **Execute** (Ctrl+Enter)
-    - Apri `003_roles_and_member_split.sql`
-    - Clicca **Execute** (Ctrl+Enter)
-    - Apri `004_member_display_name_and_expense_fix.sql`
-    - Clicca **Execute** (Ctrl+Enter)
-    - Apri `005_expense_date_column.sql`
-    - Clicca **Execute** (Ctrl+Enter)
+    - Apri `001_initial_schema.sql`.
+      - Clicca **Execute** (Ctrl+Enter).
+    - Apri `002_stored_procedures.sql`.
+      - Clicca **Execute** (Ctrl+Enter).
+    - Apri `003_roles_and_member_split.sql`.
+      - Clicca **Execute** (Ctrl+Enter).
+    - Apri `004_member_display_name_and_expense_fix.sql`.
+      - Clicca **Execute** (Ctrl+Enter).
+    - Apri `005_expense_date_column.sql`.
+      - Clicca **Execute** (Ctrl+Enter).
 
 **Con psql (CLI):**
 
@@ -85,15 +82,15 @@ WHERE table_schema = 'public'
 ORDER BY table_name;
 ```
 
-Dovresti vedere 11 tabelle (users, lists, expenses, ecc.)
+Dovresti vedere 11 tabelle (users, lists, expenses, ecc.).
 
 ---
 
-### 2. Backend API (.NET) in Debug con Rider
+### 2. Backend API (.NET)
 
 #### Configura appsettings.json
 
-Il file `backend/SplitExpenses.Api/appsettings.json` punta già al PostgreSQL locale avviato tramite Docker:
+Il file [appsettings.json](../appsettings.json) punta già al PostgreSQL locale avviato tramite Docker:
 
 ```json
 {
@@ -105,16 +102,10 @@ Il file `backend/SplitExpenses.Api/appsettings.json` punta già al PostgreSQL lo
 
 **Non serve modificarlo**, a meno che tu non abbia cambiato porta, database o credenziali nel `docker-compose.db.yml`.
 
-#### Restore pacchetti NuGet
-
-Il pacchetto BCrypt.Net è già nel file `.csproj`.
-
 #### Avvia in Debug su Rider
 
-1. Apri `backend/SplitExpenses.Api.sln` con **Rider**
-2. Clicca destro sul progetto → **Restore NuGet Packages** (se necessario)
-3. Clicca su **Run** (▶️) o **Debug** (🐞)
-4. Il backend si avvia su **http://0.0.0.0:5000**
+1. Apri `backend/SplitExpenses.Api.sln` con **Rider**.
+2. Clicca su **Run** (▶️) o **Debug** (🐞), configurazione "Api".
 
 #### Verifica che funzioni
 
@@ -133,6 +124,14 @@ Dovresti vedere:
 }
 ```
 
+### Docker
+
+Creare immagine API:
+
+```
+docker compose build api
+```
+
 ---
 
 ### 3. App Mobile (React Native + Expo)
@@ -145,17 +144,17 @@ Dovresti vedere:
 ipconfig
 ```
 
-Cerca **"Indirizzo IPv4"** della tua rete WiFi (es: `192.168.1.56`)
+Cerca **"Indirizzo IPv4"** della tua rete WiFi (es: `192.168.1.60`).
 
 #### Configura .env
 
 Crea/modifica `mobile/.env`:
 
 ```env
-EXPO_PUBLIC_API_URL=http://192.168.1.56:5000/api
+EXPO_PUBLIC_API_URL=http://192.168.1.60:5000/api
 ```
 
-⚠️ **IMPORTANTE**: Sostituisci `192.168.1.56` con il TUO IP locale!
+⚠️ **IMPORTANTE**: Sostituisci `192.168.1.60` con il TUO IP locale!
 
 #### Installa dipendenze e avvia
 
@@ -179,6 +178,37 @@ Con l'SDK 53 Expo ha rimosso dal client **Expo Go** il supporto alle notifiche p
 `expo-notifications` serve quindi un *development build* personalizzato (*Expo Dev Client*), che sfrutta il codice
 nativo del
 progetto.
+
+# TODO finire di controllare la doc da questo punto in giù.
+
+---
+
+# TEMPORANEO
+
+Registrazione manuale con token FCM:
+
+```powershell
+curl -X POST http://localhost:5000/api/auth/device-token `
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMWZmMDRlMC0yYTA0LTQ0NTYtYTIxMi03NzkwYWMwZTQxYTEiLCJlbWFpbCI6ImxvcmVuem9hcHBldGl0b0BnbWFpbC5jb20iLCJuYW1lIjoibG9yZW56b2FwcGV0aXRvIiwianRpIjoiYmQxNmFmYTMtYzFjOC00YmZkLThjZGUtOWU2YmM5ZTk4ZjkxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvZW1haWxhZGRyZXNzIjoibG9yZW56b2FwcGV0aXRvQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluIiwiZXhwIjoxNzYzNDE5MzI5LCJpc3MiOiJTcGxpdEV4cGVuc2VzQXBpIiwiYXVkIjoiU3BsaXRFeHBlbnNlc0FwcCJ9.vKhuQuqHUNNBss5H-3IQW6r83V6geq2YIJKUOkUALZw" `
+-H "Content-Type: application/json" `
+-d '{"token":"e_octOePRqelKUUU-lU-PY:APA91bGgig6zHDeUS09-Tu7KAHpxzAyOijVeMDu6CwhzfFMdhZKlsUj4podIXiJVuqKbzQgY3ZnxJBjLYSpCMRhC0QvmzUFcjFqYGwqgLMQOwLjIQAH8Tx8","platform":"android"}'
+```
+
+Nuova spesa:
+
+```powershell
+curl -X POST http://localhost:5000/api/notifications/test/new-expense/de04c8c7-1f4d-4d05-a0ca-a3dc9043d9c7 `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMWZmMDRlMC0yYTA0LTQ0NTYtYTIxMi03NzkwYWMwZTQxYTEiLCJlbWFpbCI6ImxvcmVuem9hcHBldGl0b0BnbWFpbC5jb20iLCJuYW1lIjoibG9yZW56b2FwcGV0aXRvIiwianRpIjoiYmQxNmFmYTMtYzFjOC00YmZkLThjZGUtOWU2YmM5ZTk4ZjkxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvZW1haWxhZGRyZXNzIjoibG9yZW56b2FwcGV0aXRvQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluIiwiZXhwIjoxNzYzNDE5MzI5LCJpc3MiOiJTcGxpdEV4cGVuc2VzQXBpIiwiYXVkIjoiU3BsaXRFeHBlbnNlc0FwcCJ9.vKhuQuqHUNNBss5H-3IQW6r83V6geq2YIJKUOkUALZw"
+```
+
+Nuovo membro:
+
+```powershell
+curl -X POST http://localhost:5000/api/notifications/test/member-added/<LIST_ID>/<MEMBER_ID> `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMWZmMDRlMC0yYTA0LTQ0NTYtYTIxMi03NzkwYWMwZTQxYTEiLCJlbWFpbCI6ImxvcmVuem9hcHBldGl0b0BnbWFpbC5jb20iLCJuYW1lIjoibG9yZW56b2FwcGV0aXRvIiwianRpIjoiYmQxNmFmYTMtYzFjOC00YmZkLThjZGUtOWU2YmM5ZTk4ZjkxIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvZW1haWxhZGRyZXNzIjoibG9yZW56b2FwcGV0aXRvQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IkFkbWluIiwiZXhwIjoxNzYzNDE5MzI5LCJpc3MiOiJTcGxpdEV4cGVuc2VzQXBpIiwiYXVkIjoiU3BsaXRFeHBlbnNlc0FwcCJ9.vKhuQuqHUNNBss5H-3IQW6r83V6geq2YIJKUOkUALZw"
+```
+
+---
 
 1. Installa le dipendenze native e il Dev Client (una sola volta):
 
@@ -257,27 +287,6 @@ Quando vuoi condividere rapidamente l'app senza passare dagli store puoi creare 
    successive).
 8. Al termine della build, EAS mostra l'URL per scaricare l'APK (`https://expo.dev/artifacts/eas/XXXXX.apk`).
    Condividilo con i tester e installa manualmente abilitando le origini sconosciute.
-
----
-
-## 🔐 Primo Utilizzo
-
-### Registrazione
-
-1. Apri l'app sul telefono
-2. Clicca **"Don't have an account? Sign Up"**
-3. Inserisci:
-    - Email: `test@example.com`
-    - Password: `password123`
-4. Clicca **"Sign Up"**
-5. Se vedi la home ✅ **FUNZIONA!**
-
-### Crea Prima Lista
-
-1. Clicca **"Crea Lista"** (o pulsante +)
-2. Inserisci nome: `Vacanza Roma`
-3. Salva
-4. La lista appare nella home ✅
 
 ---
 
@@ -416,133 +425,4 @@ Usa le migrations in `backend/migrations/` create appositamente per PostgreSQL l
 
 ---
 
-## 📊 Monitoraggio
-
-### Logs Backend (Rider)
-
-Nella console di Rider vedi tutti i logs:
-
-```
-info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
-      Request starting HTTP/1.1 POST http://localhost:5000/api/auth/login
-```
-
-### Logs Mobile (Terminal)
-
-Nel terminale dove hai fatto `npm start`:
-
-```
-LOG  Login error: Network Error
-```
-
-### Database Queries (DataGrip)
-
-Puoi fare query SQL direttamente:
-
-```postgresql
--- Vedi tutti gli utenti
-SELECT *
-FROM users;
-
--- Vedi tutte le liste
-SELECT *
-FROM lists;
-
--- Vedi spese con nome lista
-SELECT e.*, l.name as list_name
-FROM expenses e
-         JOIN lists l ON e.list_id = l.id;
-```
-
----
-
-## 🎯 Test Completo End-to-End
-
-1. ✅ **Database**: PostgreSQL attivo su Docker
-2. ✅ **Backend**: Rider in debug, risponde su `/health`
-3. ✅ **Mobile**: App caricata su telefono
-4. ✅ **Registrazione**: Crea account con email/password
-5. ✅ **Login**: Accedi con le stesse credenziali
-6. ✅ **Lista**: Crea lista "Test"
-7. ✅ **Database**: Vedi lista in DataGrip:
-   ```postgresql
-   SELECT * FROM lists WHERE name = 'Test';
-   ```
-
-Se tutti i passaggi funzionano ✅ **SETUP COMPLETO!**
-
----
-
-## 🔄 Riavvio Ambiente
-
-### Spegni tutto
-
-```powershell
-# Backend
-Ctrl+C su Rider
-
-# Database
-cd backend
-docker-compose down
-
-# Mobile
-Ctrl+C nel terminale
-```
-
-### Riavvia tutto
-
-```powershell
-# 1. Database
-cd backend
-docker-compose up -d
-
-# 2. Backend (apri Rider e Run)
-
-# 3. Mobile
-cd mobile
-npm start
-```
-
----
-
-## 🎉 Prossimi Passi
-
-Ora che tutto funziona, puoi:
-
-1. **Aggiungere spese**:
-    - Crea endpoint in `ExpensesController.cs`
-    - Aggiungi screen in `mobile/src/screens/`
-
-2. **Inviti membri**:
-    - Sistema `ListsController.AddMember`
-    - QR code / link condivisione
-
-3. **Calcolo rimborsi**:
-    - Usa stored procedure `calculate_optimized_reimbursements`
-    - Mostra chi deve a chi
-
-4. **Notifiche push**:
-    - Firebase Cloud Messaging
-    - Notifica nuove spese/rimborsi
-
-5. **Sincronizzazione offline**:
-    - SQLite locale
-    - Sync quando torna online
-
----
-
 **Domande?** Consulta `TROUBLESHOOTING.md` o `ARCHITECTURE.md`
-
-# TEMP
-
-Creare immagine API:
-
-```
-docker compose build api
-```
-
-Avvio:
-
-```
-docker compose up -d
-```

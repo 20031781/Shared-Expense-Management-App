@@ -19,23 +19,20 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Content Include="..\..\docs\.env.example">
-            <Link>docs\.env.example</Link>
+        <Content Include="..\..\docs\.env.example.api">
+            <Link>docs\.env.example.api</Link>
+        </Content>
+        <Content Include="..\..\docs\.env.example.mobile">
+          <Link>docs\.env.example.mobile</Link>
         </Content>
         <Content Include="..\..\docs\ARCHITECTURE.md">
             <Link>docs\ARCHITECTURE.md</Link>
         </Content>
-        <Content Include="..\..\docs\archive\CHANGELOG.md">
-            <Link>docs\archive\CHANGELOG.md</Link>
-        </Content>
         <Content Include="..\..\docs\GUIDA_SETUP_COMPLETO.md">
             <Link>docs\GUIDA_SETUP_COMPLETO.md</Link>
         </Content>
-        <Content Include="..\..\docs\NOTIFICATIONS.md">
-            <Link>docs\NOTIFICATIONS.md</Link>
-        </Content>
-        <Content Include="..\..\docs\TROUBLESHOOTING.md">
-            <Link>docs\TROUBLESHOOTING.md</Link>
+        <Content Include="..\..\docs\README_MOBILE.md">
+          <Link>docs\README_MOBILE.md</Link>
         </Content>
         <Content Include="..\.env">
             <Link>.env</Link>
