@@ -1,16 +1,4 @@
-# 🚀 START HERE - Split Expenses
-
-## ⚡ Quick Start (5 minuti)
-
-### Puoi Testare l'App SUBITO con Expo!
-
-**Requisiti minimi:**
-- ✅ Node.js 18+ installato
-- ✅ Expo Go app sul telefono ([iOS](https://apps.apple.com/app/expo-go/id982107779) | [Android](https://play.google.com/store/apps/details?id=host.exp.exponent))
-
-**NON serve configurare nulla per il primo test!**
-
----
+# 🚀 START HERE – Split Expenses
 
 ## 🎯 Avvio Rapido
 

@@ -4,20 +4,20 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🚀 INIZIA QUI
 
-**Vuoi provare l'app?** → Leggi **[SETUP_LOCALE.md](GUIDA_SETUP_COMPLETO.md)** (5 minuti)
+**Vuoi provare l'app?** → Leggi **[SETUP_LOCALE.md](docs/GUIDA_SETUP_COMPLETO.md)** (5 minuti)
 
 ## 📚 Documentazione
 
-- **[SETUP_LOCALE.md](GUIDA_SETUP_COMPLETO.md)** - Setup rapido per test locale
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Come funziona il sistema
-- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Problemi comuni
+- **[SETUP_LOCALE.md](docs/GUIDA_SETUP_COMPLETO.md)** - Setup rapido per test locale
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Come funziona il sistema
+- **[TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Problemi comuni
 - **[NOTIFICATIONS.md](docs/NOTIFICATIONS.md)** - Preferenze e test delle notifiche push
 
 ## 🏗️ Stack Tecnologico
 
 **Backend:** ASP.NET Core 9.0 + PostgreSQL (Supabase) + Docker
 **Mobile:** React Native + Expo + TypeScript
-**Auth:** Google OAuth + JWT
+**Auth:** Google OAuth and JWT
 **Database:** PostgreSQL self-hosted tramite Docker Compose
 
 ## ✨ Funzionalità
@@ -53,7 +53,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 
 ## 🚀 Quick Start
 
-Vedi **[SETUP_LOCALE.md](GUIDA_SETUP_COMPLETO.md)** per istruzioni dettagliate.
+Vedi **[SETUP_LOCALE.md](docs/GUIDA_SETUP_COMPLETO.md)** per istruzioni dettagliate.
 
 ```bash
 # Backend

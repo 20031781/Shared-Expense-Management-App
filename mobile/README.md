@@ -1,41 +1,32 @@
-# Split Expenses - Mobile App
+# Split Expenses - App mobile
 
-React Native + Expo mobile application for managing shared expenses.
+Applicazione mobile React Native + Expo per gestire le spese condivise.
 
-## Features
+## Prerequisiti
 
-- Google OAuth Authentication
-- Create and manage expense lists
-- Add expenses with photo receipts
-- Invite members via email or WhatsApp
-- Track reimbursements
-- Offline support (coming soon)
-- Push notifications
-
-## Prerequisites
-
-- Node.js 18+ and npm
+- Node.js 18+ e npm
 - Expo CLI: `npm install -g expo-cli`
-- Expo Go app on your phone (for testing)
+- App Expo Go sul telefono (per i test)
 
-## Setup
+## Configurazione
 
-### 1. Install Dependencies
+### 1. Installare le dipendenze
 
 ```bash
 cd mobile
 npm install
 ```
 
-### 2. Configure Environment
+### 2. Configurare l'ambiente
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and configure:
-- `EXPO_PUBLIC_API_URL` - Your backend API URL
-- Google OAuth Client IDs (get from Google Cloud Console)
+Modifica `.env` e configura:
+
+- `EXPO_PUBLIC_API_URL` - L'URL della tua API backend
+- Gli ID client di Google OAuth (ottienili dalla Google Cloud Console)
 
 ### 2bis. Branding rapido (senza binari nel repo)
 
@@ -46,71 +37,74 @@ cd mobile
 ./scripts/restore-assets.sh
 ```
 
-I file generati saranno in `src/assets/` (`icon.png`, `adaptive-icon.png`, `notification-icon.png`, `favicon.png`, `splash.png`). Sostituiscili con le tue varianti mantenendo i nomi per build coerenti.
+I file generati saranno in `src/assets/` (`icon.png`, `adaptive-icon.png`, `notification-icon.png`, `favicon.png`,
+`splash.png`). Sostituiscili con le tue varianti mantenendo i nomi per build coerenti.
 
-### 3. Configure Google OAuth
+### 3. Configurare Google OAuth
 
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing
-3. Enable Google Sign-In API
-4. Create OAuth 2.0 credentials:
-   - **iOS**: iOS client ID
-   - **Android**: Android client ID (use SHA-1 from Expo)
-   - **Web**: Web client ID
+1. Vai alla [Google Cloud Console](https://console.cloud.google.com/)
+2. Crea un nuovo progetto o selezionane uno esistente
+3. Abilita la Google Sign-In API
+4. Crea le credenziali OAuth 2.0:
+    - **iOS**: client ID iOS
+    - **Android**: client ID Android (usa lo SHA-1 fornito da Expo)
+    - **Web**: client ID Web
 
-To get Android SHA-1 for Expo:
+Per ottenere lo SHA-1 Android per Expo:
+
 ```bash
 expo credentials:manager -p android
 ```
 
-### 4. Start Development Server
+### 4. Avviare il server di sviluppo
 
 ```bash
 npm start
 ```
 
-This will start Expo Dev Tools. You can:
-- Press `i` for iOS simulator
-- Press `a` for Android emulator
-- Scan QR code with Expo Go app
+Questo avvierà Expo Dev Tools. Puoi:
 
-## Project Structure
+- Premere `i` per il simulatore iOS
+- Premere `a` per l'emulatore Android
+- Scansionare il QR code con l'app Expo Go
+
+## Struttura del progetto
 
 ```
 mobile/
 ├── src/
-│   ├── components/      # Reusable UI components
-│   ├── screens/         # Screen components
-│   ├── services/        # API and business logic
-│   ├── store/           # Zustand state management
-│   ├── navigation/      # Navigation configuration
+│   ├── components/      # Componenti UI riutilizzabili
+│   ├── screens/         # Componenti di schermata
+│   ├── services/        # API e logica di business
+│   ├── store/           # Gestione stato con Zustand
+│   ├── navigation/      # Configurazione della navigazione
 │   ├── hooks/           # Custom React hooks
-│   ├── types/           # TypeScript types
-│   └── utils/           # Utility functions
-├── App.tsx              # Main app entry point
-├── app.json             # Expo configuration
-└── package.json         # Dependencies
+│   ├── types/           # Tipi TypeScript
+│   └── utils/           # Funzioni di utilità
+├── App.tsx              # Punto di ingresso principale dell'app
+├── app.json             # Configurazione Expo
+└── package.json         # Dipendenze
 ```
 
-## Development
+## Sviluppo
 
-### Run on iOS Simulator
+### Esecuzione su simulatore iOS
 
 ```bash
 npm run ios
 ```
 
-Requires Xcode on macOS.
+Richiede Xcode su macOS.
 
-### Run on Android Emulator
+### Esecuzione su emulatore Android
 
 ```bash
 npm run android
 ```
 
-Requires Android Studio.
+Richiede Android Studio.
 
-### Type Checking
+### Controllo dei tipi
 
 ```bash
 npm run type-check
@@ -122,9 +116,9 @@ npm run type-check
 npm run lint
 ```
 
-## Building for Production
+## Build per la produzione
 
-### 1. Configure EAS (Expo Application Services)
+### 1. Configurare EAS (Expo Application Services)
 
 ```bash
 npm install -g eas-cli
@@ -132,107 +126,108 @@ eas login
 eas build:configure
 ```
 
-### 2. Build Android APK
+### 2. Generare APK Android
 
 ```bash
 eas build --platform android --profile preview
 ```
 
-### 3. Build iOS IPA
+### 3. Generare IPA iOS
 
 ```bash
 eas build --platform ios --profile preview
 ```
 
-Requires Apple Developer account ($99/year).
+Richiede un account Apple Developer (99$/anno).
 
-## Backend API
+## API Backend
 
-The app connects to the backend API. Make sure:
-1. Backend is running (see `../backend/README.md`)
-2. Backend URL is correctly set in `.env`
-3. Backend is accessible from your device (use ngrok for local testing)
+L'app si connette all'API del backend. Assicurati che:
 
-### Using ngrok for Local Testing
+1. Il backend sia in esecuzione (vedi `../backend/README.md`)
+2. L'URL del backend sia impostato correttamente in `.env`
+3. Il backend sia raggiungibile dal tuo dispositivo (usa ngrok per i test locali)
+
+### Uso di ngrok per i test locali
 
 ```bash
-# In another terminal
+# In un altro terminale
 ngrok http 5000
 
-# Copy the https URL to .env
+# Copia l'URL https in .env
 EXPO_PUBLIC_API_URL=https://your-id.ngrok.io/api
 ```
 
-## Troubleshooting
+## Risoluzione dei problemi
 
-### Cannot connect to API
+### Impossibile connettersi all'API
 
-- Check backend is running
-- Verify API URL in `.env`
-- For local testing, use your computer's IP or ngrok
-- Check firewall settings
+- Verifica che il backend sia in esecuzione
+- Verifica l'URL dell'API in `.env`
+- Per i test locali, usa l'IP del tuo computer o ngrok
+- Controlla le impostazioni del firewall
 
-### Google Sign-In not working
+### Accesso con Google non funzionante
 
-- Verify Client IDs in `.env`
-- Check OAuth consent screen is configured
-- For Android, verify SHA-1 certificate
-- For iOS, verify bundle identifier
+- Verifica i Client ID in `.env`
+- Controlla che la schermata di consenso OAuth sia configurata
+- Su Android, verifica il certificato SHA-1
+- Su iOS, verifica il bundle identifier
 
-### Module resolution errors
+### Errori di risoluzione dei moduli
 
 ```bash
-# Clear cache and reinstall
+# Pulisci la cache e reinstalla
 rm -rf node_modules
 npm install
 expo start -c
 ```
 
-## Testing on Real Device
+## Test su dispositivo reale
 
-### Using Expo Go (Easiest)
+### Utilizzo di Expo Go (più semplice)
 
-1. Install Expo Go from App Store/Play Store
-2. Run `npm start`
-3. Scan QR code with Expo Go
+1. Installa Expo Go da App Store/Play Store
+2. Esegui `npm start`
+3. Scansiona il QR code con Expo Go
 
-### Using Development Build
+### Utilizzo di una build di sviluppo
 
-For features not supported by Expo Go (like custom native code):
+Per funzionalità non supportate da Expo Go (come codice nativo personalizzato):
 
 ```bash
 eas build --profile development --platform ios
 eas build --profile development --platform android
 ```
 
-## Features Roadmap
+## Roadmap delle funzionalità
 
-- [x] Authentication with Google
-- [x] Lists management
-- [x] Expenses CRUD
-- [x] Photo receipts
-- [x] Member invitations
-- [ ] Offline support with SQLite
-- [ ] Push notifications
-- [ ] Expense validation workflow
-- [ ] Reimbursements view
-- [ ] Profile settings
-- [ ] Dark mode
-- [ ] Multi-language support
+- [x] Autenticazione con Google
+- [x] Gestione delle liste
+- [x] CRUD delle spese
+- [x] Foto degli scontrini
+- [x] Inviti ai membri
+- [ ] Supporto offline con SQLite
+- [ ] Notifiche push
+- [ ] Flusso di validazione delle spese
+- [ ] Vista rimborsi
+- [ ] Impostazioni profilo
+- [ ] Tema scuro
+- [ ] Supporto multilingua
 
-## Tech Stack
+## Stack tecnologico
 
 - **Framework**: React Native + Expo
-- **Language**: TypeScript
-- **Navigation**: React Navigation
-- **State Management**: Zustand
-- **API Client**: Axios
-- **Data Fetching**: React Query
+- **Linguaggio**: TypeScript
+- **Navigazione**: React Navigation
+- **Gestione stato**: Zustand
+- **Client API**: Axios
+- **Data fetching**: React Query
 - **Storage**: Expo SecureStore + AsyncStorage
-- **Authentication**: Expo Auth Session (Google OAuth)
-- **UI Components**: Custom components
-- **Icons**: @expo/vector-icons
+- **Autenticazione**: Expo Auth Session (Google OAuth)
+- **Componenti UI**: Componenti personalizzati
+- **Icone**: @expo/vector-icons
 
-## License
+## Licenza
 
-See LICENSE.md in project root
+Vedi LICENSE.md nella root del progetto
