@@ -45,14 +45,13 @@
       - "traefik.http.routers.sharedexpenseapi.tls.certresolver=le"
       - "traefik.http.services.sharedexpenseapi.loadbalancer.server.port=5000"
 
-
   # === TRAEFIK ===
   traefik:
     image: traefik:v3.0
     container_name: traefik
     restart: unless-stopped
     command:
-      - "--log.level=INFO"
+      - "--log.level=DEBUG"
       - "--api.dashboard=true"
 
       # Provider Docker
@@ -66,15 +65,18 @@
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
 
-      # Let's Encrypt
+      # Let's Encrypt (solo DNS-01 Cloudflare)
       - "--certificatesresolvers.le.acme.email=TUO_EMAIL@DOMINIO.IT"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.le.acme.httpchallenge=true"
-      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.dnschallenge=true"
+      - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
+
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
 
     ports:
       - "8080:80"
-      - "8443:443"
+      - "10443:443"
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -82,7 +84,6 @@
 
     networks:
       - proxy
-
 
 # === NETWORKS ===
 networks:

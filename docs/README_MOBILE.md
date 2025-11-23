@@ -137,7 +137,7 @@ Richiede un account Apple Developer (99$/anno).
 
 L'app si connette all'API del backend. Assicurati che:
 
-1. Il backend sia in esecuzione (vedi `../backend/README.md`)
+1. Il backend sia in esecuzione (vedi [README.md](../../../README.md))
 2. L'URL del backend sia impostato correttamente in `.env`
 3. Il backend sia raggiungibile dal tuo dispositivo (usa ngrok per i test locali)
 
