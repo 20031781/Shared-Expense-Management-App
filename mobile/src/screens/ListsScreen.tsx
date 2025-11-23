@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {Swipeable} from 'react-native-gesture-handler';
 import {Button, Card, Input, Loading, OnboardingChecklist, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {List} from '@/types';
@@ -11,12 +12,16 @@ import {getFriendlyErrorMessage} from '@/lib/errors';
 
 export const ListsScreen: React.FC = () => {
     const navigation = useNavigation<any>();
-    const {lists, isLoading, fetchLists, deleteList, joinList} = useListsStore();
+    const {lists, isLoading, fetchLists, deleteList, joinList, updateList} = useListsStore();
     const [refreshing, setRefreshing] = useState(false);
     const [isJoinModalVisible, setJoinModalVisible] = useState(false);
     const [inviteCode, setInviteCode] = useState('');
     const [joinError, setJoinError] = useState<string | undefined>();
     const [joining, setJoining] = useState(false);
+    const [editingList, setEditingList] = useState<List | null>(null);
+    const [editName, setEditName] = useState('');
+    const [editError, setEditError] = useState<string | undefined>();
+    const [savingEdit, setSavingEdit] = useState(false);
     const {t} = useTranslation();
     const {showDialog} = useDialog();
     const {colors} = useAppTheme();
@@ -77,6 +82,44 @@ export const ListsScreen: React.FC = () => {
         }
     };
 
+    const closeEditModal = () => {
+        setEditingList(null);
+        setEditName('');
+        setEditError(undefined);
+        setSavingEdit(false);
+    };
+
+    const handleStartRename = (list: List) => {
+        setEditingList(list);
+        setEditName(list.name);
+        setEditError(undefined);
+    };
+
+    const handleConfirmRename = async () => {
+        if (!editingList) return;
+        const trimmed = editName.trim();
+        if (!trimmed) {
+            setEditError(t('lists.nameRequired'));
+            return;
+        }
+        try {
+            setSavingEdit(true);
+            await updateList(editingList.id, trimmed);
+            showDialog({
+                title: t('common.success'),
+                message: t('lists.updateSuccess'),
+            });
+            closeEditModal();
+        } catch (error: any) {
+            showDialog({
+                title: t('common.error'),
+                message: getFriendlyErrorMessage(error, t('lists.updateError'), t),
+            });
+        } finally {
+            setSavingEdit(false);
+        }
+    };
+
     const handleDeleteList = (list: List) =>
         showDialog({
             title: t('lists.deleteTitle'),
@@ -104,22 +147,37 @@ export const ListsScreen: React.FC = () => {
             ],
         });
 
-    const renderList = ({item}: { item: List }) => <Card onPress={() => handleListPress(item)}>
-        <View style={styles.listItem}>
-            <View style={styles.listInfo}>
-                <Text style={styles.listName}>{item.name}</Text>
-                <Text style={styles.listDate}>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                </Text>
-            </View>
-            <TouchableOpacity
-                onPress={() => handleDeleteList(item)}
-                style={styles.deleteButton}
+    const renderList = ({item}: { item: List }) => <View style={styles.listSwipeWrapper}>
+        <Swipeable
+            overshootLeft={false}
+            overshootRight={false}
+            renderLeftActions={() => <TouchableOpacity
+                style={styles.editAction}
+                onPress={() => handleStartRename(item)}
             >
-                <Ionicons name="trash-outline" size={20} color={colors.danger}/>
-            </TouchableOpacity>
-        </View>
-    </Card>;
+                <Ionicons name="create-outline" size={20} color={colors.accentText}/>
+                <Text style={styles.actionText}>{t('lists.renameAction')}</Text>
+            </TouchableOpacity>}
+            renderRightActions={() => <TouchableOpacity
+                style={styles.deleteAction}
+                onPress={() => handleDeleteList(item)}
+            >
+                <Ionicons name="trash" size={20} color={colors.accentText}/>
+                <Text style={styles.actionText}>{t('lists.deleteAction')}</Text>
+            </TouchableOpacity>}
+        >
+            <Card onPress={() => handleListPress(item)}>
+                <View style={styles.listItem}>
+                    <View style={styles.listInfo}>
+                        <Text style={styles.listName}>{item.name}</Text>
+                        <Text style={styles.listDate}>
+                            {new Date(item.createdAt).toLocaleDateString()}
+                        </Text>
+                    </View>
+                </View>
+            </Card>
+        </Swipeable>
+    </View>;
 
     const firstListId = lists[0]?.id;
 
@@ -252,6 +310,34 @@ export const ListsScreen: React.FC = () => {
                 </View>
             </View>
         </Modal>
+
+        <Modal visible={!!editingList} transparent animationType="fade">
+            <View style={styles.joinModalBackdrop}>
+                <View style={styles.joinModalContent}>
+                    <View style={styles.joinModalHeader}>
+                        <Text style={styles.joinModalTitle}>{t('lists.renameTitle')}</Text>
+                        <TouchableOpacity onPress={closeEditModal}>
+                            <Ionicons name="close" size={24} color={colors.secondaryText}/>
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.joinModalDescription}>{t('lists.renameDescription')}</Text>
+                    <Input
+                        placeholder={t('lists.namePlaceholder')}
+                        value={editName}
+                        onChangeText={setEditName}
+                        error={editError}
+                    />
+                    <View style={styles.joinModalActions}>
+                        <Button title={t('common.cancel')} variant="ghost" onPress={closeEditModal}/>
+                        <Button
+                            title={t('lists.renameSubmit')}
+                            onPress={handleConfirmRename}
+                            loading={savingEdit}
+                        />
+                    </View>
+                </View>
+            </View>
+        </Modal>
     </View>;
 };
 
@@ -264,6 +350,10 @@ const createStyles = (colors: AppColors) =>
         listContainer: {
             paddingVertical: 8,
             flexGrow: 1,
+        },
+        listSwipeWrapper: {
+            marginHorizontal: 8,
+            marginVertical: 6,
         },
         listItem: {
             flexDirection: 'row',
@@ -283,8 +373,29 @@ const createStyles = (colors: AppColors) =>
             fontSize: 14,
             color: colors.secondaryText,
         },
-        deleteButton: {
-            padding: 8,
+        editAction: {
+            backgroundColor: colors.accent,
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 96,
+            flexDirection: 'row',
+            gap: 6,
+            borderTopLeftRadius: 16,
+            borderBottomLeftRadius: 16,
+        },
+        deleteAction: {
+            backgroundColor: colors.danger,
+            justifyContent: 'center',
+            alignItems: 'center',
+            width: 96,
+            flexDirection: 'row',
+            gap: 6,
+            borderTopRightRadius: 16,
+            borderBottomRightRadius: 16,
+        },
+        actionText: {
+            color: colors.accentText,
+            fontWeight: '700',
         },
         emptyContainer: {
             flex: 1,

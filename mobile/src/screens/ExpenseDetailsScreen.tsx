@@ -32,7 +32,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading, expenses} = useExpensesStore();
-    const {members, lists} = useListsStore();
+    const {members} = useListsStore();
     const {user} = useAuthStore();
     const [isDeleting, setIsDeleting] = useState(false);
     const [activeExpenseId, setActiveExpenseId] = useState<string | null>(expenseId ?? null);
@@ -53,6 +53,12 @@ export const ExpenseDetailsScreen: React.FC = () => {
     }, [activeExpenseId, fetchExpenseById]);
 
     useEffect(() => () => setCurrentExpense(null), [setCurrentExpense]);
+
+    useEffect(() => {
+        swipeTranslate.stopAnimation();
+        swipeTranslate.setValue(0);
+        swipeOpacity.setValue(1);
+    }, [activeExpenseId, swipeOpacity, swipeTranslate]);
 
     useEffect(() => {
         if (routeExpenseIds?.length) {
@@ -211,14 +217,6 @@ export const ExpenseDetailsScreen: React.FC = () => {
         });
     }, [currentExpense, handleConfirmDelete, showDialog, t]);
 
-    const isListAdmin = useMemo(() => {
-        if (!currentExpense) {
-            return false;
-        }
-        const targetList = lists.find(list => list.id === currentExpense.listId);
-        return targetList?.adminId === user?.id;
-    }, [lists, currentExpense?.listId, user?.id]);
-
     if (!currentExpense || isLoading) {
         return <Loading/>;
     }
@@ -264,7 +262,8 @@ export const ExpenseDetailsScreen: React.FC = () => {
         }
         return t('expenses.beneficiariesCount', {count: beneficiaryNames.length});
     })();
-    const canEdit = user?.id === currentExpense.authorId || !!user?.isAdmin || isListAdmin;
+    const canEdit = user?.id === currentExpense.authorId || !!user?.isAdmin;
+    const canDelete = canEdit;
 
     const infoItems = [
         {label: t('expenses.paymentMethodLabel'), value: paymentLabel},
@@ -318,12 +317,12 @@ export const ExpenseDetailsScreen: React.FC = () => {
                 variant="secondary"
                 style={styles.editButton}
             />}
-            <Button
+            {canDelete && <Button
                 title={t('expenses.deleteAction')}
                 onPress={handleDelete}
                 variant="danger"
                 loading={isDeleting}
-            />
+            />}
         </View>
     </ScrollView>
     </Animated.View>;

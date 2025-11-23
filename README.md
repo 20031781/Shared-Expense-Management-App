@@ -30,6 +30,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Tab Insights con selezione lista, filtri temporali e grafici per lista e membro
 - ✅ Menù a tendina negli Insights per scegliere velocemente le liste e riepilogo paganti migliorato
 - ✅ Grafici dinamici (barre, torta, trend) con animazioni fluide e assi che evitano sovrapposizioni di etichette
+- ✅ Tooltip persistenti su barre e trend con marker interattivo e asse euro ottimizzato
 - ✅ Controllo della velocità delle animazioni (ora nelle Impostazioni) con transizioni più scattanti condivise negli Insights
 - ✅ Selezione del pagatore e tracciamento della data di inserimento
 - ✅ Modifica spese con data reale, metodo di pagamento e destinatari personalizzati
@@ -37,6 +38,7 @@ App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
 - ✅ Ripartizione spese integrata negli Insights con suggerimenti sui rimborsi
 - ✅ Swipe-to-edit/delete, navigazione tra le spese tramite swipe dalla schermata di dettaglio e logout rapido dalle
   Impostazioni
+- ✅ Swipe per rinominare o eliminare le liste e blocco delle azioni di eliminazione alle sole spese create dall'utente
 - ✅ Ruoli Admin/Validatore con approvazione delle spese prima della conferma
 - ✅ Percentuali di ripartizione modificabili dagli amministratori in ogni momento con bilanciamento automatico del resto
 - ✅ Notifiche push

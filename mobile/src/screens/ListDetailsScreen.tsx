@@ -217,6 +217,7 @@ export const ListDetailsScreen: React.FC = () => {
         const paymentLabel = t(`expenses.paymentMethods.${normalizedPaymentMethod}`);
         const beneficiaryLabel = resolveBeneficiariesLabel(expense);
         const canEditExpense = expense.authorId === user?.id || isAdmin;
+        const canDeleteExpense = canEditExpense;
         return <View key={expense.id} style={styles.expenseSwipeWrapper}>
             <Swipeable
                 ref={ref => {
@@ -235,7 +236,7 @@ export const ListDetailsScreen: React.FC = () => {
                     <Ionicons name="create-outline" size={20} color={colors.accentText}/>
                     <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
                 </TouchableOpacity> : undefined}
-                renderRightActions={() => <TouchableOpacity
+                renderRightActions={canDeleteExpense ? () => <TouchableOpacity
                     style={styles.deleteAction}
                     onPress={() => handleDeleteExpense(expense)}
                     disabled={deletingId === expense.id}
@@ -244,7 +245,7 @@ export const ListDetailsScreen: React.FC = () => {
                         <Ionicons name="trash" size={20} color={colors.accentText}/>
                         <Text style={styles.deleteActionText}>{t('expenses.deleteAction')}</Text>
                     </>}
-                </TouchableOpacity>}
+                </TouchableOpacity> : undefined}
                 overshootRight={false}
             >
                 <Card

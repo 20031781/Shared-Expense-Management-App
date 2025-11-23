@@ -24,7 +24,17 @@ import expensesService from '@/services/expenses.service';
 import listsService from '@/services/lists.service';
 import {useFocusEffect} from '@react-navigation/native';
 import {buildSplitSummary} from '@/lib/split';
-import {VictoryArea, VictoryAxis, VictoryBar, VictoryChart, VictoryPie, VictoryTheme, VictoryTooltip} from 'victory-native';
+import {
+    VictoryArea,
+    VictoryAxis,
+    VictoryBar,
+    VictoryChart,
+    VictoryPie,
+    VictoryScatter,
+    VictoryTheme,
+    VictoryTooltip,
+    VictoryVoronoiContainer,
+} from 'victory-native';
 import {getFriendlyErrorMessage} from '@/lib/errors';
 import {useSettingsStore, ChartAnimationSpeed} from '@/store/settings.store';
 
@@ -46,6 +56,7 @@ const buildCurrencyTicks = (maxValue: number): number[] => {
         return [0, 1];
     }
     const desiredTicks = 4;
+    const maxTicks = 6;
     const baseStep = Math.max(safeMax / desiredTicks, 0.1);
     const magnitude = Math.pow(10, Math.floor(Math.log10(baseStep)));
     const normalized = baseStep / magnitude;
@@ -58,14 +69,18 @@ const buildCurrencyTicks = (maxValue: number): number[] => {
         step = magnitude;
     }
     const ticks: number[] = [0];
-    for (let value = step; value < safeMax * 1.05; value += step) {
+    for (let value = step; value < safeMax * 1.05 && ticks.length < maxTicks; value += step) {
         ticks.push(Number(value.toFixed(2)));
     }
     const roundedMax = Number(safeMax.toFixed(2));
     if (ticks[ticks.length - 1] < roundedMax) {
         ticks.push(roundedMax);
     }
-    return ticks;
+    return ticks.filter((value, index, arr) => {
+        if (index === 0) return true;
+        const previous = arr[index - 1];
+        return Math.abs(value - previous) >= step * 0.6;
+    });
 };
 
 const parseDateInput = (value?: string): Date | undefined => {
@@ -163,6 +178,7 @@ export const AnalyticsScreen: React.FC = () => {
     const [listInsightsError, setListInsightsError] = useState<string | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [memberChartMode, setMemberChartMode] = useState<'bar' | 'pie' | 'trend'>('bar');
+    const [activeTrendPoint, setActiveTrendPoint] = useState<{ x: number; y: number } | null>(null);
     const chartAnimationSpeed = useSettingsStore(state => state.chartAnimationSpeed);
     const chartFade = useRef(new Animated.Value(1)).current;
 
@@ -438,6 +454,10 @@ export const AnalyticsScreen: React.FC = () => {
             setMemberChartMode('bar');
         }
     }, [memberChartMode, memberBreakdown.length, memberTrendData.length]);
+
+    useEffect(() => {
+        setActiveTrendPoint(null);
+    }, [memberTrendData]);
 
     useEffect(() => {
         chartFade.stopAnimation();
@@ -747,6 +767,10 @@ export const AnalyticsScreen: React.FC = () => {
                                         style={{fontSize: 12, fill: colors.text}}
                                         constrainToVisibleArea
                                         renderInPortal={false}
+                                        activateOnPressIn
+                                        activateOnTouchStart
+                                        activateOnPressOut={false}
+                                        activateOnTouchEnd={false}
                                     />}
                                 />
                             </VictoryChart>)}
@@ -772,6 +796,22 @@ export const AnalyticsScreen: React.FC = () => {
                                 height={260}
                                 width={chartWidth}
                                 domainPadding={{x: 16, y: 16}}
+                                containerComponent={<VictoryVoronoiContainer
+                                    voronoiDimension="x"
+                                    activateData
+                                    onActivated={points => setActiveTrendPoint(points[0] ?? null)}
+                                    onDeactivated={() => setActiveTrendPoint(null)}
+                                    labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
+                                    labelComponent={<VictoryTooltip
+                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                        style={{fontSize: 12, fill: colors.text}}
+                                        renderInPortal={false}
+                                        activateOnPressIn
+                                        activateOnTouchStart
+                                        activateOnPressOut={false}
+                                        activateOnTouchEnd={false}
+                                    />}
+                                />}
                             >
                                 <VictoryAxis
                                     fixLabelOverlap
@@ -804,6 +844,28 @@ export const AnalyticsScreen: React.FC = () => {
                                             strokeWidth: 2,
                                         },
                                     }}
+                                />
+                                <VictoryScatter
+                                    data={activeTrendPoint ? [activeTrendPoint] : []}
+                                    size={7}
+                                    symbol="plus"
+                                    style={{
+                                        data: {
+                                            fill: colors.accent,
+                                            stroke: colors.background,
+                                            strokeWidth: 2,
+                                        },
+                                    }}
+                                    labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
+                                    labelComponent={<VictoryTooltip
+                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                        style={{fontSize: 12, fill: colors.text}}
+                                        renderInPortal={false}
+                                        activateOnPressIn
+                                        activateOnTouchStart
+                                        activateOnPressOut={false}
+                                        activateOnTouchEnd={false}
+                                    />}
                                 />
                             </VictoryChart>)}
                         </Animated.View>

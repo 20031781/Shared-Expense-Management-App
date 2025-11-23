@@ -1,6 +1,7 @@
-import React, {useMemo, useState} from 'react';
+import React, {useMemo, useRef, useState} from 'react';
 import {
     KeyboardAvoidingView,
+    Keyboard,
     Platform,
     ScrollView,
     StyleSheet,
@@ -19,11 +20,34 @@ export const LoginScreen: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
+    const lastAutoFillChange = useRef({
+        email: {time: 0, jump: false},
+        password: {time: 0, jump: false},
+    });
     const {login, signUp, isLoading, isInitializing} = useAuthStore();
     const {t, language, setLanguage} = useTranslation();
     const {showDialog} = useDialog();
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
+
+    const handleAutofillAwareChange = (field: 'email' | 'password') => (value: string) => {
+        const previousValue = field === 'email' ? email : password;
+        const now = Date.now();
+        const jump = value.length - previousValue.length > 3;
+        const counterpart = field === 'email' ? lastAutoFillChange.current.password : lastAutoFillChange.current.email;
+
+        lastAutoFillChange.current[field] = {time: now, jump};
+
+        if (jump && counterpart.jump && Math.abs(now - counterpart.time) < 800) {
+            Keyboard.dismiss();
+        }
+
+        if (field === 'email') {
+            setEmail(value);
+        } else {
+            setPassword(value);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!email || !password) {
@@ -93,7 +117,7 @@ export const LoginScreen: React.FC = () => {
                     <Input
                         placeholder={t('auth.emailPlaceholder')}
                         value={email}
-                        onChangeText={setEmail}
+                        onChangeText={handleAutofillAwareChange('email')}
                         keyboardType="email-address"
                         autoCapitalize="none"
                         autoCorrect={false}
@@ -102,7 +126,7 @@ export const LoginScreen: React.FC = () => {
                     <Input
                         placeholder={t('auth.passwordPlaceholder')}
                         value={password}
-                        onChangeText={setPassword}
+                        onChangeText={handleAutofillAwareChange('password')}
                         secureTextEntry
                         autoCapitalize="none"
                     />
