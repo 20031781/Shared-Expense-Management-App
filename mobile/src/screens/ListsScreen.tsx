@@ -151,20 +151,24 @@ export const ListsScreen: React.FC = () => {
         <Swipeable
             overshootLeft={false}
             overshootRight={false}
-            renderLeftActions={() => <TouchableOpacity
-                style={styles.editAction}
-                onPress={() => handleStartRename(item)}
-            >
-                <Ionicons name="create-outline" size={20} color={colors.accentText}/>
-                <Text style={styles.actionText}>{t('lists.renameAction')}</Text>
-            </TouchableOpacity>}
-            renderRightActions={() => <TouchableOpacity
-                style={styles.deleteAction}
-                onPress={() => handleDeleteList(item)}
-            >
-                <Ionicons name="trash" size={20} color={colors.accentText}/>
-                <Text style={styles.actionText}>{t('lists.deleteAction')}</Text>
-            </TouchableOpacity>}
+            renderLeftActions={() => <View style={styles.swipeActionContainer}>
+                <TouchableOpacity
+                    style={[styles.action, styles.editAction]}
+                    onPress={() => handleStartRename(item)}
+                >
+                    <Ionicons name="create-outline" size={20} color={colors.accentText}/>
+                    <Text style={styles.actionText}>{t('lists.renameAction')}</Text>
+                </TouchableOpacity>
+            </View>}
+            renderRightActions={() => <View style={styles.swipeActionContainer}>
+                <TouchableOpacity
+                    style={[styles.action, styles.deleteAction]}
+                    onPress={() => handleDeleteList(item)}
+                >
+                    <Ionicons name="trash" size={20} color={colors.accentText}/>
+                    <Text style={styles.actionText}>{t('lists.deleteAction')}</Text>
+                </TouchableOpacity>
+            </View>}
         >
             <Card onPress={() => handleListPress(item)}>
                 <View style={styles.listItem}>
@@ -373,25 +377,28 @@ const createStyles = (colors: AppColors) =>
             fontSize: 14,
             color: colors.secondaryText,
         },
-        editAction: {
-            backgroundColor: colors.accent,
+        swipeActionContainer: {
+            height: '100%',
+            justifyContent: 'center',
+            paddingHorizontal: 4,
+        },
+        action: {
+            backgroundColor: colors.surfaceSecondary,
             justifyContent: 'center',
             alignItems: 'center',
-            width: 96,
+            width: 92,
+            height: '88%',
             flexDirection: 'row',
             gap: 6,
-            borderTopLeftRadius: 16,
-            borderBottomLeftRadius: 16,
+            borderRadius: 14,
+            paddingHorizontal: 10,
+            alignSelf: 'center',
+        },
+        editAction: {
+            backgroundColor: colors.accent,
         },
         deleteAction: {
             backgroundColor: colors.danger,
-            justifyContent: 'center',
-            alignItems: 'center',
-            width: 96,
-            flexDirection: 'row',
-            gap: 6,
-            borderTopRightRadius: 16,
-            borderBottomRightRadius: 16,
         },
         actionText: {
             color: colors.accentText,

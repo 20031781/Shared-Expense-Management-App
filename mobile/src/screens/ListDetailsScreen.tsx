@@ -231,26 +231,27 @@ export const ListDetailsScreen: React.FC = () => {
                 onSwipeableClose={() => handleSwipeableClose(expense.id)}
                 renderLeftActions={canEditExpense ? () => <View style={styles.swipeActionContainer}>
                     <TouchableOpacity
-                        style={styles.editAction}
+                        style={[styles.swipeAction, styles.swipeEdit]}
                         onPress={() => handleEditExpense(expense)}
                     >
                         <Ionicons name="create-outline" size={20} color={colors.accentText}/>
-                        <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
+                        <Text style={styles.swipeActionText}>{t('expenses.editAction')}</Text>
                     </TouchableOpacity>
                 </View> : undefined}
                 renderRightActions={canDeleteExpense ? () => <View style={styles.swipeActionContainer}>
                     <TouchableOpacity
-                        style={styles.deleteAction}
+                        style={[styles.swipeAction, styles.swipeDelete]}
                         onPress={() => handleDeleteExpense(expense)}
                         disabled={deletingId === expense.id}
                     >
                         {deletingId === expense.id ? <ActivityIndicator color={colors.accentText}/> : <>
                             <Ionicons name="trash" size={20} color={colors.accentText}/>
-                            <Text style={styles.deleteActionText}>{t('expenses.deleteAction')}</Text>
+                            <Text style={styles.swipeActionText}>{t('expenses.deleteAction')}</Text>
                         </>}
                     </TouchableOpacity>
                 </View> : undefined}
                 overshootRight={false}
+                overshootLeft={false}
             >
                 <Card
                     onPress={() => handleExpensePress(expense)}
@@ -852,42 +853,30 @@ const createStyles = (colors: AppColors) =>
             shadowOpacity: 0.2,
             shadowRadius: 4,
         },
-        deleteAction: {
-            width: 84,
-            paddingVertical: 10,
-            paddingHorizontal: 10,
-            backgroundColor: colors.danger,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: 10,
-            flexDirection: 'row',
-            gap: 8,
-            alignSelf: 'stretch',
-        },
-        editAction: {
-            width: 84,
-            paddingVertical: 10,
-            paddingHorizontal: 10,
-            backgroundColor: colors.accent,
-            justifyContent: 'center',
-            alignItems: 'center',
-            borderRadius: 10,
-            flexDirection: 'row',
-            gap: 8,
-            alignSelf: 'stretch',
-        },
         swipeActionContainer: {
             height: '100%',
             justifyContent: 'center',
         },
-        deleteActionText: {
-            color: colors.accentText,
-            fontSize: 12,
-            fontWeight: '600',
+        swipeAction: {
+            width: 96,
+            height: '88%',
+            borderRadius: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            paddingHorizontal: 12,
+            alignSelf: 'center',
         },
-        editActionText: {
+        swipeEdit: {
+            backgroundColor: colors.accent,
+        },
+        swipeDelete: {
+            backgroundColor: colors.danger,
+        },
+        swipeActionText: {
             color: colors.accentText,
             fontSize: 12,
-            fontWeight: '600',
+            fontWeight: '700',
         },
     });
