@@ -34,6 +34,9 @@
         <Content Include="..\..\docs\README_MOBILE.md">
           <Link>docs\README_MOBILE.md</Link>
         </Content>
+        <Content Include="..\.env">
+          <Link>.env</Link>
+        </Content>
         <Content Include="..\docker-compose-nas.yml">
             <Link>docker-compose-nas.yml</Link>
         </Content>

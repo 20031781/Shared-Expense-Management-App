@@ -13,7 +13,6 @@
     networks:
       - splitexpenses-network
 
-
   # === API ===
   api:
     image: loreappe/shared-expense-api:latest
@@ -47,7 +46,7 @@
 
   # === TRAEFIK ===
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.1
     container_name: traefik
     restart: unless-stopped
     command:
@@ -65,11 +64,18 @@
       - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
       - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
 
-      # Let's Encrypt (solo DNS-01 Cloudflare)
+      # Let's Encrypt (DNS-01 Cloudflare)
+      # IMPORTANTE: Sostituisci con la tua email reale se non l'hai fatto nel file .env o qui
       - "--certificatesresolvers.le.acme.email=TUO_EMAIL@DOMINIO.IT"
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.le.acme.dnschallenge=true"
       - "--certificatesresolvers.le.acme.dnschallenge.provider=cloudflare"
+      
+      # === FIX DNSSEC/PROPAGAZIONE ===
+      # Attende 120 secondi prima di verificare il record TXT
+      - "--certificatesresolvers.le.acme.dnschallenge.delaybeforecheck=120"
+      # Usa i DNS di Cloudflare per la verifica interna, bypassando la cache locale
+      - "--certificatesresolvers.le.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53"
 
     environment:
       - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}
@@ -91,7 +97,6 @@ networks:
     driver: bridge
   proxy:
     external: true
-
 
 # === VOLUMES ===
 volumes:
