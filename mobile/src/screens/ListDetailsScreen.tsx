@@ -1,6 +1,7 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     ActivityIndicator,
+    Animated,
     Linking,
     RefreshControl,
     ScrollView,
@@ -10,6 +11,7 @@ import {
     View,
 } from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
+import {Swipeable} from 'react-native-gesture-handler';
 import {Button, Card, Loading, useDialog} from '@/components';
 import {useListsStore} from '@/store/lists.store';
 import {useExpensesStore} from '@/store/expenses.store';
@@ -41,6 +43,8 @@ export const ListDetailsScreen: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'expenses' | 'members'>('expenses');
     const [summaryRange, setSummaryRange] = useState<SummaryFilter>('30');
     const [deletingId, setDeletingId] = useState<string | null>(null);
+    const openExpenseSwipeId = useRef<string | null>(null);
+    const expenseSwipeRefs = useRef<Record<string, Swipeable | null>>({});
     const loadData = useCallback(async () =>
         await Promise.all([
             fetchListById(listId),
@@ -190,34 +194,64 @@ export const ListDetailsScreen: React.FC = () => {
         const beneficiaryLabel = resolveBeneficiariesLabel(expense);
         const canEditExpense = expense.authorId === user?.id || isAdmin;
         const canDeleteExpense = canEditExpense;
-        return <View key={expense.id} style={styles.expenseSwipeWrapper}>
-            <Card
-                onPress={() => handleExpensePress(expense)}
-                style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
-            >
-                <View style={styles.expenseItem}>
-                    <View style={styles.expenseInfo}>
-                        <View style={styles.expenseHeader}>
-                            <Text style={styles.expenseTitle}>{expense.title}</Text>
-                            {(canEditExpense || canDeleteExpense) && <View style={styles.expenseActionBar}>
-                                {canEditExpense && <TouchableOpacity
-                                    style={styles.expenseActionButton}
-                                    onPress={() => handleEditExpense(expense)}
-                                >
-                                    <Ionicons name="create-outline" size={18} color={colors.accent}/>
-                                </TouchableOpacity>}
-                                {canDeleteExpense && <TouchableOpacity
-                                    style={styles.expenseActionButton}
-                                    onPress={() => handleDeleteExpense(expense)}
-                                    disabled={deletingId === expense.id}
-                                >
-                                    {deletingId === expense.id
-                                        ? <ActivityIndicator size="small" color={colors.accent}/>
-                                        : <Ionicons name="trash" size={18} color={colors.danger}/>
-                                    }
-                                </TouchableOpacity>}
-                            </View>}
-                        </View>
+        const renderEditAction = (progress: Animated.AnimatedInterpolation<string | number>, dragX: Animated.AnimatedInterpolation<string | number>) => {
+            if (!canEditExpense) return null;
+            const opacity = progress.interpolate({
+                inputRange: [0.15, 0.45],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+            });
+            const translateX = dragX.interpolate({
+                inputRange: [0, 60, 140],
+                outputRange: [-30, 0, 10],
+                extrapolate: 'clamp',
+            });
+            return <Animated.View style={[styles.swipeActionContainer, {opacity, transform: [{translateX}]}]}>
+                <TouchableOpacity
+                    style={[styles.expenseAction, styles.editAction]}
+                    onPress={() => handleEditExpense(expense)}
+                >
+                    <Ionicons name="create-outline" size={20} color={colors.accentText}/>
+                    <Text style={styles.expenseActionText}>{t('expenses.editTitle')}</Text>
+                </TouchableOpacity>
+            </Animated.View>;
+        };
+
+        const renderDeleteAction = (progress: Animated.AnimatedInterpolation<string | number>, dragX: Animated.AnimatedInterpolation<string | number>) => {
+            if (!canDeleteExpense) return null;
+            const opacity = progress.interpolate({
+                inputRange: [0.15, 0.45],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+            });
+            const translateX = dragX.interpolate({
+                inputRange: [-140, -60, 0],
+                outputRange: [10, 0, -30],
+                extrapolate: 'clamp',
+            });
+            return <Animated.View style={[styles.swipeActionContainer, {opacity, transform: [{translateX}]}]}>
+                <TouchableOpacity
+                    style={[styles.expenseAction, styles.deleteAction]}
+                    onPress={() => handleDeleteExpense(expense)}
+                    disabled={deletingId === expense.id}
+                >
+                    {deletingId === expense.id
+                        ? <ActivityIndicator size="small" color={colors.accentText}/>
+                        : <Ionicons name="trash" size={20} color={colors.accentText}/>
+                    }
+                    <Text style={styles.expenseActionText}>{t('expenses.deleteAction')}</Text>
+                </TouchableOpacity>
+            </Animated.View>;
+        };
+
+        const expenseCard = <Card
+            onPress={() => handleExpensePress(expense)}
+            style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
+        >
+            <View style={styles.expenseItem}>
+                <View style={styles.expenseInfo}>
+                    <View style={styles.expenseHeader}>
+                        <Text style={styles.expenseTitle}>{expense.title}</Text>
                         <Text style={styles.expenseMeta}>
                             {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
                         </Text>
@@ -248,7 +282,44 @@ export const ListDetailsScreen: React.FC = () => {
                             <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
                     </View>
                 </View>
-            </Card>
+            </Card>;
+
+        if (!canEditExpense && !canDeleteExpense) {
+            return <View key={expense.id} style={styles.expenseSwipeWrapper}>
+                {expenseCard}
+            </View>;
+        }
+
+        return <View key={expense.id} style={styles.expenseSwipeWrapper}>
+            <Swipeable
+                ref={ref => {
+                    if (ref) {
+                        expenseSwipeRefs.current[expense.id] = ref;
+                    } else {
+                        delete expenseSwipeRefs.current[expense.id];
+                    }
+                }}
+                overshootLeft={false}
+                overshootRight={false}
+                friction={2.2}
+                leftThreshold={52}
+                rightThreshold={52}
+                onSwipeableOpen={() => {
+                    if (openExpenseSwipeId.current && openExpenseSwipeId.current !== expense.id) {
+                        expenseSwipeRefs.current[openExpenseSwipeId.current]?.close();
+                    }
+                    openExpenseSwipeId.current = expense.id;
+                }}
+                onSwipeableClose={() => {
+                    if (openExpenseSwipeId.current === expense.id) {
+                        openExpenseSwipeId.current = null;
+                    }
+                }}
+                renderLeftActions={renderEditAction}
+                renderRightActions={renderDeleteAction}
+            >
+                {expenseCard}
+            </Swipeable>
         </View>;
     };
 
@@ -622,14 +693,31 @@ const createStyles = (colors: AppColors) =>
             fontWeight: '600',
             color: colors.text,
         },
-        expenseActionBar: {
-            flexDirection: 'row',
-            gap: 6,
+        swipeActionContainer: {
+            height: '100%',
+            justifyContent: 'center',
+            paddingHorizontal: 4,
         },
-        expenseActionButton: {
-            padding: 6,
-            borderRadius: 10,
-            backgroundColor: colors.surfaceSecondary,
+        expenseAction: {
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexDirection: 'row',
+            gap: 8,
+            minWidth: 120,
+            height: '88%',
+            borderRadius: 14,
+            paddingHorizontal: 16,
+            alignSelf: 'center',
+        },
+        editAction: {
+            backgroundColor: colors.accent,
+        },
+        deleteAction: {
+            backgroundColor: colors.danger,
+        },
+        expenseActionText: {
+            color: colors.accentText,
+            fontWeight: '700',
         },
         expenseMeta: {
             fontSize: 12,
