@@ -4,7 +4,7 @@ public class User
 {
     public Guid Id { get; set; }
     public string Email { get; init; } = string.Empty;
-    public string FullName { get; init; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
     public string? PictureUrl { get; init; }
     public string? GoogleId { get; init; }
     public string? PasswordHash { get; init; }
