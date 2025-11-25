@@ -219,8 +219,12 @@ export const AnalyticsScreen: React.FC = () => {
 
     const handleSelectListId = useCallback((listId: string) => {
         setSelectedListId(current => current === listId ? current : listId);
+        setListInsights({expenses: [], members: []});
+        setListInsightsError(null);
+        setActiveBarIndex(null);
+        setActiveTrendPoint(null);
         setIsListDropdownVisible(false);
-    }, []);
+    }, [setListInsightsError]);
 
     const loadExpenses = useCallback(async (target: Timeframe, custom?: DateRangeInput | null): Promise<ResolvedRange> => {
         const range = resolveRange(target, custom || undefined);
@@ -269,7 +273,9 @@ export const AnalyticsScreen: React.FC = () => {
                 listsService.getListMembers(listId),
                 expensesService.getListExpenses(listId, range.fromIso, range.toIso),
             ]);
-            setListInsights({members: membersData, expenses: expensesData});
+            const normalizedMembers = Array.isArray(membersData) ? membersData : [];
+            const normalizedExpenses = Array.isArray(expensesData) ? expensesData : [];
+            setListInsights({members: normalizedMembers, expenses: normalizedExpenses});
         } catch (error: any) {
             setListInsightsError(getFriendlyErrorMessage(error, t('common.genericError'), t));
         } finally {
