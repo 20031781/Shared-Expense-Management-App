@@ -271,7 +271,8 @@ export const ListDetailsScreen: React.FC = () => {
                             </View>
                         </View>
                     </View>
-                    <View style={styles.expenseRight}>
+                </View>
+                <View style={styles.expenseRight}>
                         <Text style={styles.expenseAmount}>
                             {currency} {expense.amount.toFixed(2)}
                         </Text>
