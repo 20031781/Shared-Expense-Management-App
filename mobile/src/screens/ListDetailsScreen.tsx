@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
     ActivityIndicator,
     Linking,
@@ -19,7 +19,6 @@ import {Expense, ExpensePaymentMethod, ListMember, MemberStatus} from '@/types';
 import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import listsService from '@/services/lists.service';
-import {Swipeable} from 'react-native-gesture-handler';
 import {buildSplitSummary} from '@/lib/split';
 import {getFriendlyErrorMessage} from '@/lib/errors';
 
@@ -42,31 +41,6 @@ export const ListDetailsScreen: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'expenses' | 'members'>('expenses');
     const [summaryRange, setSummaryRange] = useState<SummaryFilter>('30');
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [, setOpenSwipeId] = useState<string | null>(null);
-    const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
-
-    const closeSwipe = useCallback((id: string) => {
-        const ref = swipeableRefs.current[id];
-        if (ref) {
-            ref.close();
-        }
-        setOpenSwipeId(current => current === id ? null : current);
-    }, []);
-
-    const handleSwipeableOpen = useCallback((id: string) => {
-        setOpenSwipeId(previous => {
-            if (previous && previous !== id) {
-                const ref = swipeableRefs.current[previous];
-                ref?.close();
-            }
-            return id;
-        });
-    }, []);
-
-    const handleSwipeableClose = useCallback((id: string) => {
-        setOpenSwipeId(current => current === id ? null : current);
-    }, []);
-
     const loadData = useCallback(async () =>
         await Promise.all([
             fetchListById(listId),
@@ -99,7 +73,6 @@ export const ListDetailsScreen: React.FC = () => {
     }), [navigation, listId, orderedExpenseIds]);
 
     const handleEditExpense = (expense: Expense) => {
-        closeSwipe(expense.id);
         navigation.navigate('CreateExpense', {listId, expenseId: expense.id});
     };
 
@@ -197,7 +170,6 @@ export const ListDetailsScreen: React.FC = () => {
     };
 
     const handleDeleteExpense = (expense: Expense) => {
-        closeSwipe(expense.id);
         showDialog({
             title: t('expenses.deleteTitle'),
             message: t('expenses.deleteBody', {title: expense.title}),
@@ -219,79 +191,64 @@ export const ListDetailsScreen: React.FC = () => {
         const canEditExpense = expense.authorId === user?.id || isAdmin;
         const canDeleteExpense = canEditExpense;
         return <View key={expense.id} style={styles.expenseSwipeWrapper}>
-            <Swipeable
-                ref={ref => {
-                    if (ref) {
-                        swipeableRefs.current[expense.id] = ref;
-                    } else {
-                        delete swipeableRefs.current[expense.id];
-                    }
-                }}
-                onSwipeableOpen={() => handleSwipeableOpen(expense.id)}
-                onSwipeableClose={() => handleSwipeableClose(expense.id)}
-                renderLeftActions={canEditExpense ? () => <View style={styles.swipeActionContainer}>
-                    <TouchableOpacity
-                        style={[styles.swipeAction, styles.swipeEdit]}
-                        onPress={() => handleEditExpense(expense)}
-                    >
-                        <Ionicons name="create-outline" size={20} color={colors.accentText}/>
-                        <Text style={styles.swipeActionText}>{t('expenses.editAction')}</Text>
-                    </TouchableOpacity>
-                </View> : undefined}
-                renderRightActions={canDeleteExpense ? () => <View style={styles.swipeActionContainer}>
-                    <TouchableOpacity
-                        style={[styles.swipeAction, styles.swipeDelete]}
-                        onPress={() => handleDeleteExpense(expense)}
-                        disabled={deletingId === expense.id}
-                    >
-                        {deletingId === expense.id ? <ActivityIndicator color={colors.accentText}/> : <>
-                            <Ionicons name="trash" size={20} color={colors.accentText}/>
-                            <Text style={styles.swipeActionText}>{t('expenses.deleteAction')}</Text>
-                        </>}
-                    </TouchableOpacity>
-                </View> : undefined}
-                overshootRight={false}
-                overshootLeft={false}
+            <Card
+                onPress={() => handleExpensePress(expense)}
+                style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
             >
-                <Card
-                    onPress={() => handleExpensePress(expense)}
-                    style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
-                >
-                    <View style={styles.expenseItem}>
-                        <View style={styles.expenseInfo}>
+                <View style={styles.expenseItem}>
+                    <View style={styles.expenseInfo}>
+                        <View style={styles.expenseHeader}>
                             <Text style={styles.expenseTitle}>{expense.title}</Text>
-                            <Text style={styles.expenseMeta}>
-                                {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
-                            </Text>
-                            <Text style={styles.expenseMeta}>
-                                {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
-                            </Text>
-                            {payer && <Text
-                                style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>}
-                            <View style={styles.expenseTags}>
-                                <View style={styles.expenseTag}>
-                                    <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
-                                    <Text style={styles.expenseTagText}>{paymentLabel}</Text>
-                                </View>
-                                <View style={styles.expenseTag}>
-                                    <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
-                                    <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
-                                </View>
-                            </View>
+                            {(canEditExpense || canDeleteExpense) && <View style={styles.expenseActionBar}>
+                                {canEditExpense && <TouchableOpacity
+                                    style={styles.expenseActionButton}
+                                    onPress={() => handleEditExpense(expense)}
+                                >
+                                    <Ionicons name="create-outline" size={18} color={colors.accent}/>
+                                </TouchableOpacity>}
+                                {canDeleteExpense && <TouchableOpacity
+                                    style={styles.expenseActionButton}
+                                    onPress={() => handleDeleteExpense(expense)}
+                                    disabled={deletingId === expense.id}
+                                >
+                                    {deletingId === expense.id
+                                        ? <ActivityIndicator size="small" color={colors.accent}/>
+                                        : <Ionicons name="trash" size={18} color={colors.danger}/>
+                                    }
+                                </TouchableOpacity>}
+                            </View>}
                         </View>
-                        <View style={styles.expenseRight}>
-                            <Text style={styles.expenseAmount}>
-                                {currency} {expense.amount.toFixed(2)}
-                            </Text>
-                            <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
-                                <Text style={styles.statusText}>{statusLabel}</Text>
+                        <Text style={styles.expenseMeta}>
+                            {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
+                        </Text>
+                        <Text style={styles.expenseMeta}>
+                            {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
+                        </Text>
+                        {payer && <Text
+                            style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>}
+                        <View style={styles.expenseTags}>
+                            <View style={styles.expenseTag}>
+                                <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
+                                <Text style={styles.expenseTagText}>{paymentLabel}</Text>
                             </View>
-                            {awaitingValidation &&
-                                <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
+                            <View style={styles.expenseTag}>
+                                <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
+                                <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
+                            </View>
                         </View>
                     </View>
-                </Card>
-            </Swipeable>
+                    <View style={styles.expenseRight}>
+                        <Text style={styles.expenseAmount}>
+                            {currency} {expense.amount.toFixed(2)}
+                        </Text>
+                        <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
+                            <Text style={styles.statusText}>{statusLabel}</Text>
+                        </View>
+                        {awaitingValidation &&
+                            <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
+                    </View>
+                </View>
+            </Card>
         </View>;
     };
 
@@ -654,10 +611,25 @@ const createStyles = (colors: AppColors) =>
             flex: 1,
             gap: 4,
         },
+        expenseHeader: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 8,
+        },
         expenseTitle: {
             fontSize: 16,
             fontWeight: '600',
             color: colors.text,
+        },
+        expenseActionBar: {
+            flexDirection: 'row',
+            gap: 6,
+        },
+        expenseActionButton: {
+            padding: 6,
+            borderRadius: 10,
+            backgroundColor: colors.surfaceSecondary,
         },
         expenseMeta: {
             fontSize: 12,
@@ -802,6 +774,7 @@ const createStyles = (colors: AppColors) =>
         validatorText: {
             fontSize: 12,
             color: colors.success,
+            fontWeight: '600',
         },
         memberActions: {
             flexDirection: 'row',
@@ -852,31 +825,5 @@ const createStyles = (colors: AppColors) =>
             shadowOffset: {width: 0, height: 2},
             shadowOpacity: 0.2,
             shadowRadius: 4,
-        },
-        swipeActionContainer: {
-            height: '100%',
-            justifyContent: 'center',
-        },
-        swipeAction: {
-            width: 96,
-            height: '88%',
-            borderRadius: 14,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            paddingHorizontal: 12,
-            alignSelf: 'center',
-        },
-        swipeEdit: {
-            backgroundColor: colors.accent,
-        },
-        swipeDelete: {
-            backgroundColor: colors.danger,
-        },
-        swipeActionText: {
-            color: colors.accentText,
-            fontSize: 12,
-            fontWeight: '700',
         },
     });

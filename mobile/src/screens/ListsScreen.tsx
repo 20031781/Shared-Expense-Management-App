@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {Animated, FlatList, Modal, RefreshControl, StyleSheet, Text, TouchableOpacity, View,} from 'react-native';
 import {Ionicons} from '@expo/vector-icons';
 import {Swipeable} from 'react-native-gesture-handler';
 import {Button, Card, Input, Loading, OnboardingChecklist, useDialog} from '@/components';
@@ -22,6 +22,8 @@ export const ListsScreen: React.FC = () => {
     const [editName, setEditName] = useState('');
     const [editError, setEditError] = useState<string | undefined>();
     const [savingEdit, setSavingEdit] = useState(false);
+    const [openSwipeId, setOpenSwipeId] = useState<string | null>(null);
+    const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
     const {t} = useTranslation();
     const {showDialog} = useDialog();
     const {colors} = useAppTheme();
@@ -102,6 +104,7 @@ export const ListsScreen: React.FC = () => {
             setEditError(t('lists.nameRequired'));
             return;
         }
+        const activeSwipeId = openSwipeId;
         try {
             setSavingEdit(true);
             await updateList(editingList.id, trimmed);
@@ -110,6 +113,9 @@ export const ListsScreen: React.FC = () => {
                 message: t('lists.updateSuccess'),
             });
             closeEditModal();
+            setOpenSwipeId(null);
+            const ref = swipeableRefs.current[activeSwipeId ?? editingList.id];
+            ref?.close();
         } catch (error: any) {
             showDialog({
                 title: t('common.error'),
@@ -147,11 +153,32 @@ export const ListsScreen: React.FC = () => {
             ],
         });
 
-    const renderList = ({item}: { item: List }) => <View style={styles.listSwipeWrapper}>
-        <Swipeable
-            overshootLeft={false}
-            overshootRight={false}
-            renderLeftActions={() => <View style={styles.swipeActionContainer}>
+    const handleSwipeableOpen = useCallback((id: string) => {
+        setOpenSwipeId(previous => {
+            if (previous && previous !== id) {
+                swipeableRefs.current[previous]?.close();
+            }
+            return id;
+        });
+    }, []);
+
+    const handleSwipeableClose = useCallback((id: string) => {
+        setOpenSwipeId(current => current === id ? null : current);
+    }, []);
+
+    const renderList = ({item}: { item: List }) => {
+        const renderEditAction = (progress: Animated.AnimatedInterpolation<string | number>, dragX: Animated.AnimatedInterpolation<string | number>) => {
+            const opacity = progress.interpolate({
+                inputRange: [0.15, 0.4],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+            });
+            const translateX = dragX.interpolate({
+                inputRange: [0, 40, 120],
+                outputRange: [-30, 0, 0],
+                extrapolate: 'clamp',
+            });
+            return <Animated.View style={[styles.swipeActionContainer, {opacity, transform: [{translateX}]}]}>
                 <TouchableOpacity
                     style={[styles.action, styles.editAction]}
                     onPress={() => handleStartRename(item)}
@@ -159,8 +186,21 @@ export const ListsScreen: React.FC = () => {
                     <Ionicons name="create-outline" size={20} color={colors.accentText}/>
                     <Text style={styles.actionText}>{t('lists.renameAction')}</Text>
                 </TouchableOpacity>
-            </View>}
-            renderRightActions={() => <View style={styles.swipeActionContainer}>
+            </Animated.View>;
+        };
+
+        const renderDeleteAction = (progress: Animated.AnimatedInterpolation<string | number>, dragX: Animated.AnimatedInterpolation<string | number>) => {
+            const opacity = progress.interpolate({
+                inputRange: [0.15, 0.4],
+                outputRange: [0, 1],
+                extrapolate: 'clamp',
+            });
+            const translateX = dragX.interpolate({
+                inputRange: [-120, -40, 0],
+                outputRange: [0, 0, 30],
+                extrapolate: 'clamp',
+            });
+            return <Animated.View style={[styles.swipeActionContainer, {opacity, transform: [{translateX}]}]}>
                 <TouchableOpacity
                     style={[styles.action, styles.deleteAction]}
                     onPress={() => handleDeleteList(item)}
@@ -168,20 +208,41 @@ export const ListsScreen: React.FC = () => {
                     <Ionicons name="trash" size={20} color={colors.accentText}/>
                     <Text style={styles.actionText}>{t('lists.deleteAction')}</Text>
                 </TouchableOpacity>
-            </View>}
-        >
-            <Card onPress={() => handleListPress(item)}>
-                <View style={styles.listItem}>
-                    <View style={styles.listInfo}>
-                        <Text style={styles.listName}>{item.name}</Text>
-                        <Text style={styles.listDate}>
-                            {new Date(item.createdAt).toLocaleDateString()}
-                        </Text>
+            </Animated.View>;
+        };
+
+        return <View style={styles.listSwipeWrapper}>
+            <Swipeable
+                ref={ref => {
+                    if (ref) {
+                        swipeableRefs.current[item.id] = ref;
+                    } else {
+                        delete swipeableRefs.current[item.id];
+                    }
+                }}
+                overshootLeft={false}
+                overshootRight={false}
+                friction={2.4}
+                leftThreshold={52}
+                rightThreshold={52}
+                onSwipeableOpen={() => handleSwipeableOpen(item.id)}
+                onSwipeableClose={() => handleSwipeableClose(item.id)}
+                renderLeftActions={renderEditAction}
+                renderRightActions={renderDeleteAction}
+            >
+                <Card onPress={() => handleListPress(item)}>
+                    <View style={styles.listItem}>
+                        <View style={styles.listInfo}>
+                            <Text style={styles.listName}>{item.name}</Text>
+                            <Text style={styles.listDate}>
+                                {new Date(item.createdAt).toLocaleDateString()}
+                            </Text>
+                        </View>
                     </View>
-                </View>
-            </Card>
-        </Swipeable>
-    </View>;
+                </Card>
+            </Swipeable>
+        </View>;
+    };
 
     const firstListId = lists[0]?.id;
 
@@ -332,7 +393,7 @@ export const ListsScreen: React.FC = () => {
                         error={editError}
                     />
                     <View style={styles.joinModalActions}>
-                        <Button title={t('common.cancel')} variant="ghost" onPress={closeEditModal}/>
+                        <Button title={t('common.cancel')} variant="secondary" onPress={closeEditModal}/>
                         <Button
                             title={t('lists.renameSubmit')}
                             onPress={handleConfirmRename}
@@ -386,12 +447,12 @@ const createStyles = (colors: AppColors) =>
             backgroundColor: colors.surfaceSecondary,
             justifyContent: 'center',
             alignItems: 'center',
-            width: 92,
+            minWidth: 112,
             height: '88%',
             flexDirection: 'row',
             gap: 6,
             borderRadius: 14,
-            paddingHorizontal: 10,
+            paddingHorizontal: 14,
             alignSelf: 'center',
         },
         editAction: {
@@ -493,6 +554,11 @@ const createStyles = (colors: AppColors) =>
             fontSize: 12,
             color: colors.secondaryText,
             marginTop: -8,
+        },
+        joinModalActions: {
+            flexDirection: 'row',
+            justifyContent: 'flex-end',
+            gap: 10,
         },
         joinButtons: {
             gap: 8,
