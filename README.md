@@ -1,66 +1,62 @@
-# Split Expenses - Gestione Spese Condivise
+# Split Expenses
 
-App mobile (iOS/Android) + Backend API per gestire spese condivise tra gruppi.
+Suite completa (API .NET + app mobile React Native) per gestire spese condivise in gruppi con inviti, validazione e rimborsi ottimizzati.
 
-## 🚀 INIZIA QUI
+## 🚀 Avvio rapido
 
-**Vuoi provare l'app?** → Leggi **[GUIDA SETUP COMPLETO.md](docs/GUIDA_SETUP_COMPLETO.md)** (5 minuti)
+1. Clona il repo e prepara gli env dalla root:
+   ```bash
+   cp docs/.env.example.api backend/.env
+   cp docs/.env.example.mobile mobile/.env
+   ```
+2. Avvia PostgreSQL locale:
+   ```bash
+   cd backend
+   docker compose -f docker-compose.db.yml up -d
+   ```
+3. Applica le migration SQL in `backend/migrations/` (vedi [GUIDA_SETUP_COMPLETO.md](docs/GUIDA_SETUP_COMPLETO.md)).
+4. Avvia l'API:
+   ```bash
+   cd backend/SplitExpenses.Api
+   dotnet run
+   ```
+5. Avvia l'app mobile:
+   ```bash
+   cd mobile
+   npm install
+   npm start
+   ```
 
 ## 📚 Documentazione
 
-- **[GUIDA SETUP COMPLETO.md](docs/GUIDA_SETUP_COMPLETO.md)** - Setup rapido per test locale
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Come funziona il sistema
+- [GUIDA_SETUP_COMPLETO.md](docs/GUIDA_SETUP_COMPLETO.md): setup locale end-to-end per API e mobile.
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md): panoramica di flussi, moduli e schema dati.
+- [README_MOBILE.md](docs/README_MOBILE.md): istruzioni mirate per il client Expo.
+- [TRAEFIK_SUMMARY.md](docs/TRAEFIK_SUMMARY.md): note di pubblicazione su NAS/Traefik.
 
-## 🏗️ Stack Tecnologico
+## 🏗️ Stack tecnologico
 
-**Backend:** ASP.NET Core 9.0 + PostgreSQL (Supabase) + Docker
-**Mobile:** React Native + Expo + TypeScript
-**Auth:** Google OAuth and JWT
-**Database:** PostgreSQL self-hosted tramite Docker Compose
+- **Backend:** ASP.NET Core 9, Dapper + Npgsql, JWT, Swagger, notifiche FCM.
+- **Database:** PostgreSQL via Docker Compose con migration SQL dedicate.
+- **Mobile:** React Native + Expo SDK 54, TypeScript, React Navigation, Zustand, React Query, Victory charts.
+- **Auth:** backend predisposto per Google OAuth/refresh token; la UI mobile non espone ancora il login Google.
 
-## ✨ Funzionalità
+## ✨ Funzionalità principali
 
-- ✅ Login con Google OAuth
-- ✅ Creazione e gestione liste spese
-- ✅ Aggiunta spese con foto scontrino
-- ✅ Divisione automatica spese tra membri
-- ✅ Riepilogo spese con filtri temporali e grafici
-- ✅ Tab Insights con selezione lista, filtri temporali e grafici per lista e membro
-- ✅ Menù a tendina negli Insights per scegliere velocemente le liste e riepilogo paganti migliorato
-- ✅ Grafici dinamici (barre, torta, trend) con animazioni fluide e assi che evitano sovrapposizioni di etichette
-- ✅ Tooltip persistenti su barre e trend con marker interattivo e asse euro ottimizzato
-- ✅ Controllo della velocità delle animazioni (ora nelle Impostazioni) con transizioni più scattanti condivise negli
-  Insights
-- ✅ Selezione del pagatore e tracciamento della data di inserimento
-- ✅ Modifica spese con data reale, metodo di pagamento e destinatari personalizzati
-- ✅ Calcolo rimborsi ottimizzati
-- ✅ Ripartizione spese integrata negli Insights con suggerimenti sui rimborsi
-- ✅ Swipe-to-edit/delete, navigazione tra le spese tramite swipe dalla schermata di dettaglio e logout rapido dalle
-  Impostazioni
-- ✅ Swipe per rinominare o eliminare le liste e blocco delle azioni di eliminazione alle sole spese create dall'utente
-- ✅ Ruoli Admin/Validatore con approvazione delle spese prima della conferma
-- ✅ Percentuali di ripartizione modificabili dagli amministratori in ogni momento con bilanciamento automatico del resto
-- ✅ Notifiche push
-- ✅ Preferenze notifiche granulari + endpoint di test
-- ✅ Sincronizzazione offline
-- ✅ App mobile iOS/Android
-- ✅ Impostazioni multilingua (Italiano/Inglese)
-- ✅ Tema chiaro/scuro/sistema configurabile dall'app mobile
-- ✅ Onboarding guidato con checklist interattiva
-- ✅ Dialoghi personalizzati coerenti con il tema per conferme, errori e successi
-- ✅ Messaggi di errore di connessione localizzati e coerenti in tutte le schermate principali
+- Onboarding utente (senza login Google in app) e profilo multilingua (IT/EN) con tema chiaro/scuro.
+- Gestione liste con inviti, ruoli Admin/Validatore e percentuali di ripartizione editabili.
+- CRUD spese con foto scontrino, data reale, metodo di pagamento e destinatari personalizzati.
+- Validazione collaborativa delle spese e calcolo rimborsi ottimizzati con suggerimenti.
+- Dashboard Insights con grafici (barre/torta/trend) e filtri temporali per lista/membro.
+- Notifiche push configurabili per nuove spese, rimborsi e inviti; supporto test via endpoint dedicati.
+- Sincronizzazione resiliente con cache locale (SQLite/AsyncStorage) e gestione offline.
 
-## 🏗️ Struttura Progetto
+## 🗂️ Struttura del repository
 
 ```
-project/
-├── backend/                # ASP.NET Core API + Docker
-│   ├── SplitExpenses.Api/
-│   ├── docker-compose      # Docker Compose locale e NAS
-│   └── migrations/         # SQL per PostgreSQL locale
-├── docs/                   # Guide e approfondimenti
-└── mobile/                 # React Native + Expo
-    └── src/
+backend/    # API ASP.NET Core, docker-compose* e migration SQL
+docs/       # Documentazione e template .env
+mobile/     # App Expo (TypeScript) con src/ componentizzata
 ```
 
 ## 📄 Licenza

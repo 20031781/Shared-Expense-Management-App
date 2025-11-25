@@ -1,184 +1,93 @@
-# Architettura Sistema Split Expenses
+# Architettura Split Expenses
 
-## Diagramma Architetturale
+Panoramica di backend ASP.NET Core, app mobile React Native e infrastruttura PostgreSQL/Traefik.
+
+## Diagramma alto livello
 
 ```mermaid
 graph TB
-    subgraph "Mobile App (React Native)"
-        MA[React Native + Expo]
-        SC[Screens]
+    subgraph "Mobile App (React Native + Expo)"
+        MA[UI Screens]
         ST[Zustand Stores]
-        SV[Services]
-
-        MA --> SC
-        SC --> ST
+        RQ[React Query]
+        SV[Service Layer]
+        MA --> ST
+        MA --> RQ
+        RQ --> SV
         ST --> SV
     end
 
-    subgraph "Backend API (ASP.NET Core)"
+    subgraph "Backend API (ASP.NET Core 9)"
         API[Controllers]
-        BL[Services Business Logic]
-        REPO[Repositories Data Access]
-
+        BL[Services]
+        REPO[Dapper Repositories]
         API --> BL
         BL --> REPO
     end
 
     subgraph "Infrastructure"
-        POSTGRES[(PostgreSQL - Docker)]
+        PG[(PostgreSQL)]
         FCM[Firebase Cloud Messaging]
         OAUTH[Google OAuth]
     end
 
-    MA -->|HTTPS REST| API
-    REPO -->|Npgsql / EF Core| POSTGRES
-    BL -->|Push Notifications| FCM
-    API -->|Verify Token| OAUTH
-    MA -->|Google Sign-In| OAUTH
-    FCM -->|Notifiche| MA
-
-    style MA fill:#4CAF50
-    style API fill:#2196F3
-    style POSTGRES fill:#FF9800
+    SV -->|REST HTTPS| API
+    BL -->|Notifiche push| FCM
+    API -->|JWT & Google token| OAUTH
+    REPO -->|Npgsql| PG
 ```
 
-## Flusso Autenticazione
+## Flussi chiave
+
+### Autenticazione Google → JWT
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant App as React Native App
+    participant App
     participant Google
-    participant API as Backend API
+    participant API
     participant DB as PostgreSQL
 
-    User->>App: Tap "Accedi con Google"
-    App->>Google: Request OAuth
-    Google->>User: Login Google
-    User->>Google: Credenziali
-    Google->>App: ID Token
+    App->>Google: Avvio OAuth
+    Google-->>App: ID token
     App->>API: POST /auth/google {idToken}
-    API->>Google: Verify Token
-    Google->>API: Token Valid
-    API->>DB: Get/Create User
-    DB->>API: User Data
-    API->>API: Generate JWT + Refresh Token
-    API->>DB: Store Refresh Token
-    API->>App: {accessToken, refreshToken, user}
-    App->>App: Store Tokens Securely
-    App->>User: Navigate to Home
+    API->>Google: Verifica token
+    API->>DB: Upsert utente + refresh token
+    API-->>App: accessToken + refreshToken + profilo
 ```
 
-## Workflow Spesa
+> Nota: il backend espone il flusso OAuth, ma l'attuale versione della app non include una schermata di login Google.
+
+### Ciclo di vita di una spesa
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft: Crea Spesa
-    Draft --> Submitted: Invia per Validazione
-    Draft --> [*]: Elimina
-    Submitted --> Validated: Tutti Approvano
-    Submitted --> Rejected: Almeno 1 Rifiuta
-    Validated --> [*]: Calcola Splits
-    Rejected --> Draft: Modifica
-    Rejected --> [*]: Elimina
-
-    note right of Validated
-        Trigger automatico:
-        - Calcola expense_splits
-        - Notifica membri
-    end note
+    [*] --> Draft
+    Draft --> Submitted: invia per validazione
+    Draft --> [*]: eliminata
+    Submitted --> Validated: validatori approvano
+    Submitted --> Rejected: almeno un rifiuto
+    Validated --> Settled: calcolo splits + rimborsi
+    Rejected --> Draft: modifica
 ```
 
-## Calcolo Rimborsi Ottimizzati
-
-```mermaid
-flowchart TD
-    Start([Inizio]) --> GetExpenses[Recupera Spese Validate]
-    GetExpenses --> CalcBalance[Calcola Bilancio per Membro]
-    CalcBalance --> SortDebtors[Ordina Debitori Crescente]
-    SortDebtors --> SortCreditors[Ordina Creditori Decrescente]
-    SortCreditors --> HasDebtors{Ci sono debitori?}
-
-    HasDebtors -->|Sì| HasCreditors{Ci sono creditori?}
-    HasDebtors -->|No| End([Fine])
-
-    HasCreditors -->|Sì| CalcTransfer[transfer = min(debito, credito)]
-    HasCreditors -->|No| End
-
-    CalcTransfer --> CreateReimbursement[Crea Rimborso]
-    CreateReimbursement --> UpdateBalances[Aggiorna Bilanci]
-    UpdateBalances --> CheckDebtor{Debito Saldato?}
-
-    CheckDebtor -->|Sì| NextDebtor[Prossimo Debitore]
-    CheckDebtor -->|No| UpdateDebtor[Aggiorna Debito]
-
-    NextDebtor --> CheckCreditor
-    UpdateDebtor --> CheckCreditor{Credito Saldato?}
-
-    CheckCreditor -->|Sì| NextCreditor[Prossimo Creditore]
-    CheckCreditor -->|No| UpdateCreditor[Aggiorna Credito]
-
-    NextCreditor --> HasDebtors
-    UpdateCreditor --> HasDebtors
-```
-
-## Sincronizzazione Offline
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant App
-    participant LocalDB as SQLite
-    participant SyncQueue
-    participant API
-    participant Postgres
-
-    Note over User,Postgres: Scenario: Utente offline
-
-    User->>App: Crea Spesa
-    App->>LocalDB: Save Expense (local_id)
-    App->>SyncQueue: Add to Queue (pending)
-    App->>User: ✓ Spesa Creata (sync pending)
-
-    Note over App: Network Available
-
-    App->>API: POST /sync/batch
-    Note right of API: Batch di operazioni
-    loop Per ogni operazione
-        API->>Postgres: Execute Operation
-        Postgres->>API: Result
-        alt Success
-            API->>API: Mark as synced
-        else Conflict
-            API->>App: Conflict Info
-            App->>User: Banner Riconciliazione
-        else Error
-            API->>SyncQueue: Increment retry_count
-        end
-    end
-    API->>App: Sync Result
-    App->>LocalDB: Update local records
-    App->>User: ✓ Sincronizzato
-```
-
-## Struttura Database
+## Schema dati
 
 ```mermaid
 erDiagram
-    users ||--o{ lists : "admin"
-    users ||--o{ list_members : "member"
-    users ||--o{ expenses : "author"
-    users ||--o{ expense_validations : "validator"
-    users ||--o{ reimbursements : "from/to"
+    users ||--o{ lists : admin
+    users ||--o{ list_members : membro
+    users ||--o{ expenses : autore
+    users ||--o{ reimbursements : from/to
+    users ||--o{ expense_validations : validatore
 
-    lists ||--o{ list_members : "has"
-    lists ||--o{ expenses : "contains"
-    lists ||--o{ reimbursements : "generates"
+    lists ||--o{ list_members : has
+    lists ||--o{ expenses : contains
+    lists ||--o{ reimbursements : genera
 
-    list_members ||--o{ expense_splits : "owes"
-
-    expenses ||--o{ expense_validations : "validated_by"
-    expenses ||--o{ expense_splits : "divided_into"
+    list_members ||--o{ expense_splits : owes
+    expenses ||--o{ expense_splits : divided
+    expenses ||--o{ expense_validations : reviewed
 
     users {
         uuid id PK
@@ -200,9 +109,12 @@ erDiagram
         uuid id PK
         uuid list_id FK
         uuid user_id FK
+        text email
+        text display_name
         decimal split_percentage
         boolean is_validator
         text status
+        timestamptz joined_at
     }
 
     expenses {
@@ -211,7 +123,8 @@ erDiagram
         uuid author_id FK
         decimal amount
         text status
-        timestamptz server_timestamp
+        timestamptz expense_date
+        text payment_method
     }
 
     expense_splits {
@@ -231,156 +144,31 @@ erDiagram
     }
 ```
 
-## Stack Tecnologico
+## Componenti backend
 
-### Backend
+- **Controllers:** Auth, Lists, Expenses, Reimbursements, Notifications (Swagger attivo su `/swagger`).
+- **Services:** generazione JWT/refresh, validazione Google, calcolo rimborsi, invio notifiche FCM, normalizzazione nomi membri.
+- **Repositories:** Dapper + Npgsql per query SQL, aderenti alle migration in `backend/migrations` (include stored procedure per rimborsi).
+- **Configurazione:** `appsettings.json` per connection string, chiavi JWT e Google; `docker-compose*.yml` per PostgreSQL locale/NAS.
 
-```
-ASP.NET Core 9.0
-├── Controllers (REST API)
-├── Services (Business Logic)
-│   ├── AuthService
-│   ├── NotificationService
-│   └── SyncService
-├── Repositories (Data Access)
-│   ├── UserRepository
-│   ├── ListRepository
-│   ├── ExpenseRepository
-│   └── ReimbursementRepository
-└── Models (Domain)
-```
+## Componenti mobile
 
-### Mobile
+- **UI & navigazione:** React Navigation (stack + tab), theming chiaro/scuro con design tokens in `src/theme`.
+- **State & dati:** Zustand per lo stato utente/impostazioni, React Query per cache API, AsyncStorage/SecureStore per token, SQLite per cache offline spese/liste.
+- **Services:** `api.service.ts` centralizza Axios, servizi dedicati per liste, spese, rimborsi e auth (deep-link inviti; il login Google non è esposto in UI).
+- **Feature:** grafici Victory in tab Insights, upload scontrini con Expo Image Picker/File System, notifiche push via `expo-notifications`.
 
-```
-React Native + Expo + TypeScript
-├── screens/ (UI Components)
-├── store/ (Zustand State)
-├── services/
-│   ├── api.service (Axios HTTP)
-│   ├── auth.service
-│   ├── lists/expenses/reimbursements services (REST)
-│   └── storage.service
-├── components/ (Reusable UI)
-└── types/ (TypeScript)
-```
+## Sincronizzazione e resilienza
 
-### Database
+- Cache locale (SQLite/AsyncStorage) per liste/spese con retry automatico lato client quando la rete torna disponibile.
+- Refresh token e rotazione gestiti dall'API; errori di connessione mostrati con messaggi localizzati.
+- Validazioni server-side sui permessi di lista, percentuali di split e ruoli admin/validatori.
 
-```
-PostgreSQL (Docker Compose)
-├── Tables (11)
-├── Schemi pubblici + viste materializzate
-├── Stored Procedures
-│   ├── calculate_expense_splits
-│   ├── calculate_optimized_reimbursements
-│   └── generate_reimbursements_for_list
-└── Triggers
-    └── update_expense_status_after_validation
-```
+## Deployment & osservabilità
 
-## Pattern e Principi
-
-### Backend Architecture
-
-- **Layered Architecture**: Controllers → Services → Repositories
-- **Dependency Injection**: Tutti i servizi registrati in Program.cs
-- **Repository Pattern**: Astrazione accesso dati
-- **Single Responsibility**: Ogni classe ha un solo scopo
-
-### Mobile Architecture
-
-- **Component-Based**: React functional components
-- **State Management**: Zustand stores
-- **Hooks Pattern**: React hooks for logic
-- **Service Layer**: REST API centralizzata tramite Axios
-
-### Security
-
-- **Authentication**: Google OAuth + JWT
-- **Authorization**: Claims-based con policy
-- **Data Security**: Permessi PostgreSQL + validazioni server-side
-- **Token Security**: Refresh token con rotazione
-
-## Deployment Architecture
-
-```mermaid
-graph LR
-    subgraph "Production"
-        LB[Load Balancer]
-        API1[API Instance 1]
-        API2[API Instance 2]
-        LB --> API1
-        LB --> API2
-    end
-
-    subgraph "Data Layer"
-        POSTGRES[(PostgreSQL Cluster/PgBouncer)]
-        API1 --> POSTGRES
-        API2 --> POSTGRES
-    end
-
-    subgraph "Services"
-        FCM[Firebase]
-        GOOGLE[Google OAuth]
-        API1 --> FCM
-        API1 --> GOOGLE
-        API2 --> FCM
-        API2 --> GOOGLE
-    end
-
-    subgraph "Clients"
-        IOS[iOS App]
-        ANDROID[Android App]
-    end
-
-    IOS --> LB
-    ANDROID --> LB
-```
-
-## Scalabilità
-
-### Horizontal Scaling
-
-- API stateless: può essere replicata
-- Load balancer distribuisce carico
-- Connection pooling gestito da PostgreSQL/PgBouncer
-
-### Vertical Scaling
-
-- Aumenta risorse Docker container
-- Ottimizza query database con indici
-- Caching strategico (Redis future)
-
-### Performance Optimization
-
-- Indici database su campi chiave
-- Batch operations per sync
-- Pagination per liste grandi
-- Lazy loading su mobile
-
-## Monitoring e Observability
-
-### Logs
-
-- Application Insights (Azure)
-- Serilog structured logging
-- Docker logs persistenti
-
-### Metrics
-
-- Request rate/latency
-- Error rate
-- Database query performance
-- Sync success rate
-
-### Alerts
-
-- API down
-- High error rate
-- Database connection issues
-- Sync failures
+- **Locale:** docker-compose per PostgreSQL (`docker-compose.db.yml`) + `dotnet run` per API.
+- **NAS/Produzione:** `docker-compose-nas.yml` con Traefik (porte 8080/10443) e certificati Let's Encrypt, vedi [TRAEFIK_SUMMARY.md](TRAEFIK_SUMMARY.md).
+- **Monitoring:** logging strutturato (ASP.NET + Serilog-ready) e health check su `/health`.
 
 ---
-
-**Ultimo aggiornamento**: 2025-10-10
+**Ultimo aggiornamento:** 2025-01-15
