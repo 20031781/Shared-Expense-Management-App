@@ -4,8 +4,9 @@ Applicazione mobile React Native + Expo per gestire le spese condivise.
 
 ## Aggiornamenti rapidi
 
-- Corrette le animazioni dei grafici Insights per evitare errori runtime legati a domini non validi.
-- Ridimensionati i pulsanti delle azioni swipe nelle liste spese per una presentazione più compatta.
+- Migliorata la fluidità dello swipe tra spese consecutive con animazioni più stabili.
+- Allineati dimensioni e bordi delle azioni swipe sia nelle spese sia nelle liste per un aspetto coerente.
+- I grafici Insight ignorano ora record con date non valide evitando errori durante il rendering.
 
 ## Prerequisiti
 

@@ -114,13 +114,13 @@ export const ExpenseDetailsScreen: React.FC = () => {
         Animated.parallel([
             Animated.timing(swipeTranslate, {
                 toValue: exitOffset,
-                duration: 200,
+                duration: 220,
                 easing: Easing.out(Easing.cubic),
                 useNativeDriver: true,
             }),
             Animated.timing(swipeOpacity, {
-                toValue: 0.25,
-                duration: 200,
+                toValue: 0.2,
+                duration: 220,
                 easing: Easing.out(Easing.cubic),
                 useNativeDriver: true,
             }),
@@ -132,17 +132,17 @@ export const ExpenseDetailsScreen: React.FC = () => {
             }
             const entryOffset = -exitOffset;
             swipeTranslate.setValue(entryOffset);
-            swipeOpacity.setValue(0.35);
+            swipeOpacity.setValue(0.25);
             Animated.parallel([
-                Animated.timing(swipeTranslate, {
+                Animated.spring(swipeTranslate, {
                     toValue: 0,
-                    duration: 220,
-                    easing: Easing.out(Easing.quad),
                     useNativeDriver: true,
+                    damping: 12,
+                    stiffness: 120,
                 }),
                 Animated.timing(swipeOpacity, {
                     toValue: 1,
-                    duration: 220,
+                    duration: 240,
                     easing: Easing.out(Easing.quad),
                     useNativeDriver: true,
                 }),

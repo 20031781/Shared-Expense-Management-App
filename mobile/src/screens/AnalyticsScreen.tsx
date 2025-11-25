@@ -430,6 +430,7 @@ export const AnalyticsScreen: React.FC = () => {
         const map = new Map<string, number>();
         listInsights.expenses.forEach(expense => {
             const date = new Date(expense.expenseDate);
+            if (!Number.isFinite(date.getTime())) return;
             const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
             map.set(key, (map.get(key) ?? 0) + expense.amount);
         });
