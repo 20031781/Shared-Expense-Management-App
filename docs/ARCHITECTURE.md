@@ -78,7 +78,7 @@ erDiagram
     users ||--o{ lists : admin
     users ||--o{ list_members : membro
     users ||--o{ expenses : autore
-    users ||--o{ reimbursements : from/to
+    users ||--o{ reimbursements : from-to
     users ||--o{ expense_validations : validatore
 
     lists ||--o{ list_members : has
@@ -147,16 +147,22 @@ erDiagram
 ## Componenti backend
 
 - **Controllers:** Auth, Lists, Expenses, Reimbursements, Notifications (Swagger attivo su `/swagger`).
-- **Services:** generazione JWT/refresh, validazione Google, calcolo rimborsi, invio notifiche FCM, normalizzazione nomi membri.
-- **Repositories:** Dapper + Npgsql per query SQL, aderenti alle migration in `backend/migrations` (include stored procedure per rimborsi).
-- **Configurazione:** `appsettings.json` per connection string, chiavi JWT e Google; `docker-compose*.yml` per PostgreSQL locale/NAS.
+- **Services:** generazione JWT/refresh, validazione Google, calcolo rimborsi, invio notifiche FCM, normalizzazione nomi
+  membri.
+- **Repositories:** Dapper + Npgsql per query SQL, aderenti alle migration in `backend/migrations` (include stored
+  procedure per rimborsi).
+- **Configurazione:** `appsettings.json` per connection string, chiavi JWT e Google; `docker-compose*.yml` per
+  PostgreSQL locale/NAS.
 
 ## Componenti mobile
 
 - **UI & navigazione:** React Navigation (stack + tab), theming chiaro/scuro con design tokens in `src/theme`.
-- **State & dati:** Zustand per lo stato utente/impostazioni, React Query per cache API, AsyncStorage/SecureStore per token, SQLite per cache offline spese/liste.
-- **Services:** `api.service.ts` centralizza Axios, servizi dedicati per liste, spese, rimborsi e auth (deep-link inviti; il login Google non è esposto in UI).
-- **Feature:** grafici Victory in tab Insights, upload scontrini con Expo Image Picker/File System, notifiche push via `expo-notifications`.
+- **State & dati:** Zustand per lo stato utente/impostazioni, React Query per cache API, AsyncStorage/SecureStore per
+  token, SQLite per cache offline spese/liste.
+- **Services:** `api.service.ts` centralizza Axios, servizi dedicati per liste, spese, rimborsi e auth (deep-link
+  inviti; il login Google non è esposto in UI).
+- **Feature:** grafici Victory in tab Insights, upload scontrini con Expo Image Picker/File System, notifiche push via
+  `expo-notifications`.
 
 ## Sincronizzazione e resilienza
 
@@ -167,7 +173,8 @@ erDiagram
 ## Deployment & osservabilità
 
 - **Locale:** docker-compose per PostgreSQL (`docker-compose.db.yml`) + `dotnet run` per API.
-- **NAS/Produzione:** `docker-compose-nas.yml` con Traefik (porte 8080/10443) e certificati Let's Encrypt, vedi [TRAEFIK_SUMMARY.md](TRAEFIK_SUMMARY.md).
+- **NAS/Produzione:** `docker-compose-nas.yml` con Traefik (porte 8080/10443) e certificati Let's Encrypt,
+  vedi [TRAEFIK_SUMMARY.md](TRAEFIK_SUMMARY.md).
 - **Monitoring:** logging strutturato (ASP.NET + Serilog-ready) e health check su `/health`.
 
 ---

@@ -18,9 +18,9 @@ public interface IAuthService
 
 public class AuthResult
 {
-    public bool Success { get; set; }
-    public string? AccessToken { get; set; }
-    public string? RefreshToken { get; set; }
-    public User? User { get; set; }
-    public string? ErrorMessage { get; set; }
+    public bool Success { get; init; }
+    public string? AccessToken { get; init; }
+    public string? RefreshToken { get; init; }
+    public User? User { get; init; }
+    public string? ErrorMessage { get; init; }
 }

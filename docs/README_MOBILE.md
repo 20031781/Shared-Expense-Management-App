@@ -18,15 +18,18 @@ npm start                                   # apre Metro bundler + QR code
 ```
 
 - Premi `a` o `i` per avviare l'emulatore, oppure scansiona il QR con Expo Go.
-- Per le notifiche push genera un **development build**: `npx expo run:android` oppure `npx expo run:ios --configuration Debug`.
+- Per le notifiche push genera un **development build**: `npx expo run:android` oppure
+  `npx expo run:ios --configuration Debug`.
 
 ## Variabili d'ambiente
 
-`EXPO_PUBLIC_API_URL` deve puntare all'API (es. `http://192.168.1.60:5000/api`). Il backend deve esporre HTTPS o HTTP raggiungibile dal dispositivo.
+`EXPO_PUBLIC_API_URL` deve puntare all'API (es. `http://192.168.1.60:5000/api`). Il backend deve esporre HTTPS o HTTP
+raggiungibile dal dispositivo.
 
 ## Google OAuth
 
-Il backend è predisposto per verificare ID token Google; l'app mobile attuale non include la schermata di accesso, quindi il flusso non è utilizzabile da UI.
+Il backend è predisposto per verificare ID token Google; l'app mobile attuale non include la schermata di accesso,
+quindi il flusso non è utilizzabile da UI.
 
 ## Struttura del progetto
 

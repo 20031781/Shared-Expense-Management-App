@@ -3,11 +3,11 @@ namespace SplitExpenses.Api.Models;
 public class Expense
 {
     public Guid Id { get; set; }
-    public Guid ListId { get; set; }
-    public Guid AuthorId { get; set; }
+    public Guid ListId { get; init; }
+    public Guid AuthorId { get; init; }
     public string Title { get; set; } = string.Empty;
     public decimal Amount { get; set; }
-    public string Currency { get; set; } = "EUR";
+    public string Currency { get; init; } = "EUR";
     public DateTime ExpenseDate { get; set; }
     public string? Notes { get; set; }
     public string? ReceiptUrl { get; set; }
@@ -47,10 +47,10 @@ public enum ExpenseStatus
 public class ExpenseValidation
 {
     public Guid Id { get; set; }
-    public Guid ExpenseId { get; set; }
-    public Guid ValidatorId { get; set; }
-    public ValidationStatus Status { get; set; }
-    public string? Notes { get; set; }
+    public Guid ExpenseId { get; init; }
+    public Guid ValidatorId { get; init; }
+    public ValidationStatus Status { get; init; }
+    public string? Notes { get; init; }
     public DateTime ValidatedAt { get; set; }
 
     // Navigation

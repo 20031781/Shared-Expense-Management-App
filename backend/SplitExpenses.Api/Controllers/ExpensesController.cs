@@ -246,7 +246,7 @@ public class ExpensesController(
         Guid fallbackMemberId)
     {
         var memberLookup = members.ToDictionary(m => m.Id, m => m);
-        var sanitized = (requestedBeneficiaries ?? Array.Empty<Guid>())
+        var sanitized = (requestedBeneficiaries ?? [])
             .Where(memberLookup.ContainsKey)
             .Distinct()
             .ToList();
@@ -262,10 +262,7 @@ public class ExpensesController(
         if (weighted.Count > 0)
             return weighted;
 
-        if (memberLookup.Count > 0)
-            return memberLookup.Keys.ToList();
-
-        return new[] { fallbackMemberId };
+        return memberLookup.Count > 0 ? memberLookup.Keys.ToList() : [fallbackMemberId];
     }
 }
 

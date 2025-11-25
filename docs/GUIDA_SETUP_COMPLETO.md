@@ -56,7 +56,8 @@ SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' O
    ```bash
    cp docs/.env.example.mobile mobile/.env
    ```
-   Imposta `EXPO_PUBLIC_API_URL` con l'IP della tua macchina raggiungibile dal telefono (es. `http://192.168.1.60:5000/api`).
+   Imposta `EXPO_PUBLIC_API_URL` con l'IP della tua macchina raggiungibile dal telefono (es.
+   `http://192.168.1.60:5000/api`).
 2. Installa e avvia Expo:
    ```bash
    cd mobile
@@ -64,11 +65,13 @@ SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' O
    npm start
    ```
 3. Scansiona il QR code con Expo Go oppure premi `a`/`i` per aprire l'emulatore.
-4. Per testare le notifiche push usa un **development build** (`npx expo run:android` o `npx expo run:ios --configuration Debug`).
+4. Per testare le notifiche push usa un **development build** (`npx expo run:android` o
+   `npx expo run:ios --configuration Debug`).
 
 ## 4) Test manuali rapidi
 
-- **Login Google**: il backend supporta l'exchange dell'ID token, ma la UI mobile attuale non espone la schermata di login.
+- **Login Google**: il backend supporta l'exchange dell'ID token, ma la UI mobile attuale non espone la schermata di
+  login.
 - **Liste**: `POST /api/lists` con membri e percentuali; verifica `GET /api/lists/{id}/members`.
 - **Spese**: `POST /api/expenses` con metodo di pagamento e beneficiari; controlla gli split e i rimborsi calcolati.
 - **Notifiche**: `POST /api/notifications/test/*` (richiede token valido) per simulare nuove spese o inviti.
@@ -77,5 +80,7 @@ SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' O
 
 - **Database vuoto o incoerente**: esegui `000_reset_database.sql` e riapplica le migration in ordine.
 - **401 su ogni endpoint**: controlla la chiave JWT in `.env` e in `appsettings.json`, poi rifai login.
-- **API non raggiungibile da telefono**: usa l'IP LAN nel `.env` mobile e assicurati che l'API ascolti su `0.0.0.0:5000`.
-- **Errori di schema (es. colonne mancanti)**: usa esclusivamente le migration in `backend/migrations/`, non quelle Supabase.
+- **API non raggiungibile da telefono**: usa l'IP LAN nel `.env` mobile e assicurati che l'API ascolti su
+  `0.0.0.0:5000`.
+- **Errori di schema (es. colonne mancanti)**: usa esclusivamente le migration in `backend/migrations/`, non quelle
+  Supabase.

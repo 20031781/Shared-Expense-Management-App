@@ -17,7 +17,7 @@ public class List
 public class ListMember
 {
     public Guid Id { get; set; }
-    public Guid ListId { get; set; }
+    public Guid ListId { get; init; }
     public Guid? UserId { get; set; }
     public string Email { get; set; } = string.Empty;
     public string? DisplayName { get; set; }

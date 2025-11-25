@@ -23,7 +23,7 @@
             <Link>docs\.env.example.api</Link>
         </Content>
         <Content Include="..\..\docs\.env.example.mobile">
-          <Link>docs\.env.example.mobile</Link>
+            <Link>docs\.env.example.mobile</Link>
         </Content>
         <Content Include="..\..\docs\ARCHITECTURE.md">
             <Link>docs\ARCHITECTURE.md</Link>
@@ -32,10 +32,10 @@
             <Link>docs\GUIDA_SETUP_COMPLETO.md</Link>
         </Content>
         <Content Include="..\..\docs\README_MOBILE.md">
-          <Link>docs\README_MOBILE.md</Link>
+            <Link>docs\README_MOBILE.md</Link>
         </Content>
         <Content Include="..\.env">
-          <Link>.env</Link>
+            <Link>.env</Link>
         </Content>
         <Content Include="..\docker-compose-nas.yml">
             <Link>docker-compose-nas.yml</Link>

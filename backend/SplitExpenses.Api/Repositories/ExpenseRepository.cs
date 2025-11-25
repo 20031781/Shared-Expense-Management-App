@@ -50,7 +50,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
 
     public async Task<Expense?> GetByIdAsync(Guid id)
     {
-        var sql = $"SELECT {ExpenseProjection} FROM expenses WHERE id = @Id LIMIT 1";
+        const string sql = $"SELECT {ExpenseProjection} FROM expenses WHERE id = @Id LIMIT 1";
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ExpenseDto>(sql, new { Id = id });
         return dto?.ToModel();
@@ -119,9 +119,11 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         expense.ServerTimestamp = now;
 
         const string sql =
-            $@"INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, payment_method, server_timestamp, paid_by_member_id, beneficiary_member_ids, inserted_at, created_at, updated_at)
-                VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @PaymentMethodText, @ServerTimestamp, @PaidByMemberId, @BeneficiaryMemberIds, @InsertedAt, @CreatedAt, @UpdatedAt)
-                RETURNING {ExpenseProjection}";
+            $"""
+             INSERT INTO expenses (id, list_id, author_id, title, amount, currency, expense_date, notes, receipt_url, status, payment_method, server_timestamp, paid_by_member_id, beneficiary_member_ids, inserted_at, created_at, updated_at)
+             VALUES (@Id, @ListId, @AuthorId, @Title, @Amount, @Currency, @ExpenseDate, @Notes, @ReceiptUrl, @StatusText, @PaymentMethodText, @ServerTimestamp, @PaidByMemberId, @BeneficiaryMemberIds, @InsertedAt, @CreatedAt, @UpdatedAt)
+             RETURNING {ExpenseProjection}
+             """;
 
         var parameters = new
         {
@@ -138,7 +140,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
             PaymentMethodText = expense.PaymentMethod.ToString().ToLower(),
             expense.ServerTimestamp,
             expense.PaidByMemberId,
-            BeneficiaryMemberIds = expense.BeneficiaryMemberIds?.Distinct().ToArray() ?? Array.Empty<Guid>(),
+            BeneficiaryMemberIds = expense.BeneficiaryMemberIds.Distinct().ToArray(),
             expense.InsertedAt,
             expense.CreatedAt,
             expense.UpdatedAt
@@ -154,21 +156,23 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         expense.UpdatedAt = DateTime.UtcNow;
         expense.ServerTimestamp = expense.UpdatedAt;
 
-        const string sql = $@"UPDATE expenses SET
-                    title = @Title,
-                    amount = @Amount,
-                    currency = @Currency,
-                    expense_date = @ExpenseDate,
-                    notes = @Notes,
-                    receipt_url = @ReceiptUrl,
-                    status = @StatusText,
-                    payment_method = @PaymentMethodText,
-                    server_timestamp = @ServerTimestamp,
-                    paid_by_member_id = @PaidByMemberId,
-                    beneficiary_member_ids = @BeneficiaryMemberIds,
-                    updated_at = @UpdatedAt
-                WHERE id = @Id
-                RETURNING {ExpenseProjection}";
+        const string sql = $"""
+                            UPDATE expenses SET
+                            title = @Title,
+                            amount = @Amount,
+                            currency = @Currency,
+                            expense_date = @ExpenseDate,
+                            notes = @Notes,
+                            receipt_url = @ReceiptUrl,
+                            status = @StatusText,
+                            payment_method = @PaymentMethodText,
+                            server_timestamp = @ServerTimestamp,
+                            paid_by_member_id = @PaidByMemberId,
+                            beneficiary_member_ids = @BeneficiaryMemberIds,
+                            updated_at = @UpdatedAt
+                            WHERE id = @Id
+                            RETURNING {ExpenseProjection}
+                            """;
 
         var parameters = new
         {
@@ -183,7 +187,7 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
             PaymentMethodText = expense.PaymentMethod.ToString().ToLower(),
             expense.ServerTimestamp,
             expense.PaidByMemberId,
-            BeneficiaryMemberIds = expense.BeneficiaryMemberIds?.Distinct().ToArray() ?? Array.Empty<Guid>(),
+            BeneficiaryMemberIds = expense.BeneficiaryMemberIds.Distinct().ToArray(),
             expense.UpdatedAt
         };
 
@@ -197,8 +201,8 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         const string sql = """
                            UPDATE expenses
                            SET status = @StatusText,
-                               updated_at = now(),
-                               server_timestamp = now()
+                           updated_at = now(),
+                           server_timestamp = now()
                            WHERE id = @Id
                            """;
 
@@ -262,23 +266,23 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
 
 internal class ExpenseDto
 {
-    public Guid Id { get; set; }
-    public Guid ListId { get; set; }
-    public Guid AuthorId { get; set; }
-    public string Title { get; set; } = string.Empty;
-    public decimal Amount { get; set; }
-    public string Currency { get; set; } = "EUR";
-    public DateTime ExpenseDate { get; set; }
-    public string? Notes { get; set; }
-    public string? ReceiptUrl { get; set; }
-    public string Status { get; set; } = "draft";
-    public string PaymentMethod { get; set; } = "card";
-    public DateTime ServerTimestamp { get; set; }
-    public Guid? PaidByMemberId { get; set; }
-    public Guid[] BeneficiaryMemberIds { get; set; } = Array.Empty<Guid>();
-    public DateTime InsertedAt { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public Guid Id { get; init; }
+    public Guid ListId { get; init; }
+    public Guid AuthorId { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public decimal Amount { get; init; }
+    public string Currency { get; init; } = "EUR";
+    public DateTime ExpenseDate { get; init; }
+    public string? Notes { get; init; }
+    public string? ReceiptUrl { get; init; }
+    public string Status { get; init; } = "draft";
+    public string PaymentMethod { get; init; } = "card";
+    public DateTime ServerTimestamp { get; init; }
+    public Guid? PaidByMemberId { get; init; }
+    public Guid[] BeneficiaryMemberIds { get; init; } = Array.Empty<Guid>();
+    public DateTime InsertedAt { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
 
     public Expense ToModel() =>
         new()
@@ -308,7 +312,7 @@ internal class ExpenseDto
             },
             ServerTimestamp = ServerTimestamp,
             PaidByMemberId = PaidByMemberId,
-            BeneficiaryMemberIds = BeneficiaryMemberIds?.ToList() ?? new List<Guid>(),
+            BeneficiaryMemberIds = BeneficiaryMemberIds.ToList(),
             InsertedAt = InsertedAt,
             CreatedAt = CreatedAt,
             UpdatedAt = UpdatedAt
@@ -317,12 +321,12 @@ internal class ExpenseDto
 
 internal class ExpenseValidationDto
 {
-    public Guid Id { get; set; }
-    public Guid ExpenseId { get; set; }
-    public Guid ValidatorId { get; set; }
-    public string Status { get; set; } = string.Empty;
-    public string? Notes { get; set; }
-    public DateTime ValidatedAt { get; set; }
+    public Guid Id { get; init; }
+    public Guid ExpenseId { get; init; }
+    public Guid ValidatorId { get; init; }
+    public string Status { get; init; } = string.Empty;
+    public string? Notes { get; init; }
+    public DateTime ValidatedAt { get; init; }
 
     public ExpenseValidation ToModel() =>
         new()
@@ -340,11 +344,11 @@ internal class ExpenseValidationDto
 
 internal class ExpenseSplitDto
 {
-    public Guid Id { get; set; }
-    public Guid ExpenseId { get; set; }
-    public Guid MemberId { get; set; }
-    public decimal Amount { get; set; }
-    public decimal Percentage { get; set; }
+    public Guid Id { get; init; }
+    public Guid ExpenseId { get; init; }
+    public Guid MemberId { get; init; }
+    public decimal Amount { get; init; }
+    public decimal Percentage { get; init; }
 
     public ExpenseSplit ToModel() =>
         new()

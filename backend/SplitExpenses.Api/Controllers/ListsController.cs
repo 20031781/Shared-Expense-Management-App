@@ -46,11 +46,7 @@ public class ListsController(IListRepository listRepository, INotificationServic
         list = await listRepository.CreateAsync(list);
 
         // Aggiungi membri
-        foreach (var member in request.Members)
-        {
-            if (string.IsNullOrWhiteSpace(member.Email))
-                continue;
-
+        foreach (var member in request.Members.Where(member => !string.IsNullOrWhiteSpace(member.Email)))
             await listRepository.AddMemberAsync(new ListMember
             {
                 ListId = list.Id,
@@ -60,7 +56,6 @@ public class ListsController(IListRepository listRepository, INotificationServic
                 IsValidator = member.IsValidator,
                 Status = MemberStatus.Pending
             });
-        }
 
         return CreatedAtAction(nameof(GetList), new { id = list.Id }, list);
     }
@@ -106,8 +101,8 @@ public class ListsController(IListRepository listRepository, INotificationServic
         if (list == null) return NotFound();
 
         var canManage = CanManageList(list, userId);
-        if (!canManage && !string.IsNullOrWhiteSpace(request.Name)) return Forbid();
-        if (request.AdminId.HasValue && !IsAppAdmin()) return Forbid();
+        if ((!canManage && !string.IsNullOrWhiteSpace(request.Name)) || (request.AdminId.HasValue && !IsAppAdmin()))
+            return Forbid();
 
         if (!string.IsNullOrWhiteSpace(request.Name))
             list.Name = request.Name.Trim();
@@ -306,10 +301,15 @@ public class ListsController(IListRepository listRepository, INotificationServic
 public record CreateListRequest
 {
     public string Name { get; init; } = string.Empty;
+
     public List<CreateMemberRequest> Members { get; init; } = [];
 }
 
-public record CreateMemberRequest(string Email, decimal? SplitPercentage, bool IsValidator, string? DisplayName = null);
+public abstract record CreateMemberRequest(
+    string Email,
+    decimal? SplitPercentage,
+    bool IsValidator,
+    string? DisplayName = null);
 
 public record AddMemberRequest
 {
