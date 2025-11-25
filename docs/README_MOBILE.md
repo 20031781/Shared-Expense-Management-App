@@ -70,3 +70,5 @@ mobile/
 - **Network error:** controlla l'IP nel `.env` e che il backend sia su `0.0.0.0:5000`.
 - **Accesso Google non visibile:** abilita il flusso solo tramite chiamate dirette all'API finché la UI non lo espone.
 - **Cache corrotta:** `rm -rf node_modules && npm install && expo start -c`.
+- **Errore JSX "Expected corresponding closing tag":** verifica la chiusura di tutti i componenti (es. `<View>`/`</View>`) nella
+  schermata che fallisce il bundling.

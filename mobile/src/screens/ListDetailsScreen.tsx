@@ -282,7 +282,8 @@ export const ListDetailsScreen: React.FC = () => {
                             <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
                     </View>
                 </View>
-            </Card>;
+            </View>
+        </Card>;
 
         if (!canEditExpense && !canDeleteExpense) {
             return <View key={expense.id} style={styles.expenseSwipeWrapper}>
