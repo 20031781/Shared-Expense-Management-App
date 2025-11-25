@@ -271,7 +271,8 @@ export const ListDetailsScreen: React.FC = () => {
                             </View>
                         </View>
                     </View>
-                    <View style={styles.expenseRight}>
+                </View>
+                <View style={styles.expenseRight}>
                         <Text style={styles.expenseAmount}>
                             {currency} {expense.amount.toFixed(2)}
                         </Text>
@@ -282,7 +283,8 @@ export const ListDetailsScreen: React.FC = () => {
                             <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
                     </View>
                 </View>
-            </Card>;
+            </View>
+        </Card>;
 
         if (!canEditExpense && !canDeleteExpense) {
             return <View key={expense.id} style={styles.expenseSwipeWrapper}>
