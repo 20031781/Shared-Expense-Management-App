@@ -29,7 +29,6 @@ import {
     VictoryAxis,
     VictoryBar,
     VictoryChart,
-    VictoryCursorContainer,
     VictoryPie,
     VictoryScatter,
     VictoryTheme,
@@ -463,28 +462,6 @@ export const AnalyticsScreen: React.FC = () => {
         setActiveTrendPoint(null);
     }, [memberTrendData]);
 
-    const resolveNearestTrendPoint = useCallback((x: number | null) => {
-        if (x === null || memberTrendData.length === 0) {
-            return null;
-        }
-        return memberTrendData.reduce<{point: { x: number; y: number } | null; distance: number}>((closest, point) => {
-            const distance = Math.abs(point.x - x);
-            if (!closest.point || distance < closest.distance) {
-                return {point, distance};
-            }
-            return closest;
-        }, {point: null, distance: Number.POSITIVE_INFINITY}).point;
-    }, [memberTrendData]);
-
-    const handleTrendCursorChange = useCallback((value: number | null) => {
-        setActiveTrendPoint(resolveNearestTrendPoint(value ?? null));
-    }, [resolveNearestTrendPoint]);
-
-    const trendCursorLabel = useCallback((value: number | null) => {
-        const point = resolveNearestTrendPoint(value);
-        return point ? `${currency} ${point.y.toFixed(2)}` : '';
-    }, [currency, resolveNearestTrendPoint]);
-
     useEffect(() => {
         chartFade.stopAnimation();
         chartFade.setValue(0.1);
@@ -830,13 +807,11 @@ export const AnalyticsScreen: React.FC = () => {
                                 height={260}
                                 width={chartWidth}
                                 domainPadding={{x: 16, y: 16}}
-                                containerComponent={<VictoryCursorContainer
-                                    cursorDimension="x"
+                                containerComponent={<VictoryVoronoiContainer
+                                    voronoiDimension="x"
                                     activateData
-                                    allowDrag
-                                    onCursorChange={handleTrendCursorChange}
-                                    cursorLabel={value => trendCursorLabel(typeof value === 'number' ? value : null)}
-                                    cursorLabelComponent={<VictoryTooltip
+                                    labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
+                                    labelComponent={<VictoryTooltip
                                         flyoutStyle={{fill: colors.surface, stroke: colors.border}}
                                         style={{fontSize: 12, fill: colors.text}}
                                         renderInPortal={false}
@@ -846,6 +821,8 @@ export const AnalyticsScreen: React.FC = () => {
                                         activateOnPressOut={false}
                                         activateOnTouchEnd={false}
                                     />}
+                                    onActivated={points => setActiveTrendPoint(points[0] ? {x: points[0].x as number, y: points[0].y as number} : null)}
+                                    onDeactivated={() => setActiveTrendPoint(null)}
                                 />}
                             >
                                 <VictoryAxis

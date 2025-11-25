@@ -4,9 +4,9 @@ Applicazione mobile React Native + Expo per gestire le spese condivise.
 
 ## Aggiornamenti rapidi
 
-- Migliorata la fluidità dello swipe tra spese consecutive con animazioni più stabili.
-- Allineati dimensioni e bordi delle azioni swipe sia nelle spese sia nelle liste per un aspetto coerente.
-- I grafici Insight ignorano ora record con date non valide evitando errori durante il rendering.
+- Le azioni di swipe nelle liste compaiono solo dopo uno scorrimento deciso e i pulsanti si adattano alla lunghezza del testo (es. "Rinomina").
+- Le spese non usano più gesture di swipe: le azioni di modifica/eliminazione sono pulsanti visibili accanto al titolo.
+- Il dettaglio spesa mostra anche il nome completo di chi ha creato l'elemento e gli Insights usano un container più robusto per evitare errori di rendering.
 
 ## Prerequisiti
 

@@ -225,14 +225,6 @@ export const ExpenseDetailsScreen: React.FC = () => {
 
     const statusKey = (currentExpense.status as string).toLowerCase();
     const statusLabel = t(`expenses.status.${statusKey}`);
-    const payerName = currentExpense.paidByMember?.displayName
-        || currentExpense.paidByMember?.user?.fullName
-        || members.find(m => m.id === currentExpense.paidByMemberId)?.displayName
-        || currentExpense.paidByMember?.email
-        || t('members.unknown');
-
-    const normalizedPaymentMethod = (currentExpense.paymentMethod || ExpensePaymentMethod.Other).toString().toLowerCase();
-    const paymentLabel = t(`expenses.paymentMethods.${normalizedPaymentMethod}`);
     const getMemberLabel = (member?: ListMember | null) => {
         if (!member) return t('members.unknown');
         return member.displayName && member.displayName.trim()
@@ -240,6 +232,16 @@ export const ExpenseDetailsScreen: React.FC = () => {
             || member.email
             || t('members.unknown');
     };
+    const payerMember = currentExpense.paidByMember
+        || members.find(m => m.id === currentExpense.paidByMemberId)
+        || null;
+    const payerName = getMemberLabel(payerMember);
+
+    const creatorName = currentExpense.author?.fullName
+        || getMemberLabel(members.find(member => member.userId === currentExpense.authorId) || null);
+
+    const normalizedPaymentMethod = (currentExpense.paymentMethod || ExpensePaymentMethod.Other).toString().toLowerCase();
+    const paymentLabel = t(`expenses.paymentMethods.${normalizedPaymentMethod}`);
     const beneficiaryMembers = (currentExpense.beneficiaryMemberIds ?? [])
         .map(id => members.find(member => member.id === id)
             || currentExpense.splits?.find(split => split.memberId === id)?.member
@@ -268,6 +270,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const canDelete = canEdit;
 
     const infoItems = [
+        {label: t('expenses.createdByLabel'), value: creatorName},
         {label: t('expenses.paymentMethodLabel'), value: paymentLabel},
         {label: t('expenses.beneficiariesLabel'), value: beneficiaryLabel},
         {label: t('expenses.spentOn', {date: new Date(currentExpense.expenseDate).toLocaleDateString()}), value: ''},
