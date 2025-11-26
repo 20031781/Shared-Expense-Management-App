@@ -70,3 +70,6 @@ mobile/
 - Card spese ripristinate con layout più descrittivo (importo in evidenza, pagatore, metodo e beneficiari).
 - Lista spese allineata al design precedente: swipe laterali compatti, badge di stato a destra e tag metodi di pagamento/beneficiari sotto il titolo.
 - Resilienza Insights migliorata: i grafici ignorano dati non validi e non mostrano più errori di render nella vista lista.
+- Grafico a barre Insights: il tooltip resta visibile finché si tiene premuta la barra selezionata.
+- Grafico trend Insights: highlight puntuale con linea di riferimento e marker sull'esatto punto toccato.
+- Schermata dettagli lista: la voce "Pagata da <nome>" ora usa il colore verde di successo per risaltare il pagatore.

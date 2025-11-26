@@ -683,7 +683,7 @@ const createStyles = (colors: AppColors) =>
         },
         expensePayer: {
             fontSize: 12,
-            color: colors.secondaryText,
+            color: colors.success,
             fontWeight: '600',
         },
         expenseTags: {
