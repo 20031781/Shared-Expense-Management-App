@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
     ActivityIndicator,
-    Animated,
     Linking,
     RefreshControl,
     ScrollView,
@@ -76,7 +75,15 @@ export const ListDetailsScreen: React.FC = () => {
         expenseIds: orderedExpenseIds,
     }), [navigation, listId, orderedExpenseIds]);
 
+    const closeExpenseSwipe = useCallback((id: string) => {
+        const ref = expenseSwipeRefs.current[id];
+        if (ref) {
+            ref.close();
+        }
+    }, []);
+
     const handleEditExpense = (expense: Expense) => {
+        closeExpenseSwipe(expense.id);
         navigation.navigate('CreateExpense', {listId, expenseId: expense.id});
     };
 
@@ -174,6 +181,7 @@ export const ListDetailsScreen: React.FC = () => {
     };
 
     const handleDeleteExpense = (expense: Expense) => {
+        closeExpenseSwipe(expense.id);
         showDialog({
             title: t('expenses.deleteTitle'),
             message: t('expenses.deleteBody', {title: expense.title}),
@@ -194,117 +202,6 @@ export const ListDetailsScreen: React.FC = () => {
         const beneficiaryLabel = resolveBeneficiariesLabel(expense);
         const canEditExpense = expense.authorId === user?.id || isAdmin;
         const canDeleteExpense = canEditExpense;
-        const renderEditAction = (progress: Animated.AnimatedInterpolation<string | number>, dragX: Animated.AnimatedInterpolation<string | number>) => {
-            if (!canEditExpense) return null;
-            const opacity = progress.interpolate({
-                inputRange: [0.15, 0.45],
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-            });
-            const translateX = dragX.interpolate({
-                inputRange: [0, 60, 140],
-                outputRange: [-30, 0, 10],
-                extrapolate: 'clamp',
-            });
-            return <Animated.View style={[styles.swipeActionContainer, {opacity, transform: [{translateX}]}]}>
-                <TouchableOpacity
-                    style={[styles.expenseAction, styles.editAction]}
-                    onPress={() => handleEditExpense(expense)}
-                >
-                    <Ionicons name="create-outline" size={20} color={colors.accentText}/>
-                    <Text style={styles.expenseActionText}>{t('expenses.editTitle')}</Text>
-                </TouchableOpacity>
-            </Animated.View>;
-        };
-
-        const renderDeleteAction = (progress: Animated.AnimatedInterpolation<string | number>, dragX: Animated.AnimatedInterpolation<string | number>) => {
-            if (!canDeleteExpense) return null;
-            const opacity = progress.interpolate({
-                inputRange: [0.15, 0.45],
-                outputRange: [0, 1],
-                extrapolate: 'clamp',
-            });
-            const translateX = dragX.interpolate({
-                inputRange: [-140, -60, 0],
-                outputRange: [10, 0, -30],
-                extrapolate: 'clamp',
-            });
-            return <Animated.View style={[styles.swipeActionContainer, {opacity, transform: [{translateX}]}]}>
-                <TouchableOpacity
-                    style={[styles.expenseAction, styles.deleteAction]}
-                    onPress={() => handleDeleteExpense(expense)}
-                    disabled={deletingId === expense.id}
-                >
-                    {deletingId === expense.id
-                        ? <ActivityIndicator size="small" color={colors.accentText}/>
-                        : <Ionicons name="trash" size={20} color={colors.accentText}/>
-                    }
-                    <Text style={styles.expenseActionText}>{t('expenses.deleteAction')}</Text>
-                </TouchableOpacity>
-            </Animated.View>;
-        };
-        const expenseCard = (
-            <Card
-                onPress={() => handleExpensePress(expense)}
-                style={[
-                    styles.expenseCard,
-                    awaitingValidation && styles.pendingExpenseCard,
-                    styles[`statusAccent${statusKey}` as keyof typeof styles] ?? styles.statusAccentDefault,
-                ]}
-            >
-                <View style={styles.expenseItem}>
-                    <View style={styles.expenseInfo}>
-                        <View style={styles.expenseHeader}>
-                            <View style={styles.expenseTitleBlock}>
-                                <Text style={styles.expenseTitle} numberOfLines={1}>{expense.title}</Text>
-                                <Text style={styles.expenseMeta}>
-                                    {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
-                                </Text>
-                                <Text style={styles.expenseMeta}>
-                                    {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
-                                </Text>
-                            </View>
-                            <View style={styles.expenseRight}>
-                                <Text style={styles.expenseAmount}>
-                                    {currency} {expense.amount.toFixed(2)}
-                                </Text>
-                                <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
-                                    <Text style={styles.statusText}>{statusLabel}</Text>
-                                </View>
-                            </View>
-                        </View>
-
-                        <View style={styles.expenseMetaRow}>
-                            {payer && <View style={styles.expenseTag}>
-                                <Ionicons name="person-circle-outline" size={16} color={colors.secondaryText}/>
-                                <Text style={styles.expenseTagText} numberOfLines={1}>
-                                    {t('expenses.paidBy', {name: getMemberLabel(payer)})}
-                                </Text>
-                            </View>}
-                            <View style={styles.expenseTag}>
-                                <Ionicons name="card-outline" size={16} color={colors.secondaryText}/>
-                                <Text style={styles.expenseTagText}>{paymentLabel}</Text>
-                            </View>
-                            <View style={styles.expenseTag}>
-                                <Ionicons name="people-outline" size={16} color={colors.secondaryText}/>
-                                <Text style={styles.expenseTagText} numberOfLines={1}>{beneficiaryLabel}</Text>
-                            </View>
-                        </View>
-
-                        {awaitingValidation && <View style={styles.expenseHelperRow}>
-                            <Ionicons name="shield-outline" size={16} color={colors.warning}/>
-                            <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>
-                        </View>}
-                    </View>
-                </View>
-            </Card>
-        );
-
-        if (!canEditExpense && !canDeleteExpense) {
-            return <View key={expense.id} style={styles.expenseSwipeWrapper}>
-                {expenseCard}
-            </View>;
-        }
 
         return <View key={expense.id} style={styles.expenseSwipeWrapper}>
             <Swipeable
@@ -315,11 +212,7 @@ export const ListDetailsScreen: React.FC = () => {
                         delete expenseSwipeRefs.current[expense.id];
                     }
                 }}
-                overshootLeft={false}
                 overshootRight={false}
-                friction={2.2}
-                leftThreshold={52}
-                rightThreshold={52}
                 onSwipeableOpen={() => {
                     if (openExpenseSwipeId.current && openExpenseSwipeId.current !== expense.id) {
                         expenseSwipeRefs.current[openExpenseSwipeId.current]?.close();
@@ -331,14 +224,65 @@ export const ListDetailsScreen: React.FC = () => {
                         openExpenseSwipeId.current = null;
                     }
                 }}
-                renderLeftActions={renderEditAction}
-                renderRightActions={renderDeleteAction}
+                renderLeftActions={canEditExpense ? () => <TouchableOpacity
+                    style={styles.editAction}
+                    onPress={() => handleEditExpense(expense)}
+                >
+                    <Ionicons name="create-outline" size={20} color={colors.accentText}/>
+                    <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
+                </TouchableOpacity> : undefined}
+                renderRightActions={canDeleteExpense ? () => <TouchableOpacity
+                    style={styles.deleteAction}
+                    onPress={() => handleDeleteExpense(expense)}
+                    disabled={deletingId === expense.id}
+                >
+                    {deletingId === expense.id ? <ActivityIndicator color={colors.accentText}/> : <>
+                        <Ionicons name="trash" size={20} color={colors.accentText}/>
+                        <Text style={styles.deleteActionText}>{t('expenses.deleteAction')}</Text>
+                    </>}
+                </TouchableOpacity> : undefined}
             >
-                {expenseCard}
+                <Card
+                    onPress={() => handleExpensePress(expense)}
+                    style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
+                >
+                    <View style={styles.expenseItem}>
+                        <View style={styles.expenseInfo}>
+                            <Text style={styles.expenseTitle}>{expense.title}</Text>
+                            <Text style={styles.expenseMeta}>
+                                {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
+                            </Text>
+                            <Text style={styles.expenseMeta}>
+                                {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
+                            </Text>
+                            {payer && <Text
+                                style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>}
+                            <View style={styles.expenseTags}>
+                                <View style={styles.expenseTag}>
+                                    <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
+                                    <Text style={styles.expenseTagText}>{paymentLabel}</Text>
+                                </View>
+                                <View style={styles.expenseTag}>
+                                    <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
+                                    <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.expenseRight}>
+                            <Text style={styles.expenseAmount}>
+                                {currency} {expense.amount.toFixed(2)}
+                            </Text>
+                            <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
+                                <Text style={styles.statusText}>{statusLabel}</Text>
+                            </View>
+                            {awaitingValidation &&
+                                <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
+                        </View>
+                    </View>
+                </Card>
             </Swipeable>
         </View>;
     };
-
     const renderMember = (member: ListMember) => {
         const normalizedStatus = (typeof member.status === 'string'
             ? member.status.toLowerCase()
@@ -698,56 +642,55 @@ const createStyles = (colors: AppColors) =>
             flex: 1,
             gap: 4,
         },
-        expenseHeader: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'flex-start',
-            gap: 8,
-        },
-        expenseTitleBlock: {
-            flex: 1,
-            gap: 2,
-        },
         expenseTitle: {
             fontSize: 16,
             fontWeight: '600',
             color: colors.text,
         },
-        swipeActionContainer: {
-            height: '100%',
-            justifyContent: 'center',
-            paddingHorizontal: 4,
-        },
-        expenseAction: {
+        editAction: {
+            width: 90,
+            marginVertical: 8,
+            backgroundColor: colors.accent,
             justifyContent: 'center',
             alignItems: 'center',
-            flexDirection: 'row',
-            gap: 8,
-            minWidth: 120,
-            height: '88%',
-            borderRadius: 14,
-            paddingHorizontal: 16,
-            alignSelf: 'center',
-        },
-        editAction: {
-            backgroundColor: colors.accent,
+            borderRadius: 12,
+            flexDirection: 'column',
+            gap: 4,
         },
         deleteAction: {
+            width: 90,
+            marginVertical: 8,
             backgroundColor: colors.danger,
+            justifyContent: 'center',
+            alignItems: 'center',
+            borderRadius: 12,
+            flexDirection: 'column',
+            gap: 4,
         },
-        expenseActionText: {
+        deleteActionText: {
             color: colors.accentText,
-            fontWeight: '700',
+            fontSize: 12,
+            fontWeight: '600',
+        },
+        editActionText: {
+            color: colors.accentText,
+            fontSize: 12,
+            fontWeight: '600',
         },
         expenseMeta: {
             fontSize: 12,
             color: colors.secondaryText,
         },
-        expenseMetaRow: {
+        expensePayer: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            fontWeight: '600',
+        },
+        expenseTags: {
             flexDirection: 'row',
             flexWrap: 'wrap',
             gap: 6,
-            marginTop: 10,
+            marginTop: 6,
         },
         expenseTag: {
             flexDirection: 'row',
@@ -774,15 +717,6 @@ const createStyles = (colors: AppColors) =>
             fontWeight: '700',
             color: colors.text,
         },
-        expenseHelperRow: {
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 8,
-            padding: 8,
-            borderRadius: 10,
-            backgroundColor: colors.pendingSurface,
-        },
         statusBadge: {
             paddingHorizontal: 10,
             paddingVertical: 4,
@@ -799,26 +733,6 @@ const createStyles = (colors: AppColors) =>
         },
         statusrejected: {
             backgroundColor: colors.dangerBackground,
-        },
-        statusAccentDefault: {
-            borderLeftWidth: 4,
-            borderLeftColor: colors.surfaceSecondary,
-        },
-        statusAccentdraft: {
-            borderLeftWidth: 4,
-            borderLeftColor: colors.surfaceSecondary,
-        },
-        statusAccentsubmitted: {
-            borderLeftWidth: 4,
-            borderLeftColor: colors.warning,
-        },
-        statusAccentvalidated: {
-            borderLeftWidth: 4,
-            borderLeftColor: colors.success,
-        },
-        statusAccentrejected: {
-            borderLeftWidth: 4,
-            borderLeftColor: colors.danger,
         },
         statusText: {
             fontSize: 12,
