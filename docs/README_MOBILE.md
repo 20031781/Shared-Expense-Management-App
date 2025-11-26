@@ -64,3 +64,8 @@ mobile/
 - Tab Insights con grafici Victory (barre, torta, trend) e filtri per lista/membro/periodo.
 - Rimborsi ottimizzati e riepiloghi per pagatore/debitore, con preferenze notifiche granulari.
 - Localizzazione IT/EN, tema chiaro/scuro e messaggi di errore coerenti offline/online.
+
+## Aggiornamenti recenti
+
+- Card spese ripristinate con layout più descrittivo (importo in evidenza, pagatore, metodo e beneficiari).
+- Resilienza Insights migliorata: i grafici ignorano dati non validi e non mostrano più errori di render nella vista lista.

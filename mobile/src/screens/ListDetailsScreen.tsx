@@ -243,45 +243,58 @@ export const ListDetailsScreen: React.FC = () => {
                 </TouchableOpacity>
             </Animated.View>;
         };
-
         const expenseCard = (
             <Card
                 onPress={() => handleExpensePress(expense)}
-                style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
+                style={[
+                    styles.expenseCard,
+                    awaitingValidation && styles.pendingExpenseCard,
+                    styles[`statusAccent${statusKey}` as keyof typeof styles] ?? styles.statusAccentDefault,
+                ]}
             >
                 <View style={styles.expenseItem}>
                     <View style={styles.expenseInfo}>
                         <View style={styles.expenseHeader}>
-                            <Text style={styles.expenseTitle}>{expense.title}</Text>
-                            <Text style={styles.expenseMeta}>
-                                {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
-                            </Text>
-                            <Text style={styles.expenseMeta}>
-                                {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
-                            </Text>
-                            {payer && <Text
-                                style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>}
-                            <View style={styles.expenseTags}>
-                                <View style={styles.expenseTag}>
-                                    <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
-                                    <Text style={styles.expenseTagText}>{paymentLabel}</Text>
-                                </View>
-                                <View style={styles.expenseTag}>
-                                    <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
-                                    <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
+                            <View style={styles.expenseTitleBlock}>
+                                <Text style={styles.expenseTitle} numberOfLines={1}>{expense.title}</Text>
+                                <Text style={styles.expenseMeta}>
+                                    {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
+                                </Text>
+                                <Text style={styles.expenseMeta}>
+                                    {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
+                                </Text>
+                            </View>
+                            <View style={styles.expenseRight}>
+                                <Text style={styles.expenseAmount}>
+                                    {currency} {expense.amount.toFixed(2)}
+                                </Text>
+                                <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
+                                    <Text style={styles.statusText}>{statusLabel}</Text>
                                 </View>
                             </View>
                         </View>
-                    </View>
-                    <View style={styles.expenseRight}>
-                        <Text style={styles.expenseAmount}>
-                            {currency} {expense.amount.toFixed(2)}
-                        </Text>
-                        <View style={[styles.statusBadge, styles[`status${statusKey}`]]}>
-                            <Text style={styles.statusText}>{statusLabel}</Text>
+
+                        <View style={styles.expenseMetaRow}>
+                            {payer && <View style={styles.expenseTag}>
+                                <Ionicons name="person-circle-outline" size={16} color={colors.secondaryText}/>
+                                <Text style={styles.expenseTagText} numberOfLines={1}>
+                                    {t('expenses.paidBy', {name: getMemberLabel(payer)})}
+                                </Text>
+                            </View>}
+                            <View style={styles.expenseTag}>
+                                <Ionicons name="card-outline" size={16} color={colors.secondaryText}/>
+                                <Text style={styles.expenseTagText}>{paymentLabel}</Text>
+                            </View>
+                            <View style={styles.expenseTag}>
+                                <Ionicons name="people-outline" size={16} color={colors.secondaryText}/>
+                                <Text style={styles.expenseTagText} numberOfLines={1}>{beneficiaryLabel}</Text>
+                            </View>
                         </View>
-                        {awaitingValidation &&
-                            <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
+
+                        {awaitingValidation && <View style={styles.expenseHelperRow}>
+                            <Ionicons name="shield-outline" size={16} color={colors.warning}/>
+                            <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>
+                        </View>}
                     </View>
                 </View>
             </Card>
@@ -688,8 +701,12 @@ const createStyles = (colors: AppColors) =>
         expenseHeader: {
             flexDirection: 'row',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: 'flex-start',
             gap: 8,
+        },
+        expenseTitleBlock: {
+            flex: 1,
+            gap: 2,
         },
         expenseTitle: {
             fontSize: 16,
@@ -726,11 +743,11 @@ const createStyles = (colors: AppColors) =>
             fontSize: 12,
             color: colors.secondaryText,
         },
-        expenseTags: {
+        expenseMetaRow: {
             flexDirection: 'row',
             flexWrap: 'wrap',
             gap: 6,
-            marginTop: 6,
+            marginTop: 10,
         },
         expenseTag: {
             flexDirection: 'row',
@@ -748,11 +765,6 @@ const createStyles = (colors: AppColors) =>
             color: colors.secondaryText,
             flexShrink: 1,
         },
-        expensePayer: {
-            fontSize: 12,
-            color: colors.success,
-            fontWeight: '600',
-        },
         expenseRight: {
             alignItems: 'flex-end',
             gap: 8,
@@ -761,6 +773,15 @@ const createStyles = (colors: AppColors) =>
             fontSize: 18,
             fontWeight: '700',
             color: colors.text,
+        },
+        expenseHelperRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 8,
+            padding: 8,
+            borderRadius: 10,
+            backgroundColor: colors.pendingSurface,
         },
         statusBadge: {
             paddingHorizontal: 10,
@@ -778,6 +799,26 @@ const createStyles = (colors: AppColors) =>
         },
         statusrejected: {
             backgroundColor: colors.dangerBackground,
+        },
+        statusAccentDefault: {
+            borderLeftWidth: 4,
+            borderLeftColor: colors.surfaceSecondary,
+        },
+        statusAccentdraft: {
+            borderLeftWidth: 4,
+            borderLeftColor: colors.surfaceSecondary,
+        },
+        statusAccentsubmitted: {
+            borderLeftWidth: 4,
+            borderLeftColor: colors.warning,
+        },
+        statusAccentvalidated: {
+            borderLeftWidth: 4,
+            borderLeftColor: colors.success,
+        },
+        statusAccentrejected: {
+            borderLeftWidth: 4,
+            borderLeftColor: colors.danger,
         },
         statusText: {
             fontSize: 12,
