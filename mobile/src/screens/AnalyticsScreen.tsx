@@ -29,6 +29,7 @@ import {
     VictoryAxis,
     VictoryBar,
     VictoryChart,
+    VictoryLine,
     VictoryPie,
     VictoryScatter,
     VictoryTheme,
@@ -257,6 +258,7 @@ export const AnalyticsScreen: React.FC = () => {
             activateOnTouchStart
             activateOnPressOut={false}
             activateOnTouchEnd={false}
+            active
         />
     ), [colors]);
 
@@ -266,20 +268,16 @@ export const AnalyticsScreen: React.FC = () => {
             onPressIn: (_evt, props) => {
                 const nextIndex = typeof props.index === 'number' ? props.index : null;
                 setActiveBarIndex(nextIndex);
-                return [{target: 'labels', mutation: () => ({active: true})}];
             },
             onPressOut: () => {
                 setActiveBarIndex(null);
-                return [{target: 'labels', mutation: () => ({active: false})}];
             },
             onTouchStart: (_evt, props) => {
                 const nextIndex = typeof props.index === 'number' ? props.index : null;
                 setActiveBarIndex(nextIndex);
-                return [{target: 'labels', mutation: () => ({active: true})}];
             },
             onTouchEnd: () => {
                 setActiveBarIndex(null);
-                return [{target: 'labels', mutation: () => ({active: false})}];
             },
         },
     }]), []);
@@ -838,7 +836,7 @@ export const AnalyticsScreen: React.FC = () => {
                                         data={memberChartData}
                                         horizontal
                                         barWidth={22}
-                                        labels={({datum}) => datum.label}
+                                        labels={({datum, index}) => activeBarIndex === index ? datum.label : undefined}
                                         labelComponent={barTooltip}
                                         events={barEvents}
                                         cornerRadius={{top: 6, bottom: 6}}
@@ -925,10 +923,18 @@ export const AnalyticsScreen: React.FC = () => {
                                             },
                                         }}
                                     />
+                                    {activeTrendPoint && <VictoryLine
+                                        data={[
+                                            {x: activeTrendPoint.x, y: 0},
+                                            {x: activeTrendPoint.x, y: Math.max(memberTrendMax, trendAxisTicks[trendAxisTicks.length - 1] ?? 0)},
+                                        ]}
+                                        style={{data: {stroke: colors.accent, strokeWidth: 1.5, strokeDasharray: '5,4'}}}
+                                        animate={chartSeriesAnimation}
+                                    />}
                                     <VictoryScatter
                                         data={activeTrendPoint ? [activeTrendPoint] : []}
-                                        size={7}
-                                        symbol="plus"
+                                        size={8}
+                                        symbol="circle"
                                         style={{
                                             data: {
                                                 fill: colors.accent,
