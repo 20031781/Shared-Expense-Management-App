@@ -69,3 +69,5 @@ mobile/
 
 - Card spese ripristinate con layout più descrittivo (importo in evidenza, pagatore, metodo e beneficiari).
 - Resilienza Insights migliorata: i grafici ignorano dati non validi e non mostrano più errori di render nella vista lista.
+- Grafico a barre degli Insights stabilizzato: tooltip e evidenziazione ora usano eventi sui singoli segmenti evitando eccezioni di
+  render.

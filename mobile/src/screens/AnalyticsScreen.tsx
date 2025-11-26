@@ -247,6 +247,43 @@ export const AnalyticsScreen: React.FC = () => {
         easing: 'quadInOut',
     }), [chartAnimationDuration]);
 
+    const barTooltip = useMemo(() => (
+        <VictoryTooltip
+            flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+            style={{fontSize: 12, fill: colors.text}}
+            constrainToVisibleArea
+            renderInPortal={false}
+            activateOnPressIn
+            activateOnTouchStart
+            activateOnPressOut={false}
+            activateOnTouchEnd={false}
+        />
+    ), [colors]);
+
+    const barEvents = useMemo(() => ([{
+        target: 'data',
+        eventHandlers: {
+            onPressIn: (_evt, props) => {
+                const nextIndex = typeof props.index === 'number' ? props.index : null;
+                setActiveBarIndex(nextIndex);
+                return [{target: 'labels', mutation: () => ({active: true})}];
+            },
+            onPressOut: () => {
+                setActiveBarIndex(null);
+                return [{target: 'labels', mutation: () => ({active: false})}];
+            },
+            onTouchStart: (_evt, props) => {
+                const nextIndex = typeof props.index === 'number' ? props.index : null;
+                setActiveBarIndex(nextIndex);
+                return [{target: 'labels', mutation: () => ({active: true})}];
+            },
+            onTouchEnd: () => {
+                setActiveBarIndex(null);
+                return [{target: 'labels', mutation: () => ({active: false})}];
+            },
+        },
+    }]), []);
+
     const selectedList = useMemo(() => lists.find(list => list.id === selectedListId), [lists, selectedListId]);
 
     const handleSelectListId = useCallback((listId: string) => {
@@ -776,23 +813,6 @@ export const AnalyticsScreen: React.FC = () => {
                                     domainPadding={{x: [12, 36], y: 8}}
                                     padding={{top: 16, bottom: 48, left: 88, right: 32}}
                                     height={260}
-                                    containerComponent={<VictoryVoronoiContainer
-                                        voronoiDimension="y"
-                                        activateData
-                                        labels={({datum}) => datum.label}
-                                        labelComponent={<VictoryTooltip
-                                            flyoutStyle={{fill: colors.surface, stroke: colors.border}}
-                                            style={{fontSize: 12, fill: colors.text}}
-                                            constrainToVisibleArea
-                                            renderInPortal={false}
-                                            activateOnPressIn
-                                            activateOnTouchStart
-                                            activateOnPressOut={false}
-                                            activateOnTouchEnd={false}
-                                        />}
-                                        onActivated={points => setActiveBarIndex(points[0]?.index ?? null)}
-                                        onDeactivated={() => setActiveBarIndex(null)}
-                                    />}
                                 >
                                     <VictoryAxis
                                         fixLabelOverlap
@@ -819,6 +839,8 @@ export const AnalyticsScreen: React.FC = () => {
                                         horizontal
                                         barWidth={22}
                                         labels={({datum}) => datum.label}
+                                        labelComponent={barTooltip}
+                                        events={barEvents}
                                         cornerRadius={{top: 6, bottom: 6}}
                                         style={{
                                             data: {
