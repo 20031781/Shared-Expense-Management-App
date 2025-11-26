@@ -71,4 +71,4 @@ mobile/
 - **Accesso Google non visibile:** abilita il flusso solo tramite chiamate dirette all'API finché la UI non lo espone.
 - **Cache corrotta:** `rm -rf node_modules && npm install && expo start -c`.
 - **Errore JSX "Expected corresponding closing tag":** verifica la chiusura di tutti i componenti (es. `<View>`/`</View>`) nella
-  schermata che fallisce il bundling.
+  schermata che fallisce il bundling. La `ListDetailsScreen` ora ha il markup del `Card` bilanciato per evitare blocchi di Metro.

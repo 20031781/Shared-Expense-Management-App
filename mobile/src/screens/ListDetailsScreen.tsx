@@ -244,35 +244,36 @@ export const ListDetailsScreen: React.FC = () => {
             </Animated.View>;
         };
 
-        const expenseCard = <Card
-            onPress={() => handleExpensePress(expense)}
-            style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
-        >
-            <View style={styles.expenseItem}>
-                <View style={styles.expenseInfo}>
-                    <View style={styles.expenseHeader}>
-                        <Text style={styles.expenseTitle}>{expense.title}</Text>
-                        <Text style={styles.expenseMeta}>
-                            {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
-                        </Text>
-                        <Text style={styles.expenseMeta}>
-                            {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
-                        </Text>
-                        {payer && <Text
-                            style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>}
-                        <View style={styles.expenseTags}>
-                            <View style={styles.expenseTag}>
-                                <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
-                                <Text style={styles.expenseTagText}>{paymentLabel}</Text>
-                            </View>
-                            <View style={styles.expenseTag}>
-                                <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
-                                <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
+        const expenseCard = (
+            <Card
+                onPress={() => handleExpensePress(expense)}
+                style={[styles.expenseCard, awaitingValidation && styles.pendingExpenseCard]}
+            >
+                <View style={styles.expenseItem}>
+                    <View style={styles.expenseInfo}>
+                        <View style={styles.expenseHeader}>
+                            <Text style={styles.expenseTitle}>{expense.title}</Text>
+                            <Text style={styles.expenseMeta}>
+                                {t('expenses.spentOn', {date: new Date(expense.expenseDate).toLocaleDateString()})}
+                            </Text>
+                            <Text style={styles.expenseMeta}>
+                                {t('expenses.insertedOn', {date: new Date(expense.insertedAt || expense.createdAt).toLocaleString()})}
+                            </Text>
+                            {payer && <Text
+                                style={styles.expensePayer}>{t('expenses.paidBy', {name: getMemberLabel(payer)})}</Text>}
+                            <View style={styles.expenseTags}>
+                                <View style={styles.expenseTag}>
+                                    <Ionicons name="card-outline" size={14} color={colors.secondaryText}/>
+                                    <Text style={styles.expenseTagText}>{paymentLabel}</Text>
+                                </View>
+                                <View style={styles.expenseTag}>
+                                    <Ionicons name="people-outline" size={14} color={colors.secondaryText}/>
+                                    <Text style={styles.expenseTagText}>{beneficiaryLabel}</Text>
+                                </View>
                             </View>
                         </View>
                     </View>
-                </View>
-                <View style={styles.expenseRight}>
+                    <View style={styles.expenseRight}>
                         <Text style={styles.expenseAmount}>
                             {currency} {expense.amount.toFixed(2)}
                         </Text>
@@ -283,8 +284,8 @@ export const ListDetailsScreen: React.FC = () => {
                             <Text style={styles.pendingStatusText}>{t('expenses.pendingValidation')}</Text>}
                     </View>
                 </View>
-            </View>
-        </Card>;
+            </Card>
+        );
 
         if (!canEditExpense && !canDeleteExpense) {
             return <View key={expense.id} style={styles.expenseSwipeWrapper}>
