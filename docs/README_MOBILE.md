@@ -72,3 +72,5 @@ mobile/
 - **Cache corrotta:** `rm -rf node_modules && npm install && expo start -c`.
 - **Errore JSX "Expected corresponding closing tag":** verifica la chiusura di tutti i componenti (es. `<View>`/`</View>`) nella
   schermata che fallisce il bundling.
+- **Grafici Insights bloccati:** la schermata ora mostra un messaggio di fallback se Victory non riesce a renderizzare;
+  ricarica (pull-to-refresh) per forzare il recupero dei dati e la nuova generazione dei grafici.

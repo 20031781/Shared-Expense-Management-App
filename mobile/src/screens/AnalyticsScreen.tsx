@@ -38,6 +38,25 @@ import {
 import {getFriendlyErrorMessage} from '@/lib/errors';
 import {useSettingsStore, ChartAnimationSpeed} from '@/store/settings.store';
 
+class ChartBoundary extends React.PureComponent<{ fallback: React.ReactNode }, { hasError: boolean }> {
+    state = {hasError: false};
+
+    static getDerivedStateFromError(): { hasError: boolean } {
+        return {hasError: true};
+    }
+
+    componentDidCatch(error: unknown) {
+        console.error('[Analytics] chart render failed', error);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return this.props.fallback as React.ReactNode;
+        }
+        return this.props.children as React.ReactNode;
+    }
+}
+
 const TIMEFRAME_OPTIONS = ['7', '30', '90', 'all', 'custom'] as const;
 type Timeframe = typeof TIMEFRAME_OPTIONS[number];
 type DateRangeInput = { from?: string; to?: string };
@@ -204,7 +223,7 @@ export const AnalyticsScreen: React.FC = () => {
         {key: 'trend', label: t('analytics.chartModeTrend')},
     ] as const, [t]);
 
-    const chartAnimationDuration = CHART_SPEED_DURATION[chartAnimationSpeed];
+    const chartAnimationDuration = CHART_SPEED_DURATION[chartAnimationSpeed] ?? CHART_SPEED_DURATION.medium;
     const chartContainerAnimation = useMemo(() => ({
         duration: chartAnimationDuration,
         easing: 'quadInOut',
@@ -221,6 +240,7 @@ export const AnalyticsScreen: React.FC = () => {
         setSelectedListId(current => current === listId ? current : listId);
         setListInsights({expenses: [], members: []});
         setListInsightsError(null);
+        setListInsightsLoading(listId !== ALL_LISTS_OPTION);
         setActiveBarIndex(null);
         setActiveTrendPoint(null);
         setIsListDropdownVisible(false);
@@ -294,6 +314,7 @@ export const AnalyticsScreen: React.FC = () => {
             }
             return;
         }
+        setListInsightsLoading(true);
         fetchListInsights(selectedListId, currentRange).catch(() => undefined);
     }, [selectedListId, shouldLoadInsights, currentRange, fetchListInsights, isCustomRangeMissing]);
 
@@ -726,169 +747,174 @@ export const AnalyticsScreen: React.FC = () => {
                                 </TouchableOpacity>;
                             })}
                         </View>
-                        <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}> 
-                            {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
-                                style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
-                                animate={chartContainerAnimation}
-                                theme={VictoryTheme.material}
-                                minDomain={{y: 0}}
-                                width={chartWidth}
-                                domainPadding={{x: [12, 36], y: 8}}
-                                padding={{top: 16, bottom: 48, left: 88, right: 32}}
-                                height={260}
-                                containerComponent={<VictoryVoronoiContainer
-                                    voronoiDimension="y"
-                                    activateData
-                                    labels={({datum}) => datum.label}
-                                    labelComponent={<VictoryTooltip
-                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
-                                        style={{fontSize: 12, fill: colors.text}}
-                                        constrainToVisibleArea
-                                        renderInPortal={false}
-                                        activateOnPressIn
-                                        activateOnTouchStart
-                                        activateOnPressOut={false}
-                                        activateOnTouchEnd={false}
+                        <ChartBoundary
+                            key={selectedListId}
+                            fallback={<Text style={styles.error}>{t('analytics.chartFallback')}</Text>}
+                        >
+                            <Animated.View style={[styles.chartCanvas, {opacity: chartFade}]}>
+                                {memberChartMode === 'bar' && (memberChartData.length === 0 ? <Text
+                                    style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryChart
+                                    animate={chartContainerAnimation}
+                                    theme={VictoryTheme.material}
+                                    minDomain={{y: 0}}
+                                    width={chartWidth}
+                                    domainPadding={{x: [12, 36], y: 8}}
+                                    padding={{top: 16, bottom: 48, left: 88, right: 32}}
+                                    height={260}
+                                    containerComponent={<VictoryVoronoiContainer
+                                        voronoiDimension="y"
+                                        activateData
+                                        labels={({datum}) => datum.label}
+                                        labelComponent={<VictoryTooltip
+                                            flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                            style={{fontSize: 12, fill: colors.text}}
+                                            constrainToVisibleArea
+                                            renderInPortal={false}
+                                            activateOnPressIn
+                                            activateOnTouchStart
+                                            activateOnPressOut={false}
+                                            activateOnTouchEnd={false}
+                                        />}
+                                        onActivated={points => setActiveBarIndex(points[0]?.index ?? null)}
+                                        onDeactivated={() => setActiveBarIndex(null)}
                                     />}
-                                    onActivated={points => setActiveBarIndex(points[0]?.index ?? null)}
-                                    onDeactivated={() => setActiveBarIndex(null)}
-                                />}
-                            >
-                                <VictoryAxis
-                                    fixLabelOverlap
-                                    style={{
-                                        axis: {stroke: colors.surfaceSecondary},
-                                        tickLabels: {fill: colors.secondaryText, fontSize: 12},
-                                        grid: {stroke: 'transparent'},
-                                    }}
-                                />
-                                <VictoryAxis
-                                    dependentAxis
-                                    fixLabelOverlap
-                                    tickValues={memberAxisTicks}
-                                    tickFormat={value => `${currency} ${value.toFixed(0)}`}
-                                    style={{
-                                        axis: {stroke: colors.surfaceSecondary},
-                                        tickLabels: {fill: colors.secondaryText, fontSize: 12},
-                                        grid: {stroke: colors.surfaceSecondary, opacity: 0.2},
-                                    }}
-                                />
-                                <VictoryBar
+                                >
+                                    <VictoryAxis
+                                        fixLabelOverlap
+                                        style={{
+                                            axis: {stroke: colors.surfaceSecondary},
+                                            tickLabels: {fill: colors.secondaryText, fontSize: 12},
+                                            grid: {stroke: 'transparent'},
+                                        }}
+                                    />
+                                    <VictoryAxis
+                                        dependentAxis
+                                        fixLabelOverlap
+                                        tickValues={memberAxisTicks}
+                                        tickFormat={value => `${currency} ${value.toFixed(0)}`}
+                                        style={{
+                                            axis: {stroke: colors.surfaceSecondary},
+                                            tickLabels: {fill: colors.secondaryText, fontSize: 12},
+                                            grid: {stroke: colors.surfaceSecondary, opacity: 0.2},
+                                        }}
+                                    />
+                                    <VictoryBar
+                                        animate={chartSeriesAnimation}
+                                        data={memberChartData}
+                                        horizontal
+                                        barWidth={22}
+                                        labels={({datum}) => datum.label}
+                                        cornerRadius={{top: 6, bottom: 6}}
+                                        style={{
+                                            data: {
+                                                fill: ({index}) => memberChartColors[index % memberChartColors.length],
+                                                stroke: colors.background,
+                                                strokeWidth: 1,
+                                                opacity: ({index}) => activeBarIndex === null || activeBarIndex === index ? 1 : 0.6,
+                                            },
+                                            labels: {fill: colors.text, fontSize: 12},
+                                        }}
+                                    />
+                                </VictoryChart>)}
+                                {memberChartMode === 'pie' && (memberPieData.length === 0 ? <Text
+                                    style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryPie
+                                    data={memberPieData}
+                                    colorScale={memberChartColors}
+                                    innerRadius={70}
+                                    padAngle={1.5}
+                                    height={260}
+                                    width={chartWidth}
                                     animate={chartSeriesAnimation}
-                                    data={memberChartData}
-                                    horizontal
-                                    barWidth={22}
-                                    labels={({datum}) => datum.label}
-                                    cornerRadius={{top: 6, bottom: 6}}
+                                    labels={({datum}) => `${datum.x}\n${currency} ${datum.y.toFixed(2)} (${datum.percentage}%)`}
                                     style={{
-                                        data: {
-                                            fill: ({index}) => memberChartColors[index % memberChartColors.length],
-                                            stroke: colors.background,
-                                            strokeWidth: 1,
-                                            opacity: ({index}) => activeBarIndex === null || activeBarIndex === index ? 1 : 0.6,
-                                        },
                                         labels: {fill: colors.text, fontSize: 12},
                                     }}
-                                />
-                            </VictoryChart>)}
-                            {memberChartMode === 'pie' && (memberPieData.length === 0 ? <Text
-                                style={styles.emptyText}>{t('analytics.memberChartEmpty')}</Text> : <VictoryPie
-                                data={memberPieData}
-                                colorScale={memberChartColors}
-                                innerRadius={70}
-                                padAngle={1.5}
-                                height={260}
-                                width={chartWidth}
-                                animate={chartSeriesAnimation}
-                                labels={({datum}) => `${datum.x}\n${currency} ${datum.y.toFixed(2)} (${datum.percentage}%)`}
-                                style={{
-                                    labels: {fill: colors.text, fontSize: 12},
-                                }}
-                            />)}
-                            {memberChartMode === 'trend' && (memberTrendData.length === 0 ? <Text
-                                style={styles.emptyText}>{t('analytics.memberTrendEmpty')}</Text> : <VictoryChart
-                                theme={VictoryTheme.material}
-                                animate={chartContainerAnimation}
-                                padding={{top: 16, bottom: 56, left: 56, right: 32}}
-                                height={260}
-                                width={chartWidth}
-                                domainPadding={{x: 16, y: 16}}
-                                containerComponent={<VictoryVoronoiContainer
-                                    voronoiDimension="x"
-                                    activateData
-                                    labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
-                                    labelComponent={<VictoryTooltip
-                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
-                                        style={{fontSize: 12, fill: colors.text}}
-                                        renderInPortal={false}
-                                        pointerLength={0}
-                                        activateOnPressIn={false}
-                                        activateOnTouchStart={false}
-                                        activateOnPressOut={false}
-                                        activateOnTouchEnd={false}
+                                />)}
+                                {memberChartMode === 'trend' && (memberTrendData.length === 0 ? <Text
+                                    style={styles.emptyText}>{t('analytics.memberTrendEmpty')}</Text> : <VictoryChart
+                                    theme={VictoryTheme.material}
+                                    animate={chartContainerAnimation}
+                                    padding={{top: 16, bottom: 56, left: 56, right: 32}}
+                                    height={260}
+                                    width={chartWidth}
+                                    domainPadding={{x: 16, y: 16}}
+                                    containerComponent={<VictoryVoronoiContainer
+                                        voronoiDimension="x"
+                                        activateData
+                                        labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
+                                        labelComponent={<VictoryTooltip
+                                            flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                            style={{fontSize: 12, fill: colors.text}}
+                                            renderInPortal={false}
+                                            pointerLength={0}
+                                            activateOnPressIn={false}
+                                            activateOnTouchStart={false}
+                                            activateOnPressOut={false}
+                                            activateOnTouchEnd={false}
+                                        />}
+                                        onActivated={points => setActiveTrendPoint(points[0] ? {x: points[0].x as number, y: points[0].y as number} : null)}
+                                        onDeactivated={() => setActiveTrendPoint(null)}
                                     />}
-                                    onActivated={points => setActiveTrendPoint(points[0] ? {x: points[0].x as number, y: points[0].y as number} : null)}
-                                    onDeactivated={() => setActiveTrendPoint(null)}
-                                />}
-                            >
-                                <VictoryAxis
-                                    fixLabelOverlap
-                                    tickCount={trendAxisTickCount}
-                                    tickFormat={value => trendTickFormatter.format(new Date(value))}
-                                    style={{
-                                        axis: {stroke: colors.surfaceSecondary},
-                                        tickLabels: {fill: colors.secondaryText, fontSize: 12, angle: -25, padding: 20},
-                                    }}
-                                />
-                                <VictoryAxis
-                                    dependentAxis
-                                    fixLabelOverlap
-                                    tickValues={trendAxisTicks}
-                                    tickFormat={value => `${currency} ${value.toFixed(0)}`}
-                                    style={{
-                                        axis: {stroke: colors.surfaceSecondary},
-                                        tickLabels: {fill: colors.secondaryText, fontSize: 12},
-                                        grid: {stroke: colors.surfaceSecondary, opacity: 0.2},
-                                    }}
-                                />
-                                <VictoryArea
-                                    animate={chartSeriesAnimation}
-                                    data={memberTrendData}
-                                    interpolation="monotoneX"
-                                    style={{
-                                        data: {
-                                            fill: colors.accentSoft,
-                                            stroke: colors.accent,
-                                            strokeWidth: 2,
-                                        },
-                                    }}
-                                />
-                                <VictoryScatter
-                                    data={activeTrendPoint ? [activeTrendPoint] : []}
-                                    size={7}
-                                    symbol="plus"
-                                    style={{
-                                        data: {
-                                            fill: colors.accent,
-                                            stroke: colors.background,
-                                            strokeWidth: 2,
-                                        },
-                                    }}
-                                    labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
-                                    labelComponent={<VictoryTooltip
-                                        flyoutStyle={{fill: colors.surface, stroke: colors.border}}
-                                        style={{fontSize: 12, fill: colors.text}}
-                                        renderInPortal={false}
-                                        pointerLength={0}
-                                        activateOnPressIn={false}
-                                        activateOnTouchStart={false}
-                                        activateOnPressOut={false}
-                                        activateOnTouchEnd={false}
-                                        active
-                                    />}
-                                />
-                            </VictoryChart>)}
-                        </Animated.View>
+                                >
+                                    <VictoryAxis
+                                        fixLabelOverlap
+                                        tickCount={trendAxisTickCount}
+                                        tickFormat={value => trendTickFormatter.format(new Date(value))}
+                                        style={{
+                                            axis: {stroke: colors.surfaceSecondary},
+                                            tickLabels: {fill: colors.secondaryText, fontSize: 12, angle: -25, padding: 20},
+                                        }}
+                                    />
+                                    <VictoryAxis
+                                        dependentAxis
+                                        fixLabelOverlap
+                                        tickValues={trendAxisTicks}
+                                        tickFormat={value => `${currency} ${value.toFixed(0)}`}
+                                        style={{
+                                            axis: {stroke: colors.surfaceSecondary},
+                                            tickLabels: {fill: colors.secondaryText, fontSize: 12},
+                                            grid: {stroke: colors.surfaceSecondary, opacity: 0.2},
+                                        }}
+                                    />
+                                    <VictoryArea
+                                        animate={chartSeriesAnimation}
+                                        data={memberTrendData}
+                                        interpolation="monotoneX"
+                                        style={{
+                                            data: {
+                                                fill: colors.accentSoft,
+                                                stroke: colors.accent,
+                                                strokeWidth: 2,
+                                            },
+                                        }}
+                                    />
+                                    <VictoryScatter
+                                        data={activeTrendPoint ? [activeTrendPoint] : []}
+                                        size={7}
+                                        symbol="plus"
+                                        style={{
+                                            data: {
+                                                fill: colors.accent,
+                                                stroke: colors.background,
+                                                strokeWidth: 2,
+                                            },
+                                        }}
+                                        labels={({datum}) => `${currency} ${datum.y.toFixed(2)}`}
+                                        labelComponent={<VictoryTooltip
+                                            flyoutStyle={{fill: colors.surface, stroke: colors.border}}
+                                            style={{fontSize: 12, fill: colors.text}}
+                                            renderInPortal={false}
+                                            pointerLength={0}
+                                            activateOnPressIn={false}
+                                            activateOnTouchStart={false}
+                                            activateOnPressOut={false}
+                                            activateOnTouchEnd={false}
+                                            active
+                                        />}
+                                    />
+                                </VictoryChart>)}
+                            </Animated.View>
+                        </ChartBoundary>
                     </Card>
 
                     <Card style={styles.card}>
