@@ -49,6 +49,13 @@ class ChartBoundary extends React.PureComponent<{ fallback: React.ReactNode }, {
         console.error('[Analytics] chart render failed', error);
     }
 
+    componentDidUpdate(prevProps: Readonly<{ fallback: React.ReactNode }>) {
+        if (this.state.hasError && this.props.children !== prevProps.children) {
+            // consente un nuovo tentativo di render se i dati cambiano
+            this.setState({hasError: false});
+        }
+    }
+
     render() {
         if (this.state.hasError) {
             return this.props.fallback as React.ReactNode;
@@ -203,6 +210,12 @@ export const AnalyticsScreen: React.FC = () => {
     const chartAnimationSpeed = useSettingsStore(state => state.chartAnimationSpeed);
     const chartFade = useRef(new Animated.Value(1)).current;
 
+    const isValidExpense = useCallback((expense: Expense) => {
+        const amount = Number(expense.amount);
+        const dateValue = new Date(expense.expenseDate);
+        return Number.isFinite(amount) && !Number.isNaN(dateValue.getTime());
+    }, []);
+
     useEffect(() => {
         if (customError) {
             setCustomError(null);
@@ -354,7 +367,9 @@ export const AnalyticsScreen: React.FC = () => {
         fetchListInsights(selectedListId, currentRange).catch(() => undefined);
     };
 
-    const visibleExpenses = useMemo(() => selectedListId === ALL_LISTS_OPTION ? userExpenses : listInsights.expenses, [selectedListId, userExpenses, listInsights.expenses]);
+    const safeUserExpenses = useMemo(() => userExpenses.filter(isValidExpense), [userExpenses, isValidExpense]);
+    const safeListExpenses = useMemo(() => listInsights.expenses.filter(isValidExpense), [listInsights.expenses, isValidExpense]);
+    const visibleExpenses = useMemo(() => selectedListId === ALL_LISTS_OPTION ? safeUserExpenses : safeListExpenses, [selectedListId, safeUserExpenses, safeListExpenses]);
 
     const currency = useMemo(() => visibleExpenses[0]?.currency || 'EUR', [visibleExpenses]);
 
@@ -410,18 +425,18 @@ export const AnalyticsScreen: React.FC = () => {
         })).sort((a, b) => b.amount - a.amount);
     }, []);
 
-    const listBreakdown = useMemo(() => groupBy(userExpenses, expense => listMap.get(expense.listId) || t('lists.details')), [userExpenses, groupBy, listMap, t]);
+    const listBreakdown = useMemo(() => groupBy(safeUserExpenses, expense => listMap.get(expense.listId) || t('lists.details')), [safeUserExpenses, groupBy, listMap, t]);
 
     const memberBreakdown = useMemo(() => {
         if (selectedListId === ALL_LISTS_OPTION) return [];
         const accumulator = new Map<string, number>();
-        listInsights.expenses.forEach(expense => {
+        safeListExpenses.forEach(expense => {
             if (!expense.paidByMemberId) return;
             accumulator.set(expense.paidByMemberId, (accumulator.get(expense.paidByMemberId) ?? 0) + expense.amount);
         });
         return Array.from(accumulator.entries()).map(([memberId, amount]) => ({memberId, amount}))
             .sort((a, b) => b.amount - a.amount);
-    }, [selectedListId, listInsights.expenses]);
+    }, [selectedListId, safeListExpenses]);
 
     const memberChartMax = memberBreakdown.reduce((max, item) => Math.max(max, item.amount), 0) || 1;
     const memberAxisTicks = useMemo(() => buildCurrencyTicks(memberChartMax, maxCurrencyTicks), [memberChartMax, maxCurrencyTicks]);
@@ -454,7 +469,7 @@ export const AnalyticsScreen: React.FC = () => {
             return [];
         }
         const map = new Map<string, number>();
-        listInsights.expenses.forEach(expense => {
+        safeListExpenses.forEach(expense => {
             const date = new Date(expense.expenseDate);
             if (!Number.isFinite(date.getTime())) return;
             const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
@@ -467,7 +482,7 @@ export const AnalyticsScreen: React.FC = () => {
                 const date = Date.UTC(year, (month ?? 1) - 1, day ?? 1);
                 return {x: date, y: amount};
             });
-    }, [selectedListId, listInsights.expenses]);
+    }, [selectedListId, safeListExpenses]);
     const memberTrendMax = useMemo(() => memberTrendData.reduce((max, point) => Math.max(max, point.y), 0), [memberTrendData]);
     const trendAxisTicks = useMemo(() => buildCurrencyTicks(memberTrendMax, maxCurrencyTicks), [memberTrendMax, maxCurrencyTicks]);
     const trendAxisTickCount = useMemo(() => Math.min(baseTrendTickCount, Math.max(2, memberTrendData.length)), [baseTrendTickCount, memberTrendData.length]);
@@ -504,8 +519,8 @@ export const AnalyticsScreen: React.FC = () => {
         if (selectedListId === ALL_LISTS_OPTION) {
             return {rows: [], settlements: [], reason: 'no-expenses' as const};
         }
-        return buildSplitSummary(listInsights.expenses, listInsights.members);
-    }, [selectedListId, listInsights.expenses, listInsights.members]);
+        return buildSplitSummary(safeListExpenses, listInsights.members);
+    }, [selectedListId, safeListExpenses, listInsights.members]);
 
     const dailyTotals = useMemo(() => {
         const map = new Map<string, number>();
