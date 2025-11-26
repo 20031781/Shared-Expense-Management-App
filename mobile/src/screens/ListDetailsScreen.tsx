@@ -681,6 +681,11 @@ const createStyles = (colors: AppColors) =>
             fontSize: 12,
             color: colors.secondaryText,
         },
+        expensePayer: {
+            fontSize: 12,
+            color: colors.secondaryText,
+            fontWeight: '600',
+        },
         expenseTags: {
             flexDirection: 'row',
             flexWrap: 'wrap',
