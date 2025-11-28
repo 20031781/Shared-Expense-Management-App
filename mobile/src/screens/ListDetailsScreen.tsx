@@ -200,8 +200,7 @@ export const ListDetailsScreen: React.FC = () => {
         const normalizedPaymentMethod = (expense.paymentMethod || ExpensePaymentMethod.Other).toString().toLowerCase();
         const paymentLabel = t(`expenses.paymentMethods.${normalizedPaymentMethod}`);
         const beneficiaryLabel = resolveBeneficiariesLabel(expense);
-        const canEditExpense = expense.authorId === user?.id || isAdmin;
-        const canDeleteExpense = canEditExpense;
+        const canManageExpense = isAdmin;
 
         return <View key={expense.id} style={styles.expenseSwipeWrapper}>
             <Swipeable
@@ -224,14 +223,14 @@ export const ListDetailsScreen: React.FC = () => {
                         openExpenseSwipeId.current = null;
                     }
                 }}
-                renderLeftActions={canEditExpense ? () => <TouchableOpacity
+                renderLeftActions={canManageExpense ? () => <TouchableOpacity
                     style={styles.editAction}
                     onPress={() => handleEditExpense(expense)}
                 >
                     <Ionicons name="create-outline" size={20} color={colors.accentText}/>
                     <Text style={styles.editActionText}>{t('expenses.editAction')}</Text>
                 </TouchableOpacity> : undefined}
-                renderRightActions={canDeleteExpense ? () => <TouchableOpacity
+                renderRightActions={canManageExpense ? () => <TouchableOpacity
                     style={styles.deleteAction}
                     onPress={() => handleDeleteExpense(expense)}
                     disabled={deletingId === expense.id}

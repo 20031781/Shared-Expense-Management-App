@@ -20,6 +20,8 @@ import {useTranslation} from '@i18n';
 import {AppColors, useAppTheme} from '@theme';
 import {getFriendlyErrorMessage} from '@/lib/errors';
 
+type SplitMode = 'manual' | 'shares';
+
 const normalizeDate = (value: Date = new Date()) => {
     const normalized = new Date(value);
     normalized.setHours(12, 0, 0, 0);
@@ -78,6 +80,7 @@ export const CreateExpenseScreen: React.FC = () => {
         amount?: string;
         payer?: string;
         beneficiaries?: string;
+        splits?: string;
     }>({});
     const [paymentMethod, setPaymentMethod] = useState<ExpensePaymentMethod>(ExpensePaymentMethod.Card);
     const [expenseDate, setExpenseDate] = useState(normalizeDate());
@@ -86,6 +89,9 @@ export const CreateExpenseScreen: React.FC = () => {
     const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
     const [prefillReady, setPrefillReady] = useState(!isEditing);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [splitMode, setSplitMode] = useState<SplitMode>('shares');
+    const [customSplitParts, setCustomSplitParts] = useState<Record<string, string>>({});
+    const [customSplitAmounts, setCustomSplitAmounts] = useState<Record<string, string>>({});
 
     useEffect(() => {
         fetchMembers(listId);
@@ -113,6 +119,32 @@ export const CreateExpenseScreen: React.FC = () => {
             setBeneficiaryIds(source.map(member => member.id));
         }
     }, [beneficiaryIds.length, members, isEditing]);
+
+    useEffect(() => {
+        setCustomSplitParts(prev => {
+            const updated = {...prev};
+            beneficiaryIds.forEach(id => {
+                if (!updated[id]) {
+                    updated[id] = '1';
+                }
+            });
+            Object.keys(updated).forEach(id => {
+                if (!beneficiaryIds.includes(id)) {
+                    delete updated[id];
+                }
+            });
+            return updated;
+        });
+        setCustomSplitAmounts(prev => {
+            const updated = {...prev};
+            Object.keys(updated).forEach(id => {
+                if (!beneficiaryIds.includes(id)) {
+                    delete updated[id];
+                }
+            });
+            return updated;
+        });
+    }, [beneficiaryIds]);
 
     const selectedMember = useMemo(() => members.find(m => m.id === selectedMemberId), [members, selectedMemberId]);
     const hasMembers = members.length > 0;
@@ -150,6 +182,63 @@ export const CreateExpenseScreen: React.FC = () => {
         }
         return t('expenses.beneficiariesCount', {count: labels.length});
     }, [beneficiaryIds, members, t, getMemberLabel]);
+    const totalAmount = useMemo(() => parseFloat(amount) || 0, [amount]);
+
+    const buildSplits = useCallback(() => {
+        if (beneficiaryIds.length === 0 || !totalAmount) return [];
+
+        if (splitMode === 'manual') {
+            return beneficiaryIds
+                .map(memberId => {
+                    const rawAmount = parseFloat(customSplitAmounts[memberId] || '0') || 0;
+                    const normalizedAmount = Math.max(0, rawAmount);
+                    const percentage = totalAmount > 0 ? (normalizedAmount / totalAmount) * 100 : 0;
+                    return {memberId, amount: Number(normalizedAmount.toFixed(2)), percentage};
+                })
+                .filter(split => split.amount > 0);
+        }
+
+        const parts = beneficiaryIds.map(memberId => ({
+            memberId,
+            parts: Math.max(0, parseFloat(customSplitParts[memberId] || '0') || 0),
+        }));
+        const totalParts = parts.reduce((sum, entry) => sum + entry.parts, 0);
+        if (totalParts <= 0) return [];
+
+        return parts
+            .map(entry => {
+                const amountShare = (totalAmount * entry.parts) / totalParts;
+                const percentage = totalAmount > 0 ? (amountShare / totalAmount) * 100 : 0;
+                return {
+                    memberId: entry.memberId,
+                    amount: Number(amountShare.toFixed(2)),
+                    percentage,
+                };
+            })
+            .filter(split => split.amount > 0);
+    }, [beneficiaryIds, totalAmount, splitMode, customSplitAmounts, customSplitParts]);
+
+    const splitValidationError = useMemo(() => {
+        const splits = buildSplits();
+        if (!totalAmount || splits.length === 0) return undefined;
+        const allocated = splits.reduce((sum, split) => sum + split.amount, 0);
+        if (splitMode === 'manual' && Math.abs(allocated - totalAmount) > 0.01) {
+            return t('expenses.splitTotalMismatch', {
+                total: totalAmount.toFixed(2),
+                current: allocated.toFixed(2),
+            });
+        }
+        if (splitMode === 'shares' && allocated <= 0) {
+            return t('expenses.splitSharesMissing');
+        }
+        return undefined;
+    }, [buildSplits, totalAmount, splitMode, t]);
+
+    const splitPreview = useMemo(() => {
+        const splits = buildSplits();
+        const allocated = splits.reduce((sum, split) => sum + split.amount, 0);
+        return {splits, allocated};
+    }, [buildSplits]);
 
     const handleQuickDate = (offsetDays: number) => {
         const nextDate = normalizeDate();
@@ -215,6 +304,9 @@ export const CreateExpenseScreen: React.FC = () => {
         if (beneficiaryIds.length === 0) {
             newErrors.beneficiaries = t('expenses.beneficiariesRequired');
         }
+        if (splitValidationError) {
+            newErrors.splits = splitValidationError;
+        }
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -268,6 +360,7 @@ export const CreateExpenseScreen: React.FC = () => {
         if (!validate()) return;
 
         try {
+            const splits = buildSplits();
             const basePayload = {
                 title: title.trim(),
                 amount: parseFloat(amount),
@@ -277,6 +370,7 @@ export const CreateExpenseScreen: React.FC = () => {
                 paidByMemberId: selectedMemberId!,
                 paymentMethod,
                 beneficiaryMemberIds: beneficiaryIds,
+                splits: splits.length > 0 ? splits : undefined,
             };
 
             const expense = isEditing
@@ -503,6 +597,62 @@ export const CreateExpenseScreen: React.FC = () => {
                 <Text style={styles.helperText}>{t('expenses.beneficiariesHelper')}</Text>
             </View>
 
+            <View style={styles.splitSection}>
+                <Text style={styles.label}>{t('expenses.splitOverrideTitle')}</Text>
+                <Text style={styles.helperText}>{t('expenses.splitOverrideHelper')}</Text>
+                <View style={styles.splitModeRow}>
+                    {(['manual', 'shares'] as SplitMode[]).map(mode => {
+                        const isActive = splitMode === mode;
+                        return <TouchableOpacity
+                            key={mode}
+                            style={[styles.splitModeChip, isActive && styles.splitModeChipActive]}
+                            onPress={() => {
+                                setSplitMode(mode);
+                                setErrors(prev => ({...prev, splits: undefined}));
+                            }}
+                        >
+                            <Text style={[styles.splitModeLabel, isActive && styles.splitModeLabelActive]}>
+                                {mode === 'manual' ? t('expenses.splitManual') : t('expenses.splitShares')}
+                            </Text>
+                        </TouchableOpacity>;
+                    })}
+                </View>
+                <View style={styles.splitInputs}>
+                    {beneficiaryIds.map(memberId => {
+                        const member = members.find(m => m.id === memberId);
+                        const value = splitMode === 'manual'
+                            ? customSplitAmounts[memberId] ?? ''
+                            : customSplitParts[memberId] ?? '1';
+                        const placeholder = splitMode === 'manual' ? '0.00' : '1';
+                        const keyboardType = splitMode === 'manual' ? 'decimal-pad' : 'number-pad';
+                        const handleChange = (text: string) => {
+                            setErrors(prev => ({...prev, splits: undefined}));
+                            if (splitMode === 'manual') {
+                                setCustomSplitAmounts(prev => ({...prev, [memberId]: text}));
+                            } else {
+                                setCustomSplitParts(prev => ({...prev, [memberId]: text}));
+                            }
+                        };
+
+                        return <View key={`split-${memberId}`} style={styles.splitRow}>
+                            <Text style={styles.splitLabel}>{getMemberLabel(member)}</Text>
+                            <Input
+                                value={value}
+                                onChangeText={handleChange}
+                                placeholder={placeholder}
+                                keyboardType={keyboardType}
+                                containerStyle={styles.splitInputContainer}
+                                style={styles.splitInput}
+                            />
+                        </View>;
+                    })}
+                </View>
+                {splitPreview.allocated > 0 && <Text style={styles.helperText}>
+                    {t('expenses.splitPreview', {amount: splitPreview.allocated.toFixed(2)})}
+                </Text>}
+                {errors.splits && <Text style={styles.errorText}>{errors.splits}</Text>}
+            </View>
+
             <Input
                 label={t('expenses.notesLabel')}
                 placeholder={t('expenses.notesPlaceholder')}
@@ -647,6 +797,9 @@ const createStyles = (colors: AppColors) =>
             fontWeight: '600',
             color: colors.text,
         },
+        splitSection: {
+            gap: 8,
+        },
         payerSelector: {
             flexDirection: 'row',
             alignItems: 'center',
@@ -751,6 +904,53 @@ const createStyles = (colors: AppColors) =>
         },
         dateChipActiveText: {
             color: colors.accentText,
+        },
+        splitModeRow: {
+            flexDirection: 'row',
+            gap: 8,
+        },
+        splitModeChip: {
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+        },
+        splitModeChipActive: {
+            backgroundColor: colors.accent,
+            borderColor: colors.accent,
+        },
+        splitModeLabel: {
+            fontSize: 13,
+            fontWeight: '600',
+            color: colors.text,
+        },
+        splitModeLabelActive: {
+            color: colors.accentText,
+        },
+        splitInputs: {
+            gap: 8,
+        },
+        splitRow: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+        },
+        splitLabel: {
+            flex: 1,
+            fontSize: 14,
+            color: colors.text,
+            fontWeight: '600',
+        },
+        splitInputContainer: {
+            flex: 0.4,
+            marginVertical: 0,
+        },
+        splitInput: {
+            textAlign: 'right',
+            paddingVertical: 10,
         },
         errorText: {
             fontSize: 12,
