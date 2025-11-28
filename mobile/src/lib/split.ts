@@ -41,21 +41,31 @@ export const buildSplitSummary = (expenses: Expense[], members: ListMember[]): S
             );
         }
 
-        const beneficiaries = (expense.beneficiaryMemberIds?.length
-            ? expense.beneficiaryMemberIds
-            : membersWithSplit.map(member => member.id))
-            .map(id => memberLookup.get(id))
-            .filter((member): member is ListMember => !!member);
+        const hasCustomSplits = (expense.splits?.length ?? 0) > 0;
+        if (hasCustomSplits) {
+            expense.splits
+                ?.filter(split => memberLookup.has(split.memberId))
+                .forEach(split => {
+                    const current = shareMap.get(split.memberId) ?? 0;
+                    shareMap.set(split.memberId, current + split.amount);
+                });
+        } else {
+            const beneficiaries = (expense.beneficiaryMemberIds?.length
+                ? expense.beneficiaryMemberIds
+                : membersWithSplit.map(member => member.id))
+                .map(id => memberLookup.get(id))
+                .filter((member): member is ListMember => !!member);
 
-        const scopedBeneficiaries = beneficiaries.length > 0 ? beneficiaries : membersWithSplit;
-        const totalWeight = scopedBeneficiaries.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
+            const scopedBeneficiaries = beneficiaries.length > 0 ? beneficiaries : membersWithSplit;
+            const totalWeight = scopedBeneficiaries.reduce((sum, member) => sum + (member.splitPercentage ?? 0), 0);
 
-        scopedBeneficiaries.forEach(member => {
-            const weight = totalWeight > 0
-                ? (member.splitPercentage ?? 0) / totalWeight
-                : 1 / scopedBeneficiaries.length;
-            shareMap.set(member.id, (shareMap.get(member.id) ?? 0) + expense.amount * weight);
-        });
+            scopedBeneficiaries.forEach(member => {
+                const weight = totalWeight > 0
+                    ? (member.splitPercentage ?? 0) / totalWeight
+                    : 1 / scopedBeneficiaries.length;
+                shareMap.set(member.id, (shareMap.get(member.id) ?? 0) + expense.amount * weight);
+            });
+        }
     });
 
     const hasShare = Array.from(shareMap.values()).some(value => value > 0);
