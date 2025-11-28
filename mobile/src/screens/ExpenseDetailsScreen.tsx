@@ -28,10 +28,11 @@ export const ExpenseDetailsScreen: React.FC = () => {
     const {colors} = useAppTheme();
     const styles = useMemo(() => createStyles(colors), [colors]);
     const {currentExpense, fetchExpenseById, deleteExpense, setCurrentExpense, isLoading} = useExpensesStore();
-    const {members} = useListsStore();
+    const {members, lists, fetchListById} = useListsStore();
     const {user} = useAuthStore();
     const [isDeleting, setIsDeleting] = useState(false);
     const [activeExpenseId, setActiveExpenseId] = useState<string | null>(expenseId ?? null);
+    const [listLoaded, setListLoaded] = useState(false);
 
     useEffect(() => {
         if (expenseId && expenseId !== activeExpenseId) {
@@ -43,6 +44,16 @@ export const ExpenseDetailsScreen: React.FC = () => {
         if (!activeExpenseId) return;
         fetchExpenseById(activeExpenseId);
     }, [activeExpenseId, fetchExpenseById]);
+
+    useEffect(() => {
+        if (!listId || listLoaded) return;
+        const targetList = lists.find(list => list.id === listId);
+        if (!targetList) {
+            fetchListById(listId).finally(() => setListLoaded(true));
+            return;
+        }
+        setListLoaded(true);
+    }, [listId, listLoaded, lists, fetchListById]);
 
     useEffect(() => () => setCurrentExpense(null), [setCurrentExpense]);
 
@@ -141,8 +152,11 @@ export const ExpenseDetailsScreen: React.FC = () => {
         }
         return t('expenses.beneficiariesCount', {count: beneficiaryNames.length});
     })();
-    const canEdit = user?.id === currentExpense.authorId || !!user?.isAdmin;
-    const canDelete = canEdit;
+    const listAdminId = useMemo(() => lists.find(list => list.id === (listId ?? currentExpense?.listId))?.adminId,
+        [lists, listId, currentExpense?.listId]);
+    const isAdmin = (listAdminId && listAdminId === user?.id) || !!user?.isAdmin;
+    const canEdit = isAdmin;
+    const canDelete = isAdmin;
 
     const infoItems = [
         {label: t('expenses.createdByLabel'), value: creatorName},

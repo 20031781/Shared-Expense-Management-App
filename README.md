@@ -46,7 +46,9 @@ Suite completa (API .NET + app mobile React Native) per gestire spese condivise 
 - Onboarding utente (senza login Google in app) e profilo multilingua (IT/EN) con tema chiaro/scuro.
 - Gestione liste con inviti, ruoli Admin/Validatore e percentuali di ripartizione editabili.
 - CRUD spese con foto scontrino, data reale, metodo di pagamento e destinatari personalizzati.
+- Divisione spese per-lista o per-singola spesa (importi o "parti") con ripartizione personalizzabile tipo Tricount.
 - Validazione collaborativa delle spese e calcolo rimborsi ottimizzati con suggerimenti.
+- Azioni di modifica/cancellazione spese limitate agli amministratori della lista per maggiore sicurezza.
 - Dashboard Insights con grafici (barre/torta/trend) e filtri temporali per lista/membro.
 - Notifiche push configurabili per nuove spese, rimborsi e inviti; supporto test via endpoint dedicati.
 - Sincronizzazione resiliente con cache locale (SQLite/AsyncStorage) e gestione offline.

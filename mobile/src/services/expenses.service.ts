@@ -1,6 +1,12 @@
 import {Expense, ExpensePaymentMethod, ExpenseSplit, ExpenseValidation, ValidationStatus} from '@/types';
 import apiService from './api.service';
 
+export interface ExpenseSplitInput {
+    memberId: string;
+    amount: number;
+    percentage: number;
+}
+
 export interface CreateExpenseData {
     listId: string;
     title: string;
@@ -12,6 +18,7 @@ export interface CreateExpenseData {
     paidByMemberId: string;
     paymentMethod: ExpensePaymentMethod;
     beneficiaryMemberIds: string[];
+    splits?: ExpenseSplitInput[];
 }
 
 class ExpensesService {
