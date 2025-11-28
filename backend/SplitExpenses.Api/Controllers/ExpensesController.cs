@@ -57,6 +57,12 @@ public class ExpensesController(
         var normalizedBeneficiaries =
             NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
 
+        var splits = ExpenseSplitMapper.NormalizeSplits(
+            request.SplitMode,
+            request.Splits,
+            request.Amount,
+            normalizedBeneficiaries.ToList());
+
         var expense = new Expense
         {
             ListId = request.ListId,
@@ -69,10 +75,12 @@ public class ExpensesController(
             PaidByMemberId = request.PaidByMemberId,
             Status = ExpenseStatus.Draft,
             PaymentMethod = request.PaymentMethod,
-            BeneficiaryMemberIds = normalizedBeneficiaries.ToList()
+            BeneficiaryMemberIds = normalizedBeneficiaries.ToList(),
+            Splits = splits
         };
 
         expense = await expenseRepository.CreateAsync(expense);
+        await expenseRepository.ReplaceExpenseSplitsAsync(expense.Id, expense.Splits);
 
         await notificationService.SendNewExpenseNotificationAsync(expense.Id);
 
@@ -94,6 +102,12 @@ public class ExpensesController(
         var normalizedBeneficiaries =
             NormalizeBeneficiaries(request.BeneficiaryMemberIds, members, request.PaidByMemberId);
 
+        var splits = ExpenseSplitMapper.NormalizeSplits(
+            request.SplitMode,
+            request.Splits,
+            request.Amount,
+            normalizedBeneficiaries.ToList());
+
         expense.Title = request.Title;
         expense.Amount = request.Amount;
         expense.ExpenseDate = request.ExpenseDate;
@@ -101,8 +115,10 @@ public class ExpensesController(
         expense.PaidByMemberId = request.PaidByMemberId;
         expense.PaymentMethod = request.PaymentMethod;
         expense.BeneficiaryMemberIds = normalizedBeneficiaries.ToList();
+        expense.Splits = splits;
 
         expense = await expenseRepository.UpdateAsync(expense);
+        await expenseRepository.ReplaceExpenseSplitsAsync(expense.Id, expense.Splits);
         return Ok(expense);
     }
 
@@ -266,6 +282,60 @@ public class ExpensesController(
     }
 }
 
+public static class ExpenseSplitMapper
+{
+    public static List<ExpenseSplit> NormalizeSplits(
+        ExpenseSplitMode? mode,
+        IReadOnlyCollection<ExpenseSplitRequest>? splits,
+        decimal expenseAmount,
+        IReadOnlyCollection<Guid> beneficiaries)
+    {
+        if (mode is null || splits is null || splits.Count == 0)
+            return new List<ExpenseSplit>();
+
+        var scopedSplits = splits
+            .Where(split => beneficiaries.Contains(split.MemberId) && split.Value > 0)
+            .ToList();
+        if (scopedSplits.Count == 0) return new List<ExpenseSplit>();
+
+        return mode == ExpenseSplitMode.Amounts
+            ? BuildFromAmounts(scopedSplits, expenseAmount)
+            : BuildFromParts(scopedSplits, expenseAmount);
+    }
+
+    private static List<ExpenseSplit> BuildFromAmounts(IEnumerable<ExpenseSplitRequest> splits, decimal expenseAmount)
+    {
+        var totalProvided = splits.Sum(split => split.Value);
+        if (totalProvided <= 0) return new List<ExpenseSplit>();
+
+        var normalizationFactor = expenseAmount > 0 ? expenseAmount / totalProvided : 0;
+
+        return splits
+            .Select(split => new ExpenseSplit
+            {
+                MemberId = split.MemberId,
+                Amount = normalizationFactor > 0 ? split.Value * normalizationFactor : 0,
+                Percentage = totalProvided > 0 ? split.Value / totalProvided : 0
+            })
+            .ToList();
+    }
+
+    private static List<ExpenseSplit> BuildFromParts(IEnumerable<ExpenseSplitRequest> splits, decimal expenseAmount)
+    {
+        var totalWeight = splits.Sum(split => split.Value);
+        if (totalWeight <= 0 || expenseAmount <= 0) return new List<ExpenseSplit>();
+
+        return splits
+            .Select(split => new ExpenseSplit
+            {
+                MemberId = split.MemberId,
+                Amount = expenseAmount * (split.Value / totalWeight),
+                Percentage = split.Value / totalWeight
+            })
+            .ToList();
+    }
+}
+
 public record CreateExpenseRequest(
     Guid ListId,
     string Title,
@@ -275,7 +345,9 @@ public record CreateExpenseRequest(
     string? Notes,
     Guid PaidByMemberId,
     ExpensePaymentMethod PaymentMethod = ExpensePaymentMethod.Card,
-    IReadOnlyCollection<Guid>? BeneficiaryMemberIds = null);
+    IReadOnlyCollection<Guid>? BeneficiaryMemberIds = null,
+    ExpenseSplitMode? SplitMode = null,
+    IReadOnlyCollection<ExpenseSplitRequest>? Splits = null);
 
 public record UpdateExpenseRequest(
     string Title,
@@ -284,6 +356,16 @@ public record UpdateExpenseRequest(
     string? Notes,
     Guid PaidByMemberId,
     ExpensePaymentMethod PaymentMethod = ExpensePaymentMethod.Card,
-    IReadOnlyCollection<Guid>? BeneficiaryMemberIds = null);
+    IReadOnlyCollection<Guid>? BeneficiaryMemberIds = null,
+    ExpenseSplitMode? SplitMode = null,
+    IReadOnlyCollection<ExpenseSplitRequest>? Splits = null);
+
+public record ExpenseSplitRequest(Guid MemberId, decimal Value);
+
+public enum ExpenseSplitMode
+{
+    Amounts,
+    Parts
+}
 
 public record ValidateExpenseRequest(bool Approved, string? Notes);

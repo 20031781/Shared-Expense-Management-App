@@ -1,5 +1,6 @@
 #region
 
+using System.Data;
 using System.Text;
 using Dapper;
 using SplitExpenses.Api.Data;
@@ -53,7 +54,11 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         const string sql = $"SELECT {ExpenseProjection} FROM expenses WHERE id = @Id LIMIT 1";
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var dto = await connection.QuerySingleOrDefaultAsync<ExpenseDto>(sql, new { Id = id });
-        return dto?.ToModel();
+        if (dto is null) return null;
+
+        var expense = dto.ToModel();
+        await AttachSplitsAsync([expense], connection);
+        return expense;
     }
 
     public async Task<IEnumerable<Expense>> GetListExpensesAsync(Guid listId, DateTime? fromDate = null,
@@ -78,7 +83,9 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
 
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ExpenseDto>(sqlBuilder.ToString(), parameters);
-        return rows.Select(dto => dto.ToModel());
+        var expenses = rows.Select(dto => dto.ToModel()).ToList();
+        await AttachSplitsAsync(expenses, connection);
+        return expenses;
     }
 
     public async Task<IEnumerable<Expense>> GetUserExpensesAsync(Guid userId, DateTime? fromDate = null,
@@ -103,7 +110,9 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
 
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ExpenseDto>(sqlBuilder.ToString(), parameters);
-        return rows.Select(dto => dto.ToModel());
+        var expenses = rows.Select(dto => dto.ToModel()).ToList();
+        await AttachSplitsAsync(expenses, connection);
+        return expenses;
     }
 
     public async Task<Expense> CreateAsync(Expense expense)
@@ -196,6 +205,41 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         return dto.ToModel();
     }
 
+    public async Task ReplaceExpenseSplitsAsync(Guid expenseId, IEnumerable<ExpenseSplit> splits)
+    {
+        await using var connection = await connectionFactory.CreateConnectionAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+
+        const string deleteSql = "DELETE FROM expense_splits WHERE expense_id = @ExpenseId";
+        await connection.ExecuteAsync(deleteSql, new { ExpenseId = expenseId }, transaction);
+
+        const string insertSql =
+            """
+             INSERT INTO expense_splits (id, expense_id, member_id, amount, percentage)
+             VALUES (@Id, @ExpenseId, @MemberId, @Amount, @Percentage)
+            """;
+
+        foreach (var split in splits)
+        {
+            var normalized = split with
+            {
+                Id = split.Id == Guid.Empty ? Guid.NewGuid() : split.Id,
+                ExpenseId = expenseId,
+            };
+
+            await connection.ExecuteAsync(insertSql, new
+            {
+                normalized.Id,
+                normalized.ExpenseId,
+                normalized.MemberId,
+                normalized.Amount,
+                normalized.Percentage,
+            }, transaction);
+        }
+
+        await transaction.CommitAsync();
+    }
+
     public async Task UpdateStatusAsync(Guid id, ExpenseStatus status)
     {
         const string sql = """
@@ -261,6 +305,32 @@ public class ExpenseRepository(IDbConnectionFactory connectionFactory) : IExpens
         await using var connection = await connectionFactory.CreateConnectionAsync();
         var rows = await connection.QueryAsync<ExpenseSplitDto>(sql, new { ExpenseId = expenseId });
         return rows.Select(dto => dto.ToModel());
+    }
+
+    private static void AttachSplits(IEnumerable<Expense> expenses, IEnumerable<ExpenseSplit> splits)
+    {
+        var splitLookup = splits
+            .GroupBy(split => split.ExpenseId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        foreach (var expense in expenses)
+        {
+            expense.Splits = splitLookup.TryGetValue(expense.Id, out var list)
+                ? list
+                : new List<ExpenseSplit>();
+        }
+    }
+
+    private static Guid[] CollectExpenseIds(IEnumerable<Expense> expenses) => expenses.Select(expense => expense.Id).ToArray();
+
+    private async Task AttachSplitsAsync(ICollection<Expense> expenses, IDbConnection connection)
+    {
+        if (expenses.Count == 0) return;
+
+        var expenseIds = CollectExpenseIds(expenses);
+        var sql = $"SELECT {SplitProjection} FROM expense_splits WHERE expense_id = ANY(@ExpenseIds)";
+        var splitRows = await connection.QueryAsync<ExpenseSplitDto>(sql, new { ExpenseIds = expenseIds });
+        AttachSplits(expenses, splitRows.Select(dto => dto.ToModel()));
     }
 }
 

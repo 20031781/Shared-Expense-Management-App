@@ -50,6 +50,7 @@ Suite completa (API .NET + app mobile React Native) per gestire spese condivise 
 - Dashboard Insights con grafici (barre/torta/trend) e filtri temporali per lista/membro.
 - Notifiche push configurabili per nuove spese, rimborsi e inviti; supporto test via endpoint dedicati.
 - Sincronizzazione resiliente con cache locale (SQLite/AsyncStorage) e gestione offline.
+- Ripartizione personalizzata per singola spesa (importi o parti) e azioni di modifica riservate agli amministratori.
 
 ## 🗂️ Struttura del repository
 

@@ -86,6 +86,8 @@ export const CreateExpenseScreen: React.FC = () => {
     const [existingReceiptUrl, setExistingReceiptUrl] = useState<string | null>(null);
     const [prefillReady, setPrefillReady] = useState(!isEditing);
     const [showDatePicker, setShowDatePicker] = useState(false);
+    const [splitMode, setSplitMode] = useState<'none' | 'amounts' | 'parts'>('none');
+    const [splitValues, setSplitValues] = useState<Record<string, string>>({});
 
     useEffect(() => {
         fetchMembers(listId);
@@ -114,8 +116,17 @@ export const CreateExpenseScreen: React.FC = () => {
         }
     }, [beneficiaryIds.length, members, isEditing]);
 
+    useEffect(() => {
+        setSplitValues(prev => Object.fromEntries(
+            Object.entries(prev).filter(([id]) => beneficiaryIds.includes(id))
+        ));
+    }, [beneficiaryIds]);
+
     const selectedMember = useMemo(() => members.find(m => m.id === selectedMemberId), [members, selectedMemberId]);
     const hasMembers = members.length > 0;
+    const beneficiaryMembers = useMemo(() => beneficiaryIds
+        .map(id => members.find(member => member.id === id))
+        .filter((member): member is ListMember => !!member), [beneficiaryIds, members]);
     const paymentOptions = useMemo(() => [
         {key: ExpensePaymentMethod.Card, icon: 'card-outline', label: t('expenses.paymentMethods.card')},
         {key: ExpensePaymentMethod.Cash, icon: 'cash-outline', label: t('expenses.paymentMethods.cash')},
@@ -171,6 +182,21 @@ export const CreateExpenseScreen: React.FC = () => {
         setErrors(prev => ({...prev, beneficiaries: undefined}));
     };
 
+    const buildSplitPayload = (): { splitMode?: 'amounts' | 'parts'; splits?: { memberId: string; value: number; }[] } => {
+        if (splitMode === 'none') return {};
+
+        const parsedSplits = beneficiaryMembers
+            .map(member => ({memberId: member.id, value: parseFloat(splitValues[member.id] ?? '0')}))
+            .filter(entry => !isNaN(entry.value) && entry.value > 0);
+
+        if (parsedSplits.length === 0) return {};
+
+        return {
+            splitMode,
+            splits: parsedSplits,
+        };
+    };
+
     const handleSelectAllBeneficiaries = () => {
         setBeneficiaryIds(members.map(member => member.id));
         setErrors(prev => ({...prev, beneficiaries: undefined}));
@@ -189,6 +215,15 @@ export const CreateExpenseScreen: React.FC = () => {
             ? currentExpense.beneficiaryMemberIds
             : members.map(member => member.id));
         setExistingReceiptUrl(currentExpense.receiptUrl ?? null);
+        if ((currentExpense.splits?.length ?? 0) > 0) {
+            setSplitMode('amounts');
+            setSplitValues(Object.fromEntries(
+                (currentExpense.splits ?? []).map(split => [
+                    split.memberId,
+                    split.amount.toFixed(2)
+                ])
+            ));
+        }
         setPrefillReady(true);
     }, [isEditing, expenseId, currentExpense, members]);
 
@@ -277,6 +312,7 @@ export const CreateExpenseScreen: React.FC = () => {
                 paidByMemberId: selectedMemberId!,
                 paymentMethod,
                 beneficiaryMemberIds: beneficiaryIds,
+                ...buildSplitPayload(),
             };
 
             const expense = isEditing
@@ -501,6 +537,43 @@ export const CreateExpenseScreen: React.FC = () => {
                 </TouchableOpacity>
                 {errors.beneficiaries && <Text style={styles.errorText}>{errors.beneficiaries}</Text>}
                 <Text style={styles.helperText}>{t('expenses.beneficiariesHelper')}</Text>
+            </View>
+
+            <View style={styles.splitSection}>
+                <Text style={styles.label}>{t('expenses.splitOverrideTitle')}</Text>
+                <Text style={styles.helperText}>{t('expenses.splitOverrideHelper')}</Text>
+                <View style={styles.splitModeRow}>
+                    {([
+                        {key: 'amounts', label: t('expenses.splitOverrideManual')},
+                        {key: 'parts', label: t('expenses.splitOverrideParts')},
+                        {key: 'none', label: t('expenses.splitOverrideNone')}
+                    ] as const).map(option => {
+                        const isActive = splitMode === option.key;
+                        return <TouchableOpacity
+                            key={option.key}
+                            style={[styles.splitModeChip, isActive && styles.splitModeChipActive]}
+                            onPress={() => {
+                                setSplitMode(option.key);
+                                if (option.key === 'none') {
+                                    setSplitValues({});
+                                }
+                            }}
+                        >
+                            <Text style={[styles.splitModeText, isActive && styles.splitModeTextActive]}>
+                                {option.label}
+                            </Text>
+                        </TouchableOpacity>;
+                    })}
+                </View>
+
+                {splitMode !== 'none' && beneficiaryMembers.map(member => <Input
+                    key={`split-${member.id}`}
+                    label={getMemberLabel(member)}
+                    placeholder={splitMode === 'amounts' ? '0.00' : '0'}
+                    value={splitValues[member.id] ?? ''}
+                    onChangeText={value => setSplitValues(prev => ({...prev, [member.id]: value}))}
+                    keyboardType="decimal-pad"
+                />)}
             </View>
 
             <Input
@@ -758,6 +831,33 @@ const createStyles = (colors: AppColors) =>
         },
         receiptSection: {
             gap: 12,
+        },
+        splitSection: {
+            gap: 12,
+        },
+        splitModeRow: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: 8,
+        },
+        splitModeChip: {
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+        },
+        splitModeChipActive: {
+            backgroundColor: colors.accent,
+            borderColor: colors.accent,
+        },
+        splitModeText: {
+            color: colors.text,
+            fontWeight: '600',
+        },
+        splitModeTextActive: {
+            color: colors.accentText,
         },
         receiptButtons: {
             flexDirection: 'row',

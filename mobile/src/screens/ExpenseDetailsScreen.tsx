@@ -141,7 +141,7 @@ export const ExpenseDetailsScreen: React.FC = () => {
         }
         return t('expenses.beneficiariesCount', {count: beneficiaryNames.length});
     })();
-    const canEdit = user?.id === currentExpense.authorId || !!user?.isAdmin;
+    const canEdit = !!user?.isAdmin;
     const canDelete = canEdit;
 
     const infoItems = [
